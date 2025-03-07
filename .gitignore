@@ -1,0 +1,5 @@
+".env" 
+"blogging website - frontend"/.env
+server/.env
+node_modules/
+blogging website - frontend/node_modules/
