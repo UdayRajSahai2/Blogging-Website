@@ -1,7 +1,28 @@
-POST http://localhost:3000/signin
+
+//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJpYXQiOjE3NDIzOTk1NzF9.uDQvsqtlvoA-RAQCR69laJE0hAMrn13nqN7vLer9pwM
+
+POST http://localhost:3000/create-blog
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJpYXQiOjE3NDIzOTk1NzF9.uDQvsqtlvoA-RAQCR69laJE0hAMrn13nqN7vLer9pwM
 
 {
-    "email" : "udayrajsahai24@gmail.com",
-    "password" : "Udayraj@2208"
+
+  "title": "My Blog",
+  "des": "This is a description",
+  "banner": "https://example.com/image-url",
+  "tags": ["blog", "coding"],
+  "content": { "blocks": [1,2] },
+  "draft": false
 }
+
+# POST http://localhost:3000/signup
+# Content-Type: application/json
+
+
+# {
+#   "fullname":"Petrone",
+#   "email": "petrone123@gmail.com",
+#   "password":"Petrone@123456789"
+
+# }
+

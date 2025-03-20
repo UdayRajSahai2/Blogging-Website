@@ -1,18 +1,25 @@
-import { useRef } from "react";
+import { useContext, useRef } from "react";
 import AnimationWrapper from "../common/page-animation";
 import InputBox from "../components/input.component";
 import googleIcon from "../imgs/google.png";
 import { Link } from "react-router-dom";
 import toast, { Toaster } from 'react-hot-toast';
 import axios from "axios";
+import { storeInSession } from "../common/session";
+import { UserContext } from "../App";
+import { Navigate } from "react-router-dom";
+import { authWithGoogle } from "../common/firebase";
+
 
 const UserAuthForm = ({ type }) => {
+  let {userAuth: {access_token},setUserAuth} = useContext(UserContext);
+  console.log(access_token);
   let serverRoute = type === "sign-in" ? "/signin" : "/signup";
-  console.log("API URL:", import.meta.env.VITE_SERVER_DOMAIN + serverRoute);
 
   const userAuthThroughServer = (serverRoute,formData) => {
       axios.post(import.meta.env.VITE_SERVER_DOMAIN + serverRoute,formData).then(({data}) => {
-        console.log(data);
+        storeInSession("user",JSON.stringify(data));
+        setUserAuth(data)
       })
       .catch(({response}) => {
         toast.error(response.data.error)
@@ -47,7 +54,38 @@ const UserAuthForm = ({ type }) => {
     }
     userAuthThroughServer(serverRoute,formData)
   };
+  const handleGoogleAuth = async (e) => {
+    e.preventDefault();
+    try {
+      const user = await authWithGoogle();
+      if (!user) throw new Error("Google authentication failed");
+  
+      const idToken = await user.getIdToken(); // Get ID token from Firebase
+      console.log("Google Auth User:", user);
+      console.log("Google Access Token:", idToken);
+  
+      // Send the token to the backend
+      axios.post(import.meta.env.VITE_SERVER_DOMAIN + "/google-auth", {
+        access_token: idToken,
+      })
+      .then(({ data }) => {
+        storeInSession("user", JSON.stringify(data));
+        setUserAuth(data);
+      })
+      .catch(({ response }) => {
+        toast.error(response.data.error);
+      });
+    } catch (error) {
+      console.error("Google Auth Error:", error);
+      toast.error("Google sign-in failed. Please try again.");
+    }
+  };
+  
+  
   return (
+    access_token ? 
+    <Navigate to="/" />
+    :
     <AnimationWrapper keyValue={type}>
       <section className="h-cover flex items-center justify-center">
         <Toaster />
@@ -89,8 +127,8 @@ const UserAuthForm = ({ type }) => {
             <p>or</p>
             <hr className="w-1/2 border-black" />
           </div>
-          <button className="btn-dark flex items-center justify-center gap-4 w-[90%] center">
-            <img src={googleIcon} className="w-5" />
+          <button className="btn-dark flex items-center justify-center gap-4 w-[90%] center" onClick={handleGoogleAuth}>
+            <img src={googleIcon} className="w-5"/>
             continue with google
           </button>
           {type === "sign-in" ? (
