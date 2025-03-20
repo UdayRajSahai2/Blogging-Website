@@ -1,0 +1,47 @@
+[33mcommit 8f419bc3379765b42b4c2ac983ae0c654791a7fa[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: UdayRajSahai2 <udayrajsahai@outlook.com>
+Date:   Thu Mar 20 21:17:06 2025 +0530
+
+    Worked on google auth as well as Blog editor to publish and save as draft
+
+[33mcommit 617f651c41c53b02886160dc910690fa370d5e9f[m[33m ([m[1;31morigin/main[m[33m)[m
+Author: UdayRajSahai2 <udayrajsahai@outlook.com>
+Date:   Fri Mar 7 14:37:21 2025 +0530
+
+    Added .env-example as a reference file
+
+[33mcommit 8127cc4ee1b6cbcededb7cd9f8fd7a7b5c759958[m
+Author: UdayRajSahai2 <udayrajsahai@outlook.com>
+Date:   Fri Mar 7 14:36:58 2025 +0530
+
+    Added .env-example as a reference file
+
+[33mcommit 0a9cbbb9eea9b53023eb85d6bc86ae3aa1d8a2d9[m
+Author: UdayRajSahai2 <udayrajsahai@outlook.com>
+Date:   Fri Mar 7 13:53:47 2025 +0530
+
+    Ignored server/node_modules in git
+
+[33mcommit 1786db35c2c13f35fa2e7c992df6ae42c144fa0b[m
+Author: UdayRajSahai2 <udayrajsahai@outlook.com>
+Date:   Fri Mar 7 13:36:39 2025 +0530
+
+    Removed .env, node_modules, and package-lock.json from Git tracking
+
+[33mcommit ba0fe9bb0ebe47816d2df87b58d354bfad6dcffb[m
+Author: UdayRajSahai2 <udayrajsahai@outlook.com>
+Date:   Fri Mar 7 13:34:23 2025 +0530
+
+    Added .env and node_modules to .gitignore
+
+[33mcommit 792243389b3656aee60cc19719055e2e47c39d9c[m
+Author: UdayRajSahai2 <udayrajsahai@outlook.com>
+Date:   Fri Mar 7 13:24:15 2025 +0530
+
+    Removed .env from tracking
+
+[33mcommit 9bb3e96aa145748aeb8dc5fc7dc6ef524c7fea3a[m
+Author: UdayRajSahai2 <udayrajsahai@outlook.com>
+Date:   Fri Mar 7 12:37:44 2025 +0530
+
+    Initial commit
