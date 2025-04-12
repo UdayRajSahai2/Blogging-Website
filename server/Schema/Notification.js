@@ -7,8 +7,12 @@ const Notification = sequelize.define("Notification", {
         allowNull: false,
     },
     blog: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.STRING,
         allowNull: false,
+        references: {
+            model: "Blogs",
+            key: "blog_id"
+        }
     },
     notification_for: {
         type: DataTypes.INTEGER,
@@ -18,7 +22,7 @@ const Notification = sequelize.define("Notification", {
         type: DataTypes.INTEGER,
         allowNull: false,
     },
-    comment: {
+    comment_id: {
         type: DataTypes.INTEGER, // Can be null if it's a like
     },
     reply: {
@@ -34,5 +38,6 @@ const Notification = sequelize.define("Notification", {
 }, {
     timestamps: true,
 });
+
 
 export default Notification;

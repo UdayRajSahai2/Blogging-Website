@@ -26,6 +26,10 @@ const Blog = sequelize.define("Blog", {
     author: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        references: {
+            model: 'Users', // Name of the referenced table (case-sensitive)
+            key: 'user_id', // Name of the referenced column
+        },
     },
     activity: {
         type: DataTypes.JSON, // Store likes/comments as JSON
@@ -33,9 +37,14 @@ const Blog = sequelize.define("Blog", {
     draft: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
+    },
+    publishedAt: {
+        type: DataTypes.DATE, // Add this field
+        allowNull: true, // Allow null if the blog is a draft
     }
 }, {
     timestamps: true,
 });
+
 
 export default Blog;

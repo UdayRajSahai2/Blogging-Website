@@ -11,10 +11,30 @@ import serviceAccountKey from "./reactjs-blogging-website-ac6e9-firebase-adminsd
 
 import { getAuth } from "firebase-admin/auth";
 import aws from "aws-sdk";
+import { Op } from 'sequelize';
 
-import User from "./Schema/User.js";
-import Profession from "./Schema/Professions.js";
-import Blog from "./Schema/Blog.js";
+// import User from "./Schema/User.js";
+// import Profession from "./Schema/Professions.js";
+// import Blog from "./Schema/Blog.js";
+
+// Import models and setupAssociations from associations.js
+import {
+  User,
+  Profession,
+  Blog,
+  Comment,
+  Like,
+  Read,
+  Notification,
+  setupAssociations,
+} from "./Schema/associations.js";
+
+// Set up associations
+setupAssociations({ User, Blog, Comment, Notification, Profession });
+
+// Log associations to verify they are correctly imported
+console.log("User associations in server.js:", User.associations);
+console.log("Blog associations in server.js:", Blog.associations);
 
 dotenv.config();
 
@@ -94,10 +114,20 @@ const connectDB = async () => {
   try {
     await sequelize.authenticate();
     console.log("✅ MySQL Database Connected!");
-    await Profession.sync({ alter: true });
-    await User.sync(); // Sync the model with the database
-    await Blog.sync(); // Sync the Blog model
-    console.log("✅ Users table is ready!");
+     // Disable alter and force for all sync operations
+     const syncOptions = { 
+      alter: false,  // Disable automatic table changes
+      force: false   // Make sure this is false (or you'll lose data)
+    };
+    await User.sync(syncOptions);
+    await Profession.sync(syncOptions);
+    await Blog.sync(syncOptions);
+    await Like.sync(syncOptions);
+    await Comment.sync(syncOptions);
+    await Read.sync(syncOptions);
+    // await Comment.sync({ alter: true });
+    // await Notification.sync({ alter: true });
+    console.log("✅ All tables are ready!");
   } catch (error) {
     console.error("❌ Database Connection Error:", error);
     process.exit(1);
@@ -170,11 +200,9 @@ server.post("/signin", async (req, res) => {
 
       return res.json(formatDatatoSend(user));
     } else {
-      return res
-        .status(403)
-        .json({
-          error: "Account was created using google. Try logging in with google",
-        });
+      return res.status(403).json({
+        error: "Account was created using google. Try logging in with google",
+      });
     }
   } catch (err) {
     console.log(err);
@@ -244,25 +272,544 @@ server.get("/get-upload-url", (req, res) => {
     });
 });
 
+server.post('/latest-blogs', async (req, res) => {
+  let maxLimit = 5;
+  let {page} = req.body;
+
+  try {
+    // Calculate offset for pagination
+    const offset = (page - 1) * maxLimit;
+
+    // Fetch all published blogs with author information
+    const blogs = await Blog.findAll({
+      where: { draft: false },
+      include: [
+        {
+          model: User,
+          as: 'blogAuthor',
+          attributes: ['profile_img', 'username', 'fullname'],
+        },
+      ],
+      order: [['publishedAt', 'DESC']],
+      attributes: [
+        'blog_id', 
+        'title', 
+        'des', 
+        'banner', 
+        'tags', 
+        'publishedAt',
+        'createdAt',
+        'updatedAt'
+      ],
+       offset: offset, // Use offset instead of skip
+      limit: maxLimit,
+    });
+
+    if (!blogs.length) {
+      return res.status(200).json({ 
+        status: 'success',
+        results: 0,
+        blogs: [] 
+      });
+    }
+
+    const blogIds = blogs.map(blog => blog.blog_id);
+
+    // Count likes, comments, reads, and parent comments
+    const [likesCounts, commentsCounts, readsCounts, parentCommentsCounts] = await Promise.all([
+      Like.findAll({
+        attributes: [
+          'blog_id', 
+          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+        ],
+        where: { blog_id: blogIds },
+        group: ['blog_id'],
+        raw: true
+      }),
+      
+      Comment.findAll({
+        attributes: [
+          'blog_id', 
+          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+        ],
+        where: { blog_id: blogIds },
+        group: ['blog_id'],
+        raw: true
+      }),
+      
+      Read.findAll({
+        attributes: [
+          'blog_id', 
+          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+        ],
+        where: { blog_id: blogIds },
+        group: ['blog_id'],
+        raw: true
+      }),
+
+      // Count only parent comments (where parent is null)
+      Comment.findAll({
+        attributes: [
+          'blog_id', 
+          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+        ],
+        where: { 
+          blog_id: blogIds,
+          parent: null 
+        },
+        group: ['blog_id'],
+        raw: true
+      })
+    ]);
+
+    // Create lookup maps
+    const createCountMap = (items) => {
+      return items.reduce((acc, item) => {
+        acc[item.blog_id] = item.count;
+        return acc;
+      }, {});
+    };
+
+    const likesMap = createCountMap(likesCounts);
+    const commentsMap = createCountMap(commentsCounts);
+    const readsMap = createCountMap(readsCounts);
+    const parentCommentsMap = createCountMap(parentCommentsCounts);
+
+    // Combine blog data with activity counts
+    const blogsWithActivity = blogs.map(blog => {
+      return {
+        ...blog.get({ plain: true }),
+        activity: {
+          total_likes: likesMap[blog.blog_id] || 0,
+          total_comments: commentsMap[blog.blog_id] || 0,
+          total_reads: readsMap[blog.blog_id] || 0,
+          total_parent_comments: parentCommentsMap[blog.blog_id] || 0
+        }
+      };
+    });
+
+    return res.status(200).json({ 
+      status: 'success',
+      results: blogsWithActivity.length,
+      blogs: blogsWithActivity,
+      pagination: {
+        currentPage: parseInt(page),
+        perPage: maxLimit,
+        totalPages: Math.ceil(blogsWithActivity.length / maxLimit)
+      }
+    });
+
+  } catch (err) {
+    console.error("Error fetching latest blogs:", err);
+    return res.status(500).json({ 
+      status: 'error',
+      message: 'Failed to fetch latest blogs',
+      error: process.env.NODE_ENV === 'development' ? err.message : null
+    });
+  }
+});
+
+server.post("/all-latest-blogs-count", async (req, res) => {
+  try {
+    const count = await Blog.count({
+      where: { draft: false }
+    });
+    
+    return res.status(200).json({ totalDocs: count });
+  } catch (err) {
+    console.log(err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+server.get("/trending-blogs", async (req, res) => {
+  let maxLimit = 5;
+
+  try {
+    // Fetch all published blogs with author information
+    const blogs = await Blog.findAll({
+      where: { draft: false },
+      include: [
+        {
+          model: User,
+          as: 'blogAuthor',
+          attributes: ['profile_img', 'username', 'fullname', 'user_id'],
+        },
+      ],
+      attributes: [
+        'blog_id', 
+        'title',  
+        'publishedAt',
+        'author'
+      ],
+      limit: maxLimit,
+    });
+
+    if (!blogs.length) {
+      return res.status(200).json({ 
+        status: 'success',
+        results: 0,
+        blogs: [] 
+      });
+    }
+
+    const blogIds = blogs.map(blog => blog.blog_id);
+
+    // Count likes, comments, reads, and parent comments
+    const [likesCounts, commentsCounts, readsCounts, parentCommentsCounts] = await Promise.all([
+      Like.findAll({
+        attributes: [
+          'blog_id', 
+          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+        ],
+        where: { blog_id: blogIds },
+        group: ['blog_id'],
+        raw: true
+      }),
+      
+      Comment.findAll({
+        attributes: [
+          'blog_id', 
+          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+        ],
+        where: { blog_id: blogIds },
+        group: ['blog_id'],
+        raw: true
+      }),
+      
+      Read.findAll({
+        attributes: [
+          'blog_id', 
+          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+        ],
+        where: { blog_id: blogIds },
+        group: ['blog_id'],
+        raw: true
+      }),
+
+      // Count only parent comments (where parent is null)
+      Comment.findAll({
+        attributes: [
+          'blog_id', 
+          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+        ],
+        where: { 
+          blog_id: blogIds,
+          parent: null 
+        },
+        group: ['blog_id'],
+        raw: true
+      })
+    ]);
+
+    // Create lookup maps
+    const createCountMap = (items) => {
+      return items.reduce((acc, item) => {
+        acc[item.blog_id] = item.count;
+        return acc;
+      }, {});
+    };
+
+    const likesMap = createCountMap(likesCounts);
+    const commentsMap = createCountMap(commentsCounts);
+    const readsMap = createCountMap(readsCounts);
+    const parentCommentsMap = createCountMap(parentCommentsCounts);
+
+    // Combine blog data with activity counts
+    const blogsWithActivity = blogs.map(blog => {
+      return {
+        ...blog.get({ plain: true }),
+        activity: {
+          total_likes: likesMap[blog.blog_id] || 0,
+          total_comments: commentsMap[blog.blog_id] || 0,
+          total_reads: readsMap[blog.blog_id] || 0,
+          total_parent_comments: parentCommentsMap[blog.blog_id] || 0
+        }
+      };
+    });
+
+    // Sort the blogs by trending criteria
+    const trendingBlogs = blogsWithActivity.sort((a, b) => {
+      // First sort by total reads (descending)
+      if (b.activity.total_reads !== a.activity.total_reads) {
+        return b.activity.total_reads - a.activity.total_reads;
+      }
+      // Then sort by total likes (descending)
+      if (b.activity.total_likes !== a.activity.total_likes) {
+        return b.activity.total_likes - a.activity.total_likes;
+      }
+      // Finally sort by published date (newest first)
+      return new Date(b.publishedAt) - new Date(a.publishedAt);
+    });
+
+    return res.status(200).json({ 
+      status: 'success',
+      results: trendingBlogs.length,
+      blogs: trendingBlogs 
+    });
+
+  } catch (err) {
+    console.error("Error fetching trending blogs:", err);
+    return res.status(500).json({ 
+      status: 'error',
+      message: 'Failed to fetch trending blogs',
+      error: process.env.NODE_ENV === 'development' ? err.message : null
+    });
+  }
+});
+server.post("/search-blogs", async (req, res) => {
+  let { tag, query,author, page = 1 } = req.body;
+  let maxLimit = 2;
+
+  if (!tag && !query && !author) {
+    return res.status(400).json({ 
+      status: 'error',
+      message: 'Either tag,query or author parameter is required'
+    });
+  }
+
+  try {
+    const offset = (page - 1) * maxLimit;
+    let whereClause = { draft: false };
+
+    if (tag) {
+      // For tag search (clicking on tags)
+      const normalizedTag = tag.toLowerCase().trim();
+      whereClause[Op.or] = [
+        sequelize.where(
+          sequelize.fn('JSON_SEARCH', sequelize.col('tags'), 'one', `%${normalizedTag}%`),
+          { [Op.ne]: null }
+        ),
+        { tags: { [Op.like]: `%${normalizedTag}%` } }
+      ];
+    } else if (query) {
+      // For query search (search box) - search in both title AND tags
+      const normalizedQuery = query.toLowerCase().trim();
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${normalizedQuery}%` } },
+        sequelize.where(
+          sequelize.fn('JSON_SEARCH', sequelize.col('tags'), 'one', `%${normalizedQuery}%`),
+          { [Op.ne]: null }
+        ),
+        { tags: { [Op.like]: `%${normalizedQuery}%` } }
+      ];
+    }
+    else if (author) {
+      // For author search
+      whereClause.author = author;
+    }
+
+    // Rest of your existing code remains the same...
+    const { count: totalBlogs, rows: blogs } = await Blog.findAndCountAll({
+      where: whereClause,
+      include: [{
+        model: User,
+        as: 'blogAuthor',
+        attributes: ['profile_img', 'username', 'fullname']
+      }],
+      attributes: ['blog_id', 'title', 'des', 'banner', 'tags', 'publishedAt'],
+      order: [['publishedAt', 'DESC']],
+      limit: maxLimit,
+      offset: offset
+    });
+
+    if (!blogs.length) {
+      return res.status(200).json({ 
+        status: 'success',
+        results: totalBlogs,
+        blogs: [] 
+      });
+    }
+
+    const blogIds = blogs.map(blog => blog.blog_id);
+    
+    const [likesCounts, commentsCounts, readsCounts] = await Promise.all([
+      Like.findAll({
+        attributes: [
+          'blog_id', 
+          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+        ],
+        where: { blog_id: blogIds },
+        group: ['blog_id'],
+        raw: true
+      }),
+      
+      Comment.findAll({
+        attributes: [
+          'blog_id', 
+          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+        ],
+        where: { blog_id: blogIds },
+        group: ['blog_id'],
+        raw: true
+      }),
+      
+      Read.findAll({
+        attributes: [
+          'blog_id', 
+          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+        ],
+        where: { blog_id: blogIds },
+        group: ['blog_id'],
+        raw: true
+      })
+    ]);
+
+    const createCountMap = (items) => {
+      return items.reduce((acc, item) => {
+        acc[item.blog_id] = item.count;
+        return acc;
+      }, {});
+    };
+
+    const likesMap = createCountMap(likesCounts);
+    const commentsMap = createCountMap(commentsCounts);
+    const readsMap = createCountMap(readsCounts);
+
+    const blogsWithActivity = blogs.map(blog => {
+      return {
+        ...blog.get({ plain: true }),
+        activity: {
+          total_likes: likesMap[blog.blog_id] || 0,
+          total_comments: commentsMap[blog.blog_id] || 0,
+          total_reads: readsMap[blog.blog_id] || 0
+        }
+      };
+    });
+
+    return res.status(200).json({ 
+      status: 'success',
+      results: totalBlogs,
+      blogs: blogsWithActivity,
+      pagination: {
+        currentPage: parseInt(page),
+        perPage: maxLimit,
+        totalPages: Math.ceil(totalBlogs / maxLimit)
+      }
+    });
+
+  } catch (err) {
+    console.error("Error searching blogs:", err);
+    return res.status(500).json({ 
+      status: 'error',
+      message: 'Failed to search blogs',
+      error: process.env.NODE_ENV === 'development' ? err.message : null
+    });
+  }
+});
+
+server.post("/search-blogs-count", async (req, res) => {
+  let { tag,author, query } = req.body;
+
+  try {
+    let whereClause = { draft: false };
+
+    if (tag) {
+      const normalizedTag = tag.toLowerCase().trim();
+      whereClause[Op.or] = [
+        sequelize.where(
+          sequelize.fn('JSON_SEARCH', sequelize.col('tags'), 'one', `%${normalizedTag}%`),
+          { [Op.ne]: null }
+        ),
+        { tags: { [Op.like]: `%${normalizedTag}%` } }
+      ];
+    } else if (query) {
+      const normalizedQuery = query.toLowerCase().trim();
+      whereClause[Op.or] = [
+        { title: { [Op.like]: `%${normalizedQuery}%` } },
+        sequelize.where(
+          sequelize.fn('JSON_SEARCH', sequelize.col('tags'), 'one', `%${normalizedQuery}%`),
+          { [Op.ne]: null }
+        ),
+        { tags: { [Op.like]: `%${normalizedQuery}%` } }
+      ];
+    }
+    else if (author) {
+      // For author search
+      whereClause.author = author;
+    }
+    const count = await Blog.count({
+      where: whereClause
+    });
+
+    return res.status(200).json({ 
+      totalDocs: count 
+    });
+
+  } catch (err) {
+    console.error("Error counting search blogs:", err);
+    return res.status(500).json({ 
+      error: "Failed to count search blogs",
+      details: process.env.NODE_ENV === 'development' ? err.message : null
+    });
+  }
+});
+
+server.post("/search-users", async (req, res) => {
+  let { query } = req.body;
+
+  if (!query || !query.trim()) {
+    return res.status(400).json({ error: "Search query is required" });
+  }
+
+  try {
+    const users = await User.findAll({
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('username')),
+        'LIKE',
+        `%${query.toLowerCase()}%`
+      ),
+      limit: 50,
+      attributes: ['fullname', 'username', 'profile_img'],
+      order: [['username', 'ASC']]
+    });
+
+    return res.status(200).json({ users });
+  } catch (err) {
+    console.error("Error searching users:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+server.post("/get-profile", async (req, res) => {
+  try {
+      const { username } = req.body;
+
+      // Find user and exclude sensitive fields
+      const user = await User.findOne({
+          where: { username },
+          attributes: { 
+              exclude: ['password', 'google_auth', 'updateAt'] 
+          },
+          include: [] // You can include associated models here if needed
+      });
+
+      if (!user) {
+          return res.status(404).json({ error: 'User not found' });
+      }
+
+      return res.status(200).json(user);
+  } catch (err) {
+      console.log(err);
+      return res.status(500).json({ error: err.message });
+  }
+});
+
+
 server.post("/create-blog", verifyJWT, async (req, res) => {
   let authorId = req.user;
   // console.log("Author Id is ", authorId);
   let { title, des, banner, tags, content, draft } = req.body;
   if (!title.length) {
-    return res
-      .status(403)
-      .json({ error: "You must provide a title " });
+    return res.status(403).json({ error: "You must provide a title " });
   }
 
   // Validation
-  if(!draft)
-  {
+  if (!draft) {
     if (typeof des !== "string" || !des.length || des.length > 200) {
-      return res
-        .status(403)
-        .json({
-          error: "You must provide blog description under 200 characters",
-        });
+      return res.status(403).json({
+        error: "You must provide blog description under 200 characters",
+      });
     }
     if (!banner.length) {
       return res
@@ -277,11 +824,12 @@ server.post("/create-blog", verifyJWT, async (req, res) => {
     if (!tags.length || tags.length > 10) {
       return res
         .status(403)
-        .json({ error: "Provide tags in order to publish the blog, Maximum 10" });
+        .json({
+          error: "Provide tags in order to publish the blog, Maximum 10",
+        });
     }
-  
   }
-   
+
   try {
     tags = tags.map((tag) => tag.toLowerCase());
     let blog_id =
@@ -301,6 +849,7 @@ server.post("/create-blog", verifyJWT, async (req, res) => {
       author: authorId,
       blog_id,
       draft: Boolean(draft),
+      publishedAt: draft ? null : new Date()
     });
     // console.log("Blog created successfully:", blog);
     // console.log("Checking author id 2nd time", authorId);

@@ -1,6 +1,7 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js"; // Adjust based on your DB config
 
+import Blog from './Blog.js';
 const User = sequelize.define(
   "User",
   {
@@ -28,7 +29,7 @@ const User = sequelize.define(
       type: DataTypes.INTEGER,
       references: {
         model: "Professions",
-        key: "id",
+        key: "profession_id",
       },
     },
     username: {
@@ -120,7 +121,20 @@ const User = sequelize.define(
   {
     timestamps: true, // Automatically adds createdAt & updatedAt
     tableName: "users",
+    indexes: [
+      {
+        unique: true,
+        fields: ['email'],
+        name: 'email_unique' // Named unique constraint
+      },
+      {
+        unique: true,
+        fields: ['username'],
+        name: 'username_unique' // Named unique constraint
+      }
+    ]
   }
 );
+
 
 export default User;

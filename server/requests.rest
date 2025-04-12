@@ -1,19 +1,19 @@
 
 //eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJpYXQiOjE3NDIzOTk1NzF9.uDQvsqtlvoA-RAQCR69laJE0hAMrn13nqN7vLer9pwM
 
-POST http://localhost:3000/create-blog
-Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJpYXQiOjE3NDIzOTk1NzF9.uDQvsqtlvoA-RAQCR69laJE0hAMrn13nqN7vLer9pwM
+# POST http://localhost:3000/create-blog
+# Content-Type: application/json
+# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJpYXQiOjE3NDIzOTk1NzF9.uDQvsqtlvoA-RAQCR69laJE0hAMrn13nqN7vLer9pwM
 
-{
+# {
 
-  "title": "My Blog",
-  "des": "This is a description",
-  "banner": "https://example.com/image-url",
-  "tags": ["blog", "coding"],
-  "content": { "blocks": [1,2] },
-  "draft": false
-}
+#   "title": "My Blog",
+#   "des": "This is a description",
+#   "banner": "https://example.com/image-url",
+#   "tags": ["blog", "coding"],
+#   "content": { "blocks": [1,2] },
+#   "draft": false
+# }
 
 # POST http://localhost:3000/signup
 # Content-Type: application/json
@@ -25,4 +25,33 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJpY
 #   "password":"Petrone@123456789"
 
 # }
+
+# GET http://localhost:3000/latest-blogs
+
+# GET http://localhost:3000/trending-blogs
+
+# POST http://localhost:3000/search-blogs
+# Content-Type: application/json
+
+# {
+#     "tag": "luffy"
+# }
+
+# POST http://localhost:3000/search-users
+# Content-Type: application/json
+
+# {
+#     "query": "him"
+# }
+
+
+POST http://localhost:3000/get-profile
+Content-Type: application/json
+
+{
+    "username": "himanshu123"
+}
+
+
+
 

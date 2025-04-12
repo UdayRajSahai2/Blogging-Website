@@ -8,8 +8,12 @@ const Comment = sequelize.define("Comment", {
         unique: true,
     },
     blog_id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.STRING,
         allowNull: false,
+        references: {
+            model: "Blogs", // Table name (case-sensitive)
+            key: "blog_id", // Primary key in Blogs table
+        },
     },
     blog_author: {
         type: DataTypes.INTEGER,
@@ -25,13 +29,21 @@ const Comment = sequelize.define("Comment", {
     commented_by: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        references: {
+            model: "Users", // Table name
+            key: "user_id", // Primary key in Users table
+        },
     },
     isReply: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
     },
-    parent: {
-        type: DataTypes.INTEGER, // Parent comment ID
+    parent_comment_id: {
+        type: DataTypes.STRING, // Parent comment ID
+        references: {
+            model: "Comments", // Self-reference
+            key: "comment_id",
+        },
     }
 }, {
     timestamps: true,
