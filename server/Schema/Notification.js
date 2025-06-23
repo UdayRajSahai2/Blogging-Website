@@ -17,19 +17,42 @@ const Notification = sequelize.define("Notification", {
     notification_for: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        references: {
+            model: "Users",
+            key: "user_id"
+        }
     },
     user: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        references: {
+            model: "Users", 
+            key: "user_id"
+        }
     },
     comment_id: {
-        type: DataTypes.INTEGER, // Can be null if it's a like
+        type: DataTypes.STRING,
+        allowNull: true,
+        references: {
+            model: "Comments",
+            key: "comment_id"
+        }
     },
     reply: {
-        type: DataTypes.INTEGER, // Can be null if it's not a reply
+        type: DataTypes.STRING,
+        allowNull: true,
+        references: {
+            model: "Comments",
+            key: "comment_id"
+        }
     },
     replied_on_comment: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.STRING,
+        allowNull: true,
+        references: {
+            model: "Comments",
+            key: "comment_id"
+        }
     },
     seen: {
         type: DataTypes.BOOLEAN,
@@ -38,6 +61,5 @@ const Notification = sequelize.define("Notification", {
 }, {
     timestamps: true,
 });
-
 
 export default Notification;

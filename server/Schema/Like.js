@@ -11,7 +11,7 @@ const Like = sequelize.define("Like", {
     type: DataTypes.STRING,
     allowNull: false,
     references: {
-      model: "Blogs", // References the Blog table
+      model: "Blogs",
       key: "blog_id",
     },
   },
@@ -19,12 +19,19 @@ const Like = sequelize.define("Like", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: "Users", // References the User table
+      model: "Users",
       key: "user_id",
     },
-  },
+  }
 }, {
-  timestamps: true, // Adds createdAt and updatedAt
+  timestamps: true,
+  indexes: [
+    {
+      unique: true,
+      fields: ['blog_id', 'user_id'],
+      name: 'unique_like'
+    }
+  ]
 });
 
 export default Like;

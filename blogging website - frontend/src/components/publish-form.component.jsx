@@ -5,12 +5,12 @@ import { EditorContext } from "../pages/editor.pages";
 import Tag from "./tags.component";
 import axios from "axios";
 import { UserContext } from "../App";
-import { useNavigate } from "react-router-dom";
+import { useNavigate,useParams } from "react-router-dom";
 
 const PublishForm = () => {
   let characterLimit = 300;
   let tagLimit = 10;
-
+  let {blog_id} = useParams();
   let {
     blog,
     blog: { banner, title, tags, des,content },
@@ -75,7 +75,7 @@ const PublishForm = () => {
       let blogObj = {
         title,banner,des,content,tags,draft:false
       }
-      axios.post(import.meta.env.VITE_SERVER_DOMAIN + "/create-blog",blogObj,{
+      axios.post(import.meta.env.VITE_SERVER_DOMAIN + "/create-blog",{...blogObj,id:blog_id},{
           headers: {
             'Authorization': `Bearer ${access_token}`
           }

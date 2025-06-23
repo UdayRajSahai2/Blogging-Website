@@ -7,7 +7,7 @@ const BlogPostCard = ({ content, author }) => {
     title,
     des,
     banner,
-    activity: { total_likes },
+    total_likes ,
     blog_id: id,
   } = content;
  
@@ -41,7 +41,7 @@ const BlogPostCard = ({ content, author }) => {
           {tags[0] && (<span className="btn-light py-1 px-4">{tags[0]}</span>)}
           <span className="ml-3 flex items-center gap-2 text-dark-grey ">
             <i className="fi fi-rr-heart text-xl"></i>
-            {total_likes}
+            {total_likes || 0}
           </span>
         </div>
       </div>

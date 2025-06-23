@@ -45,12 +45,91 @@
 # }
 
 
-POST http://localhost:3000/get-profile
+# POST http://localhost:3000/get-profile
+# Content-Type: application/json
+
+# {
+#     "username": "himanshu123"
+# }
+
+# POST http://localhost:3000/get-blog
+# Content-Type: application/json
+
+# {
+#     "blog_id": "Smart-Saving-Tips-for-Millennials-and-Gen-ZVzEmkkVQAjmLo_3yhGtXn"
+# }
+
+# POST http://localhost:3000/handle-like
+# Content-Type: application/json
+# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJpYXQiOjE3NDIzOTk1NzF9.uDQvsqtlvoA-RAQCR69laJE0hAMrn13nqN7vLer9pwM
+
+# {
+#     "blog_id": "React-Hooks-ExplainedL6NzuLuqFvRm8Lrcv8zDK",
+#     "isLiked": true
+    
+# }
+
+# GET http://localhost:3000/notifications
+# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJpYXQiOjE3NDIzOTk1NzF9.uDQvsqtlvoA-RAQCR69laJE0hAMrn13nqN7vLer9pwM
+
+# POST http://localhost:3000/add-comment
+# Content-Type: application/json
+# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJpYXQiOjE3NDIzOTk1NzF9.uDQvsqtlvoA-RAQCR69laJE0hAMrn13nqN7vLer9pwM
+
+# {
+#     "blog_id": "Want-to-grow-your-followers-without-spending-on-ads-Here-s-how-RrbLuJ7dmZWUMg_M3fXHT",
+#     "comment": "Very helpful !!!! I was struggling with this but thanks to you i got the solution now . Thanks a ton !!!!!"
+# }
+
+# POST http://localhost:3000/add-comment
+# Content-Type: application/json
+# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJpYXQiOjE3NDIzOTk1NzF9.uDQvsqtlvoA-RAQCR69laJE0hAMrn13nqN7vLer9pwM
+
+# {
+#     "blog_id": "Want-to-grow-your-followers-without-spending-on-ads-Here-s-how-RrbLuJ7dmZWUMg_M3fXHT",
+#     "comment": "Thanks for sharing your thoughts! I agree completely.",
+#     "replying_to": "comment_cIfFCgQGUHKe-hKTWD0DX"
+# }
+
+# POST http://localhost:3000/get-blog-comments
+# Content-Type: application/json
+
+# {
+#   "blog_id": "Want-to-grow-your-followers-without-spending-on-ads-Here-s-how-RrbLuJ7dmZWUMg_M3fXHT"
+# }
+
+# DELETE http://localhost:3000/delete-comment
+# Content-Type: application/json
+# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJpYXQiOjE3NDIzOTk1NzF9.uDQvsqtlvoA-RAQCR69laJE0hAMrn13nqN7vLer9pwM
+
+# {
+#   "comment_id": "comment_qxaruX5LcQjAkCxWZa3uH"
+# }
+
+# GET http://localhost:3000/new-notification
+# Content-Type: application/json
+# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJpYXQiOjE3NDIzOTk1NzF9.uDQvsqtlvoA-RAQCR69laJE0hAMrn13nqN7vLer9pwM
+
+# POST http://localhost:3000/signin
+# Content-Type: application/json
+
+# {
+#   "email": "pradeep123@yahoo.com",
+#   "password": "Pradeep@123456789"
+# }
+
+
+POST http://localhost:3000/notifications
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMCwiaWF0IjoxNzUwNDkwODgzfQ.hqTO-hrzctN28ilyUfkprIKVR_C5zeEAoEH6uj_cjRw
 
 {
-    "username": "himanshu123"
+  "page": 1,
+  "filter": "all"
 }
+
+
+
 
 
 

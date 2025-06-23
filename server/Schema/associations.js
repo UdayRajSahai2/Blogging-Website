@@ -1,78 +1,147 @@
 import User from "./User.js";
 import Blog from "./Blog.js";
 import Comment from "./Comment.js";
-import Like from "./Like.js"; // Add this at the top
+import Like from "./Like.js";
 import Read from "./Read.js";
 import Notification from "./Notification.js";
 import Profession from "./Professions.js";
 
-// Define associations for User
-User.associate = (models) => {
-    User.hasMany(models.Blog, { foreignKey: "author", as: "userBlogs" });
-    User.hasMany(models.Comment, { foreignKey: "commented_by", as: "comments" });
-    User.hasMany(models.Notification, { foreignKey: "notification_for", as: "notifications" });
-    User.belongsTo(models.Profession, { foreignKey: "profession_id", as: "profession" });
-};
-
-// Define associations for Blog
-Blog.associate = (models) => {
-    Blog.belongsTo(models.User, { foreignKey: "author", as: "blogAuthor" });
-    Blog.hasMany(models.Comment, { foreignKey: "blog_id", as: "comments" });
-    Blog.hasMany(models.Notification, { foreignKey: "blog", as: "notifications" });
-};
-
-Like.associate = (models) => {
-    Like.belongsTo(models.Blog, { foreignKey: "blog_id" });
-    Like.belongsTo(models.User, { foreignKey: "user_id" });
-};
-
-// Define associations for Comment
-Comment.associate = (models) => {
-    Comment.belongsTo(models.User, { foreignKey: "commented_by", as: "commentedBy" });
-    Comment.belongsTo(models.Blog, { foreignKey: "blog_id", as: "blog" });
-    Comment.belongsTo(models.Comment, { foreignKey: "parent", as: "parentComment" });
-    Comment.hasMany(models.Comment, { foreignKey: "parent", as: "replies" });
-};
-
-// Define associations for Notification
-Notification.associate = (models) => {
-    Notification.belongsTo(models.User, { foreignKey: "notification_for", as: "notificationFor" });
-    Notification.belongsTo(models.Blog, { foreignKey: "blog_id", as: "notificationBlog" });
-    Notification.belongsTo(models.Comment, { foreignKey: "comment_id", as: "notificationComment" });
-    Notification.belongsTo(models.User, { foreignKey: "user", as: "notificationUser" });
-};
-
-// Define associations for Read
-Read.associate = (models) => {
-    Read.belongsTo(models.Blog, { foreignKey: "blog_id" });
-    Read.belongsTo(models.User, { foreignKey: "user_id" });
-};
-
-// Define associations for Profession
-Profession.associate = (models) => {
-    Profession.hasMany(models.User, { foreignKey: "profession_id", as: "users" });
-    Profession.belongsTo(models.Profession, { foreignKey: "parent_id", as: "parentProfession" });
-    Profession.hasMany(models.Profession, { foreignKey: "parent_id", as: "childProfessions" });
-};
-
 // Function to set up all associations
-const setupAssociations = (models) => {
-    User.associate(models);
-    Blog.associate(models);
-    Like.associate(models);
-    Read.associate(models);
-    Comment.associate(models);
-    Notification.associate(models);
-    Profession.associate(models);
+const setupAssociations = () => {
+  // Create models object
+  const models = {
+    User,
+    Blog,
+    Comment,
+    Like,
+    Read,
+    Notification,
+    Profession,
   };
 
+  // Define associations for User
+  User.hasMany(Blog, { foreignKey: "author", as: "userBlogs" });
+  User.hasMany(Comment, { foreignKey: "commented_by", as: "comments" });
+  User.hasMany(Like, { foreignKey: "user_id", as: "userLikes" }); // Added this missing association
+  User.hasMany(Notification, {
+    foreignKey: "notification_for",
+    as: "notifications",
+  });
+  User.hasMany(Notification, { foreignKey: "user", as: "sentNotifications" });
+  User.belongsTo(Profession, { foreignKey: "profession_id", as: "profession" });
 
-console.log("User associations:", User.associations);
-console.log("Blog associations:", Blog.associations);
-console.log("Like associations", Like.associations)
-console.log("Read associations", Read.associations)
-console.log("Comment associations:", Comment.associations);
-console.log("Notification associations:", Notification.associations);
-console.log("Profession associations:", Profession.associations);
+  // Define associations for Blog
+  Blog.belongsTo(User, { foreignKey: "author", as: "blogAuthor" });
+  Blog.hasMany(Comment, {
+    sourceKey: "blog_id",
+    foreignKey: "blog_id",
+    as: "comments",
+  });
+ Blog.hasMany(Notification, { 
+    sourceKey: "blog_id",  // Use blog_id from Blog table
+    foreignKey: "blog", 
+    as: "notifications" 
+});
+  Blog.hasMany(Like, {
+    sourceKey: "blog_id", // Use blog_id from Blog table
+    foreignKey: "blog_id", // References blog_id in Like table
+    as: "likes",
+  });
+  Blog.hasMany(Read, {
+    sourceKey: "blog_id",
+    foreignKey: "blog_id",
+    as: "reads",
+  });
 
-export { User, Blog,Like, Comment,Read, Notification, Profession,setupAssociations  };
+  // Define associations for Like
+  Like.belongsTo(Blog, {
+    targetKey: "blog_id", // Use blog_id in Blog table
+    foreignKey: "blog_id", // References blog_id in Like table
+    as: "blog",
+  });
+  Like.belongsTo(User, {
+    targetKey: "user_id", // Use user_id in User table
+    foreignKey: "user_id", // References user_id in Like table
+    as: "user",
+  });
+
+  // Define associations for Comment
+  Comment.belongsTo(User, {
+    targetKey: "user_id",
+    foreignKey: "commented_by",
+    as: "commentedBy",
+  });
+  Comment.belongsTo(Blog, {
+    targetKey: "blog_id",
+    foreignKey: "blog_id",
+    as: "blog",
+  });
+  Comment.belongsTo(Comment, {
+    foreignKey: "parent_comment_id",
+    as: "parentComment",
+  });
+  Comment.hasMany(Comment, { foreignKey: "parent_comment_id", as: "replies" });
+  Comment.hasMany(Notification, {
+    foreignKey: "comment_id",
+    as: "commentNotifications",
+  });
+
+  // Define associations for Notification
+  Notification.belongsTo(User, {
+    foreignKey: "notification_for",
+    as: "notificationFor",
+  });
+  Notification.belongsTo(User, { foreignKey: "user", as: "notificationUser" });
+  Notification.belongsTo(Blog, {
+    foreignKey: "blog",
+    targetKey: "blog_id", // This tells Sequelize to match with blog_id field in Blog table
+    as: "notificationBlog",
+  });
+  Notification.belongsTo(Comment, {
+    foreignKey: "comment_id",
+    as: "notificationComment",
+  });
+  Notification.belongsTo(Comment, { foreignKey: "reply", as: "replyComment" });
+  Notification.belongsTo(Comment, {
+    foreignKey: "replied_on_comment",
+    as: "repliedOnComment",
+  });
+
+  // Define associations for Read
+  Read.belongsTo(Blog, {
+    targetKey: "blog_id",
+    foreignKey: "blog_id",
+    as: "blog",
+  });
+  Read.belongsTo(User, {
+    targetKey: "user_id",
+    foreignKey: "user_id",
+    as: "user",
+  });
+
+  // Define associations for Profession
+  Profession.hasMany(User, { foreignKey: "profession_id", as: "users" });
+  Profession.belongsTo(Profession, {
+    foreignKey: "parent_id",
+    as: "parentProfession",
+  });
+  Profession.hasMany(Profession, {
+    foreignKey: "parent_id",
+    as: "childProfessions",
+  });
+
+  console.log("✅ All associations set up successfully!");
+
+  return models;
+};
+
+export {
+  User,
+  Blog,
+  Like,
+  Comment,
+  Read,
+  Notification,
+  Profession,
+  setupAssociations,
+};

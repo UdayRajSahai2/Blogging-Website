@@ -8,16 +8,12 @@ import jwt from "jsonwebtoken";
 import cors from "cors";
 import admin from "firebase-admin";
 import serviceAccountKey from "./reactjs-blogging-website-ac6e9-firebase-adminsdk-fbsvc-9c580bec3f.json" assert { type: "json" };
-
 import { getAuth } from "firebase-admin/auth";
 import aws from "aws-sdk";
-import { Op } from 'sequelize';
+import { Op } from "sequelize";
+// import multer from 'multer';
+// import path from 'path';
 
-// import User from "./Schema/User.js";
-// import Profession from "./Schema/Professions.js";
-// import Blog from "./Schema/Blog.js";
-
-// Import models and setupAssociations from associations.js
 import {
   User,
   Profession,
@@ -90,11 +86,17 @@ const formatDatatoSend = (user) => {
     { user_id: user.user_id },
     process.env.SECRET_ACCESS_KEY
   );
+  // Verify consistency
+  const decoded = jwt.decode(access_token);
+  if (decoded.user_id !== user.user_id) {
+    throw new Error("User ID mismatch in token generation");
+  }
   return {
     access_token,
     profile_img: user.profile_img,
     username: user.username,
     fullname: user.fullname,
+    user_id: user.user_id,
   };
 };
 
@@ -114,16 +116,17 @@ const connectDB = async () => {
   try {
     await sequelize.authenticate();
     console.log("✅ MySQL Database Connected!");
-     // Disable alter and force for all sync operations
-     const syncOptions = { 
-      alter: false,  // Disable automatic table changes
-      force: false   // Make sure this is false (or you'll lose data)
+    // Disable alter and force for all sync operations
+    const syncOptions = {
+      alter: false, // Disable automatic table changes
+      force: false, // Make sure this is false (or you'll lose data)
     };
     await User.sync(syncOptions);
     await Profession.sync(syncOptions);
+    await Comment.sync(syncOptions);
+    await Notification.sync(syncOptions);
     await Blog.sync(syncOptions);
     await Like.sync(syncOptions);
-    await Comment.sync(syncOptions);
     await Read.sync(syncOptions);
     // await Comment.sync({ alter: true });
     // await Notification.sync({ alter: true });
@@ -140,50 +143,143 @@ let emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/; // regex for e
 let passwordRegex =
   /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{12,}$/;
 
-server.post("/signup", async (req, res) => {
-  let { fullname, email, password } = req.body;
+let mobileRegex = /^[+]?[0-9]{10,15}$/;
 
-  if (fullname.length < 3) {
-    return res
-      .status(403)
-      .json({ error: "❌ Fullname must be at least 3 letters long" });
+server.post("/signup", async (req, res) => {
+  let { first_name, last_name, email, password, mobile_number } = req.body;
+
+  if (!first_name || first_name.length < 1) {
+    return res.status(403).json({ error: "❌ First name is required" });
   }
-  if (!email.length) {
-    return res.status(403).json({ error: "❌ Enter email" });
+  if (!last_name || last_name.length < 1) {
+    return res.status(403).json({ error: "❌ Last name is required" });
   }
-  if (!emailRegex.test(email)) {
+  if (!email || !emailRegex.test(email)) {
     return res.status(403).json({ error: "❌ Email is invalid" });
   }
-  if (!passwordRegex.test(password)) {
+  if (!password || !passwordRegex.test(password)) {
     return res.status(403).json({
       error:
-        "❌ Password must be at least 12 characters long and include at least one numeric digit, one lowercase letter, one uppercase letter, and one special character.",
+        "❌ Password must be at least 12 characters with uppercase, lowercase, number and special character",
     });
+  }
+  if (mobile_number && !mobileRegex.test(mobile_number)) {
+    return res.status(403).json({ error: "❌ Mobile number is invalid" });
   }
 
   try {
-    // Hash the password
     const hashed_password = await bcrypt.hash(password, 10);
     let username = await generateUsername(email);
 
-    // Save user to database
     let user = await User.create({
-      fullname,
+      first_name,
+      last_name,
       email,
       password: hashed_password,
       username,
+      mobile_number: mobile_number || null,
+      google_auth: false,
     });
 
     return res.status(200).json(formatDatatoSend(user));
   } catch (error) {
+    console.error("Signup error:", error);
     if (error.name === "SequelizeUniqueConstraintError") {
-      return res.status(400).json({ error: "❌ Email already exists" });
+      if (error.errors.some((e) => e.path === "email")) {
+        return res.status(400).json({ error: "❌ Email already exists" });
+      }
+      if (error.errors.some((e) => e.path === "mobile_number")) {
+        return res
+          .status(400)
+          .json({ error: "❌ Mobile number already exists" });
+      }
     }
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: "❌ Server error during signup" });
   }
 });
+
+server.post("/change-password", verifyJWT, async (req, res) => {
+  let { currentPassword, newPassword } = req.body;
+
+  // Input validation
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({
+      error: "❌ Both current password and new password are required",
+    });
+  }
+
+  if (!passwordRegex.test(newPassword)) {
+    return res.status(403).json({
+      error:
+        "❌ New password must be at least 12 characters long and include at least one numeric digit, one lowercase letter, one uppercase letter, and one special character.",
+    });
+  }
+
+  // Check if new password is different from current password
+  if (currentPassword === newPassword) {
+    return res.status(400).json({
+      error: "❌ New password must be different from current password",
+    });
+  }
+
+  try {
+    // Find the user by ID (from JWT token)
+    const user = await User.findOne({
+      where: { user_id: req.user },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "❌ User not found" });
+    }
+
+    // Check if user signed up with Google
+    if (user.google_auth) {
+      return res.status(403).json({
+        error:
+          "❌ Cannot change password for Google authenticated account. Use Google to manage your password.",
+      });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
+    if (!isCurrentPasswordValid) {
+      return res
+        .status(403)
+        .json({ error: "❌ Current password is incorrect" });
+    }
+
+    // Hash the new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user's password in database
+    await User.update(
+      { password: hashedNewPassword },
+      { where: { user_id: req.user } }
+    );
+
+    return res.status(200).json({
+      message: "✅ Password changed successfully",
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+    return res.status(500).json({
+      error: "❌ Server error occurred while changing password",
+    });
+  }
+});
+
 server.post("/signin", async (req, res) => {
   let { email, password } = req.body;
+
+  // Input validation
+  if (!email || !password) {
+    return res
+      .status(400)
+      .json({ error: "❌ Email and password are required" });
+  }
 
   try {
     const user = await User.findOne({ where: { email } });
@@ -191,6 +287,7 @@ server.post("/signin", async (req, res) => {
     if (!user) {
       return res.status(403).json({ error: "❌ Email not found" });
     }
+
     if (!user.google_auth) {
       // Compare the entered password with the hashed password
       const passwordMatch = await bcrypt.compare(password, user.password);
@@ -201,63 +298,150 @@ server.post("/signin", async (req, res) => {
       return res.json(formatDatatoSend(user));
     } else {
       return res.status(403).json({
-        error: "Account was created using google. Try logging in with google",
+        error:
+          "❌ Account was created using Google. Try logging in with Google",
       });
     }
   } catch (err) {
-    console.log(err);
-    return res.status(500).json({ error: "❌ Server error" });
+    console.error("Signin error:", err);
+    return res.status(500).json({ error: "❌ Server error during signin" });
   }
 });
 
+// IMPROVED GOOGLE AUTH ENDPOINT
 server.post("/google-auth", async (req, res) => {
   let { access_token } = req.body;
 
+  console.log("=== Google Auth Request ===");
+  console.log("Received request body:", req.body);
+
   if (!access_token) {
+    console.log("❌ No access token provided");
     return res.status(400).json({ error: "❌ Access token is missing" });
   }
 
   try {
-    console.log("Received Access Token:", access_token);
+    console.log("🔍 Verifying Firebase ID token...");
+    console.log(
+      "Token (first 50 chars):",
+      access_token.substring(0, 50) + "..."
+    );
 
+    // Verify the Firebase ID token
     const decodedUser = await getAuth().verifyIdToken(access_token);
 
     if (!decodedUser) {
+      console.log("❌ Token verification failed - no decoded user");
       throw new Error("Failed to verify token");
     }
 
-    console.log("Decoded User:", decodedUser);
+    console.log("✅ Token verified successfully");
+    console.log("Decoded user info:", {
+      email: decodedUser.email,
+      name: decodedUser.name,
+      uid: decodedUser.uid,
+      picture: decodedUser.picture ? "present" : "not present",
+    });
 
-    let { email, name, picture } = decodedUser;
-    picture = picture.replace("s96-c", "s384-c");
+    let { email, name, picture, uid } = decodedUser;
 
-    let user = await User.findOne({ where: { email } });
-
-    if (user && !user.google_auth) {
-      return res.status(403).json({
-        error:
-          "This email was signed up without Google. Please log in with a password.",
-      });
+    // Validate required fields
+    if (!email || !name) {
+      console.log("❌ Missing required fields from Google");
+      throw new Error("Missing required user information from Google");
     }
 
-    if (!user) {
+    // Improve picture quality if available
+    if (picture) {
+      picture = picture.replace("s96-c", "s384-c");
+    }
+
+    console.log("🔍 Checking if user exists in database...");
+    // Check if user already exists
+    let user = await User.findOne({ where: { email } });
+
+    if (user) {
+      console.log("👤 User found in database:", user.user_id);
+
+      // If user exists but not with Google auth, prevent login
+      if (!user.google_auth) {
+        console.log("❌ User exists but not with Google auth");
+        return res.status(403).json({
+          error:
+            "❌ This email was signed up without Google. Please log in with a password.",
+        });
+      }
+
+      // User exists and has Google auth, update profile image if it has changed
+      if (picture && user.profile_img !== picture) {
+        console.log("📸 Updating profile image...");
+        await User.update(
+          { profile_img: picture },
+          { where: { user_id: user.user_id } }
+        );
+        // Refresh user data
+        user = await User.findOne({ where: { email } });
+      }
+
+      console.log("✅ Existing Google user logged in successfully");
+    } else {
+      console.log("🆕 Creating new user...");
+
+      // If user doesn't exist, create new user
       let username = await generateUsername(email);
+
       user = await User.create({
         fullname: name,
         email,
-        profile_img: picture,
+        profile_img: picture || "", // Provide default empty string if no picture
         username,
         google_auth: true,
-        password: null,
+        password: null, // No password for Google auth users
+      });
+
+      console.log("✅ New Google user created successfully:", user.user_id);
+    }
+
+    const responseData = formatDatatoSend(user);
+    console.log("📤 Sending response for user:", user.user_id);
+
+    return res.status(200).json(responseData);
+  } catch (err) {
+    console.error("❌ Google Auth Error Details:", err);
+
+    // Handle specific Firebase auth errors
+    if (err.code === "auth/id-token-expired") {
+      console.log("🕐 Token expired");
+      return res.status(401).json({
+        error: "❌ Token has expired. Please sign in again.",
+      });
+    } else if (err.code === "auth/invalid-id-token") {
+      console.log("🔒 Invalid token");
+      return res.status(401).json({
+        error: "❌ Invalid token. Please sign in again.",
+      });
+    } else if (err.code === "auth/project-not-found") {
+      console.log("🚫 Firebase project not found");
+      return res.status(500).json({
+        error: "❌ Firebase project configuration error.",
+      });
+    } else if (err.code === "auth/argument-error") {
+      console.log("📝 Token format error");
+      return res.status(400).json({
+        error: "❌ Invalid token format.",
       });
     }
 
-    return res.status(200).json(formatDatatoSend(user));
-  } catch (err) {
-    console.error("Google Auth Error:", err.message);
+    // Database errors
+    if (err.name && err.name.includes("Sequelize")) {
+      console.log("🗄️ Database error");
+      return res.status(500).json({
+        error: "❌ Database error during Google authentication.",
+      });
+    }
+
     return res.status(500).json({
-      error:
-        "❌ Failed to authenticate with Google. Try with another Google account.",
+      error: "❌ Failed to authenticate with Google. Please try again.",
     });
   }
 });
@@ -272,9 +456,9 @@ server.get("/get-upload-url", (req, res) => {
     });
 });
 
-server.post('/latest-blogs', async (req, res) => {
+server.post("/latest-blogs", async (req, res) => {
   let maxLimit = 5;
-  let {page} = req.body;
+  let { page } = req.body;
 
   try {
     // Calculate offset for pagination
@@ -286,81 +470,82 @@ server.post('/latest-blogs', async (req, res) => {
       include: [
         {
           model: User,
-          as: 'blogAuthor',
-          attributes: ['profile_img', 'username', 'fullname'],
+          as: "blogAuthor",
+          attributes: ["profile_img", "username", "fullname"],
         },
       ],
-      order: [['publishedAt', 'DESC']],
+      order: [["publishedAt", "DESC"]],
       attributes: [
-        'blog_id', 
-        'title', 
-        'des', 
-        'banner', 
-        'tags', 
-        'publishedAt',
-        'createdAt',
-        'updatedAt'
+        "blog_id",
+        "title",
+        "des",
+        "banner",
+        "tags",
+        "publishedAt",
+        "createdAt",
+        "updatedAt",
       ],
-       offset: offset, // Use offset instead of skip
+      offset: offset, // Use offset instead of skip
       limit: maxLimit,
     });
 
     if (!blogs.length) {
-      return res.status(200).json({ 
-        status: 'success',
+      return res.status(200).json({
+        status: "success",
         results: 0,
-        blogs: [] 
+        blogs: [],
       });
     }
 
-    const blogIds = blogs.map(blog => blog.blog_id);
+    const blogIds = blogs.map((blog) => blog.blog_id);
 
     // Count likes, comments, reads, and parent comments
-    const [likesCounts, commentsCounts, readsCounts, parentCommentsCounts] = await Promise.all([
-      Like.findAll({
-        attributes: [
-          'blog_id', 
-          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
-        ],
-        where: { blog_id: blogIds },
-        group: ['blog_id'],
-        raw: true
-      }),
-      
-      Comment.findAll({
-        attributes: [
-          'blog_id', 
-          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
-        ],
-        where: { blog_id: blogIds },
-        group: ['blog_id'],
-        raw: true
-      }),
-      
-      Read.findAll({
-        attributes: [
-          'blog_id', 
-          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
-        ],
-        where: { blog_id: blogIds },
-        group: ['blog_id'],
-        raw: true
-      }),
+    const [likesCounts, commentsCounts, readsCounts, parentCommentsCounts] =
+      await Promise.all([
+        Like.findAll({
+          attributes: [
+            "blog_id",
+            [sequelize.fn("COUNT", sequelize.col("blog_id")), "count"],
+          ],
+          where: { blog_id: blogIds },
+          group: ["blog_id"],
+          raw: true,
+        }),
 
-      // Count only parent comments (where parent is null)
-      Comment.findAll({
-        attributes: [
-          'blog_id', 
-          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
-        ],
-        where: { 
-          blog_id: blogIds,
-          parent: null 
-        },
-        group: ['blog_id'],
-        raw: true
-      })
-    ]);
+        Comment.findAll({
+          attributes: [
+            "blog_id",
+            [sequelize.fn("COUNT", sequelize.col("blog_id")), "count"],
+          ],
+          where: { blog_id: blogIds },
+          group: ["blog_id"],
+          raw: true,
+        }),
+
+        Read.findAll({
+          attributes: [
+            "blog_id",
+            [sequelize.fn("COUNT", sequelize.col("blog_id")), "count"],
+          ],
+          where: { blog_id: blogIds },
+          group: ["blog_id"],
+          raw: true,
+        }),
+
+        // Count only parent comments (where parent is null)
+        Comment.findAll({
+          attributes: [
+            "blog_id",
+            [sequelize.fn("COUNT", sequelize.col("blog_id")), "count"],
+          ],
+          where: {
+            blog_id: blogIds,
+            parent: null,
+          },
+          group: ["blog_id"],
+          raw: true,
+        }),
+      ]);
 
     // Create lookup maps
     const createCountMap = (items) => {
@@ -376,35 +561,32 @@ server.post('/latest-blogs', async (req, res) => {
     const parentCommentsMap = createCountMap(parentCommentsCounts);
 
     // Combine blog data with activity counts
-    const blogsWithActivity = blogs.map(blog => {
+    const blogsWithActivity = blogs.map((blog) => {
       return {
         ...blog.get({ plain: true }),
-        activity: {
-          total_likes: likesMap[blog.blog_id] || 0,
-          total_comments: commentsMap[blog.blog_id] || 0,
-          total_reads: readsMap[blog.blog_id] || 0,
-          total_parent_comments: parentCommentsMap[blog.blog_id] || 0
-        }
+        total_likes: likesMap[blog.blog_id] || 0,
+        total_comments: commentsMap[blog.blog_id] || 0,
+        total_reads: readsMap[blog.blog_id] || 0,
+        total_parent_comments: parentCommentsMap[blog.blog_id] || 0,
       };
     });
 
-    return res.status(200).json({ 
-      status: 'success',
+    return res.status(200).json({
+      status: "success",
       results: blogsWithActivity.length,
       blogs: blogsWithActivity,
       pagination: {
         currentPage: parseInt(page),
         perPage: maxLimit,
-        totalPages: Math.ceil(blogsWithActivity.length / maxLimit)
-      }
+        totalPages: Math.ceil(blogsWithActivity.length / maxLimit),
+      },
     });
-
   } catch (err) {
     console.error("Error fetching latest blogs:", err);
-    return res.status(500).json({ 
-      status: 'error',
-      message: 'Failed to fetch latest blogs',
-      error: process.env.NODE_ENV === 'development' ? err.message : null
+    return res.status(500).json({
+      status: "error",
+      message: "Failed to fetch latest blogs",
+      error: process.env.NODE_ENV === "development" ? err.message : null,
     });
   }
 });
@@ -412,9 +594,9 @@ server.post('/latest-blogs', async (req, res) => {
 server.post("/all-latest-blogs-count", async (req, res) => {
   try {
     const count = await Blog.count({
-      where: { draft: false }
+      where: { draft: false },
     });
-    
+
     return res.status(200).json({ totalDocs: count });
   } catch (err) {
     console.log(err.message);
@@ -432,75 +614,71 @@ server.get("/trending-blogs", async (req, res) => {
       include: [
         {
           model: User,
-          as: 'blogAuthor',
-          attributes: ['profile_img', 'username', 'fullname', 'user_id'],
+          as: "blogAuthor",
+          attributes: ["profile_img", "username", "fullname", "user_id"],
         },
       ],
-      attributes: [
-        'blog_id', 
-        'title',  
-        'publishedAt',
-        'author'
-      ],
+      attributes: ["blog_id", "title", "publishedAt", "author"],
       limit: maxLimit,
     });
 
     if (!blogs.length) {
-      return res.status(200).json({ 
-        status: 'success',
+      return res.status(200).json({
+        status: "success",
         results: 0,
-        blogs: [] 
+        blogs: [],
       });
     }
 
-    const blogIds = blogs.map(blog => blog.blog_id);
+    const blogIds = blogs.map((blog) => blog.blog_id);
 
     // Count likes, comments, reads, and parent comments
-    const [likesCounts, commentsCounts, readsCounts, parentCommentsCounts] = await Promise.all([
-      Like.findAll({
-        attributes: [
-          'blog_id', 
-          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
-        ],
-        where: { blog_id: blogIds },
-        group: ['blog_id'],
-        raw: true
-      }),
-      
-      Comment.findAll({
-        attributes: [
-          'blog_id', 
-          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
-        ],
-        where: { blog_id: blogIds },
-        group: ['blog_id'],
-        raw: true
-      }),
-      
-      Read.findAll({
-        attributes: [
-          'blog_id', 
-          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
-        ],
-        where: { blog_id: blogIds },
-        group: ['blog_id'],
-        raw: true
-      }),
+    const [likesCounts, commentsCounts, readsCounts, parentCommentsCounts] =
+      await Promise.all([
+        Like.findAll({
+          attributes: [
+            "blog_id",
+            [sequelize.fn("COUNT", sequelize.col("blog_id")), "count"],
+          ],
+          where: { blog_id: blogIds },
+          group: ["blog_id"],
+          raw: true,
+        }),
 
-      // Count only parent comments (where parent is null)
-      Comment.findAll({
-        attributes: [
-          'blog_id', 
-          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
-        ],
-        where: { 
-          blog_id: blogIds,
-          parent: null 
-        },
-        group: ['blog_id'],
-        raw: true
-      })
-    ]);
+        Comment.findAll({
+          attributes: [
+            "blog_id",
+            [sequelize.fn("COUNT", sequelize.col("blog_id")), "count"],
+          ],
+          where: { blog_id: blogIds },
+          group: ["blog_id"],
+          raw: true,
+        }),
+
+        Read.findAll({
+          attributes: [
+            "blog_id",
+            [sequelize.fn("COUNT", sequelize.col("blog_id")), "count"],
+          ],
+          where: { blog_id: blogIds },
+          group: ["blog_id"],
+          raw: true,
+        }),
+
+        // Count only parent comments (where parent is null)
+        Comment.findAll({
+          attributes: [
+            "blog_id",
+            [sequelize.fn("COUNT", sequelize.col("blog_id")), "count"],
+          ],
+          where: {
+            blog_id: blogIds,
+            parent: null,
+          },
+          group: ["blog_id"],
+          raw: true,
+        }),
+      ]);
 
     // Create lookup maps
     const createCountMap = (items) => {
@@ -516,55 +694,52 @@ server.get("/trending-blogs", async (req, res) => {
     const parentCommentsMap = createCountMap(parentCommentsCounts);
 
     // Combine blog data with activity counts
-    const blogsWithActivity = blogs.map(blog => {
+    const blogsWithActivity = blogs.map((blog) => {
       return {
         ...blog.get({ plain: true }),
-        activity: {
-          total_likes: likesMap[blog.blog_id] || 0,
-          total_comments: commentsMap[blog.blog_id] || 0,
-          total_reads: readsMap[blog.blog_id] || 0,
-          total_parent_comments: parentCommentsMap[blog.blog_id] || 0
-        }
+        total_likes: likesMap[blog.blog_id] || 0,
+        total_comments: commentsMap[blog.blog_id] || 0,
+        total_reads: readsMap[blog.blog_id] || 0,
+        total_parent_comments: parentCommentsMap[blog.blog_id] || 0,
       };
     });
 
     // Sort the blogs by trending criteria
     const trendingBlogs = blogsWithActivity.sort((a, b) => {
       // First sort by total reads (descending)
-      if (b.activity.total_reads !== a.activity.total_reads) {
-        return b.activity.total_reads - a.activity.total_reads;
+      if (b.total_reads !== a.total_reads) {
+        return b.total_reads - a.total_reads;
       }
       // Then sort by total likes (descending)
-      if (b.activity.total_likes !== a.activity.total_likes) {
-        return b.activity.total_likes - a.activity.total_likes;
+      if (b.total_likes !== a.total_likes) {
+        return b.total_likes - a.total_likes;
       }
       // Finally sort by published date (newest first)
       return new Date(b.publishedAt) - new Date(a.publishedAt);
     });
 
-    return res.status(200).json({ 
-      status: 'success',
+    return res.status(200).json({
+      status: "success",
       results: trendingBlogs.length,
-      blogs: trendingBlogs 
+      blogs: trendingBlogs,
     });
-
   } catch (err) {
     console.error("Error fetching trending blogs:", err);
-    return res.status(500).json({ 
-      status: 'error',
-      message: 'Failed to fetch trending blogs',
-      error: process.env.NODE_ENV === 'development' ? err.message : null
+    return res.status(500).json({
+      status: "error",
+      message: "Failed to fetch trending blogs",
+      error: process.env.NODE_ENV === "development" ? err.message : null,
     });
   }
 });
 server.post("/search-blogs", async (req, res) => {
-  let { tag, query,author, page = 1 } = req.body;
-  let maxLimit = 2;
+  let { tag, query, author, page = 1, limit, eliminate_blog } = req.body;
+  let maxLimit = limit ? parseInt(limit) : 2; // Use provided limit or default to 2
 
   if (!tag && !query && !author) {
-    return res.status(400).json({ 
-      status: 'error',
-      message: 'Either tag,query or author parameter is required'
+    return res.status(400).json({
+      status: "error",
+      message: "Either tag, query or author parameter is required",
     });
   }
 
@@ -572,87 +747,115 @@ server.post("/search-blogs", async (req, res) => {
     const offset = (page - 1) * maxLimit;
     let whereClause = { draft: false };
 
+    // Add eliminate_blog condition if provided
+    if (eliminate_blog) {
+      whereClause.blog_id = { [Op.ne]: eliminate_blog };
+    }
+
     if (tag) {
       // For tag search (clicking on tags)
       const normalizedTag = tag.toLowerCase().trim();
-      whereClause[Op.or] = [
-        sequelize.where(
-          sequelize.fn('JSON_SEARCH', sequelize.col('tags'), 'one', `%${normalizedTag}%`),
-          { [Op.ne]: null }
-        ),
-        { tags: { [Op.like]: `%${normalizedTag}%` } }
+      whereClause[Op.and] = [
+        ...(whereClause[Op.and] || []), // Preserve existing conditions
+        {
+          [Op.or]: [
+            sequelize.where(
+              sequelize.fn(
+                "JSON_SEARCH",
+                sequelize.col("tags"),
+                "one",
+                `%${normalizedTag}%`
+              ),
+              { [Op.ne]: null }
+            ),
+            { tags: { [Op.like]: `%${normalizedTag}%` } },
+          ],
+        },
       ];
     } else if (query) {
       // For query search (search box) - search in both title AND tags
       const normalizedQuery = query.toLowerCase().trim();
-      whereClause[Op.or] = [
-        { title: { [Op.like]: `%${normalizedQuery}%` } },
-        sequelize.where(
-          sequelize.fn('JSON_SEARCH', sequelize.col('tags'), 'one', `%${normalizedQuery}%`),
-          { [Op.ne]: null }
-        ),
-        { tags: { [Op.like]: `%${normalizedQuery}%` } }
+      whereClause[Op.and] = [
+        ...(whereClause[Op.and] || []), // Preserve existing conditions
+        {
+          [Op.or]: [
+            { title: { [Op.like]: `%${normalizedQuery}%` } },
+            sequelize.where(
+              sequelize.fn(
+                "JSON_SEARCH",
+                sequelize.col("tags"),
+                "one",
+                `%${normalizedQuery}%`
+              ),
+              { [Op.ne]: null }
+            ),
+            { tags: { [Op.like]: `%${normalizedQuery}%` } },
+          ],
+        },
+      ];
+    } else if (author) {
+      // For author search
+      whereClause[Op.and] = [
+        ...(whereClause[Op.and] || []), // Preserve existing conditions
+        { author: author },
       ];
     }
-    else if (author) {
-      // For author search
-      whereClause.author = author;
-    }
 
-    // Rest of your existing code remains the same...
     const { count: totalBlogs, rows: blogs } = await Blog.findAndCountAll({
       where: whereClause,
-      include: [{
-        model: User,
-        as: 'blogAuthor',
-        attributes: ['profile_img', 'username', 'fullname']
-      }],
-      attributes: ['blog_id', 'title', 'des', 'banner', 'tags', 'publishedAt'],
-      order: [['publishedAt', 'DESC']],
+      include: [
+        {
+          model: User,
+          as: "blogAuthor",
+          attributes: ["profile_img", "username", "fullname"],
+        },
+      ],
+      attributes: ["blog_id", "title", "des", "banner", "tags", "publishedAt"],
+      order: [["publishedAt", "DESC"]],
       limit: maxLimit,
-      offset: offset
+      offset: offset,
     });
 
     if (!blogs.length) {
-      return res.status(200).json({ 
-        status: 'success',
+      return res.status(200).json({
+        status: "success",
         results: totalBlogs,
-        blogs: [] 
+        blogs: [],
       });
     }
 
-    const blogIds = blogs.map(blog => blog.blog_id);
-    
+    const blogIds = blogs.map((blog) => blog.blog_id);
+
     const [likesCounts, commentsCounts, readsCounts] = await Promise.all([
       Like.findAll({
         attributes: [
-          'blog_id', 
-          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+          "blog_id",
+          [sequelize.fn("COUNT", sequelize.col("blog_id")), "count"],
         ],
         where: { blog_id: blogIds },
-        group: ['blog_id'],
-        raw: true
+        group: ["blog_id"],
+        raw: true,
       }),
-      
+
       Comment.findAll({
         attributes: [
-          'blog_id', 
-          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+          "blog_id",
+          [sequelize.fn("COUNT", sequelize.col("blog_id")), "count"],
         ],
         where: { blog_id: blogIds },
-        group: ['blog_id'],
-        raw: true
+        group: ["blog_id"],
+        raw: true,
       }),
-      
+
       Read.findAll({
         attributes: [
-          'blog_id', 
-          [sequelize.fn('COUNT', sequelize.col('blog_id')), 'count']
+          "blog_id",
+          [sequelize.fn("COUNT", sequelize.col("blog_id")), "count"],
         ],
         where: { blog_id: blogIds },
-        group: ['blog_id'],
-        raw: true
-      })
+        group: ["blog_id"],
+        raw: true,
+      }),
     ]);
 
     const createCountMap = (items) => {
@@ -666,40 +869,37 @@ server.post("/search-blogs", async (req, res) => {
     const commentsMap = createCountMap(commentsCounts);
     const readsMap = createCountMap(readsCounts);
 
-    const blogsWithActivity = blogs.map(blog => {
+    const blogsWithActivity = blogs.map((blog) => {
       return {
         ...blog.get({ plain: true }),
-        activity: {
-          total_likes: likesMap[blog.blog_id] || 0,
-          total_comments: commentsMap[blog.blog_id] || 0,
-          total_reads: readsMap[blog.blog_id] || 0
-        }
+        total_likes: likesMap[blog.blog_id] || 0,
+        total_comments: commentsMap[blog.blog_id] || 0,
+        total_reads: readsMap[blog.blog_id] || 0,
       };
     });
 
-    return res.status(200).json({ 
-      status: 'success',
+    return res.status(200).json({
+      status: "success",
       results: totalBlogs,
       blogs: blogsWithActivity,
       pagination: {
         currentPage: parseInt(page),
         perPage: maxLimit,
-        totalPages: Math.ceil(totalBlogs / maxLimit)
-      }
+        totalPages: Math.ceil(totalBlogs / maxLimit),
+      },
     });
-
   } catch (err) {
     console.error("Error searching blogs:", err);
-    return res.status(500).json({ 
-      status: 'error',
-      message: 'Failed to search blogs',
-      error: process.env.NODE_ENV === 'development' ? err.message : null
+    return res.status(500).json({
+      status: "error",
+      message: "Failed to search blogs",
+      error: process.env.NODE_ENV === "development" ? err.message : null,
     });
   }
 });
 
 server.post("/search-blogs-count", async (req, res) => {
-  let { tag,author, query } = req.body;
+  let { tag, author, query } = req.body;
 
   try {
     let whereClause = { draft: false };
@@ -708,39 +908,47 @@ server.post("/search-blogs-count", async (req, res) => {
       const normalizedTag = tag.toLowerCase().trim();
       whereClause[Op.or] = [
         sequelize.where(
-          sequelize.fn('JSON_SEARCH', sequelize.col('tags'), 'one', `%${normalizedTag}%`),
+          sequelize.fn(
+            "JSON_SEARCH",
+            sequelize.col("tags"),
+            "one",
+            `%${normalizedTag}%`
+          ),
           { [Op.ne]: null }
         ),
-        { tags: { [Op.like]: `%${normalizedTag}%` } }
+        { tags: { [Op.like]: `%${normalizedTag}%` } },
       ];
     } else if (query) {
       const normalizedQuery = query.toLowerCase().trim();
       whereClause[Op.or] = [
         { title: { [Op.like]: `%${normalizedQuery}%` } },
         sequelize.where(
-          sequelize.fn('JSON_SEARCH', sequelize.col('tags'), 'one', `%${normalizedQuery}%`),
+          sequelize.fn(
+            "JSON_SEARCH",
+            sequelize.col("tags"),
+            "one",
+            `%${normalizedQuery}%`
+          ),
           { [Op.ne]: null }
         ),
-        { tags: { [Op.like]: `%${normalizedQuery}%` } }
+        { tags: { [Op.like]: `%${normalizedQuery}%` } },
       ];
-    }
-    else if (author) {
+    } else if (author) {
       // For author search
       whereClause.author = author;
     }
     const count = await Blog.count({
-      where: whereClause
+      where: whereClause,
     });
 
-    return res.status(200).json({ 
-      totalDocs: count 
+    return res.status(200).json({
+      totalDocs: count,
     });
-
   } catch (err) {
     console.error("Error counting search blogs:", err);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: "Failed to count search blogs",
-      details: process.env.NODE_ENV === 'development' ? err.message : null
+      details: process.env.NODE_ENV === "development" ? err.message : null,
     });
   }
 });
@@ -755,13 +963,13 @@ server.post("/search-users", async (req, res) => {
   try {
     const users = await User.findAll({
       where: sequelize.where(
-        sequelize.fn('LOWER', sequelize.col('username')),
-        'LIKE',
+        sequelize.fn("LOWER", sequelize.col("username")),
+        "LIKE",
         `%${query.toLowerCase()}%`
       ),
       limit: 50,
-      attributes: ['fullname', 'username', 'profile_img'],
-      order: [['username', 'ASC']]
+      attributes: ["fullname", "username", "profile_img"],
+      order: [["username", "ASC"]],
     });
 
     return res.status(200).json({ users });
@@ -773,38 +981,37 @@ server.post("/search-users", async (req, res) => {
 
 server.post("/get-profile", async (req, res) => {
   try {
-      const { username } = req.body;
+    const { username } = req.body;
 
-      // Find user and exclude sensitive fields
-      const user = await User.findOne({
-          where: { username },
-          attributes: { 
-              exclude: ['password', 'google_auth', 'updateAt'] 
-          },
-          include: [] // You can include associated models here if needed
-      });
+    // Find user and exclude sensitive fields
+    const user = await User.findOne({
+      where: { username },
+      attributes: {
+        exclude: ["password", "google_auth", "updateAt"],
+      },
+      include: [], // You can include associated models here if needed
+    });
 
-      if (!user) {
-          return res.status(404).json({ error: 'User not found' });
-      }
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-      return res.status(200).json(user);
+    return res.status(200).json(user);
   } catch (err) {
-      console.log(err);
-      return res.status(500).json({ error: err.message });
+    console.log(err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
-
 server.post("/create-blog", verifyJWT, async (req, res) => {
   let authorId = req.user;
-  // console.log("Author Id is ", authorId);
-  let { title, des, banner, tags, content, draft } = req.body;
+  let { title, des, banner, tags, content, draft, id } = req.body;
+
   if (!title.length) {
-    return res.status(403).json({ error: "You must provide a title " });
+    return res.status(403).json({ error: "You must provide a title" });
   }
 
-  // Validation
+  // Validation (same as before)
   if (!draft) {
     if (typeof des !== "string" || !des.length || des.length > 200) {
       return res.status(403).json({
@@ -812,70 +1019,2183 @@ server.post("/create-blog", verifyJWT, async (req, res) => {
       });
     }
     if (!banner.length) {
-      return res
-        .status(403)
-        .json({ error: "You must provide blog banner to publish it" });
+      return res.status(403).json({
+        error: "You must provide blog banner to publish it",
+      });
     }
     if (!content.blocks || !content.blocks.length) {
-      return res
-        .status(403)
-        .json({ error: "There must be some blog content to publish it" });
+      return res.status(403).json({
+        error: "There must be some blog content to publish it",
+      });
     }
     if (!tags.length || tags.length > 10) {
-      return res
-        .status(403)
-        .json({
-          error: "Provide tags in order to publish the blog, Maximum 10",
-        });
+      return res.status(403).json({
+        error: "Provide tags in order to publish the blog, Maximum 10",
+      });
     }
   }
 
   try {
     tags = tags.map((tag) => tag.toLowerCase());
     let blog_id =
+      id ||
       title
         .replace(/[^a-zA-Z0-9]/g, " ")
         .replace(/\s+/g, "-")
         .trim() + nanoid();
 
-    // console.log("Before creating blog...");
-    // Create blog with Sequelize
-    const blog = await Blog.create({
-      title,
-      des,
-      banner,
-      content: JSON.stringify(content), // Store as JSON string
-      tags: JSON.stringify(tags),
-      author: authorId,
-      blog_id,
-      draft: Boolean(draft),
-      publishedAt: draft ? null : new Date()
-    });
-    // console.log("Blog created successfully:", blog);
-    // console.log("Checking author id 2nd time", authorId);
-    // Increment total_posts and update blogs array for user
-    const incrementVal = draft ? 0 : 1;
-    await User.update(
-      {
-        total_posts: Sequelize.literal(`total_posts + ${incrementVal}`), // Increment total_posts
-        blogs: Sequelize.fn(
-          "JSON_ARRAY_APPEND",
-          Sequelize.col("blogs"),
-          "$",
-          blog_id
-        ), // Add blog_id to blogs array
-      },
-      { where: { user_id: authorId } }
-    );
-    // Return success
-    return res.status(200).json({ id: blog.blog_id });
+    if (id) {
+      // UPDATE EXISTING BLOG (Sequelize version)
+      const [updatedCount] = await Blog.update(
+        {
+          title,
+          des,
+          banner,
+          content: JSON.stringify(content),
+          tags: JSON.stringify(tags),
+          draft: draft ? draft : false,
+          publishedAt: draft ? null : new Date(),
+        },
+        {
+          where: { blog_id, author: authorId }, // Only allow author to update
+        }
+      );
+
+      if (updatedCount === 0) {
+        return res
+          .status(404)
+          .json({ error: "Blog not found or not authorized" });
+      }
+
+      return res.status(200).json({ id: blog_id });
+    } else {
+      // CREATE NEW BLOG
+      const blog = await Blog.create({
+        title,
+        des,
+        banner,
+        content: JSON.stringify(content),
+        tags: JSON.stringify(tags),
+        author: authorId,
+        blog_id,
+        draft: Boolean(draft),
+        publishedAt: draft ? null : new Date(),
+      });
+
+      // Update user's post count
+      const incrementVal = draft ? 0 : 1;
+      await User.update(
+        {
+          total_posts: Sequelize.literal(`total_posts + ${incrementVal}`),
+          blogs: Sequelize.fn(
+            "JSON_ARRAY_APPEND",
+            Sequelize.col("blogs"),
+            "$",
+            blog_id
+          ),
+        },
+        { where: { user_id: authorId } }
+      );
+
+      return res.status(200).json({ id: blog.blog_id });
+    }
   } catch (err) {
-    return res
-      .status(500)
-      .json({ error: err.message || "Failed to create blog" });
+    console.error("Error in create-blog:", err);
+    return res.status(500).json({
+      error: err.message || "Failed to create/update blog",
+    });
   }
 });
 
+server.post("/get-blog", async (req, res) => {
+  const { blog_id, draft, mode } = req.body;
+  const incrementVal = mode !== "edit" ? 1 : 0; // Only increment reads if not in edit mode
+
+  try {
+    // 1. Find the blog with author info
+    const blog = await Blog.findOne({
+      where: { blog_id },
+      include: [
+        {
+          model: User,
+          as: "blogAuthor",
+          attributes: ["fullname", "username", "profile_img"],
+        },
+      ],
+      attributes: [
+        "blog_id",
+        "title",
+        "des",
+        "content",
+        "banner",
+        "tags",
+        "publishedAt",
+        "draft",
+      ],
+    });
+
+    if (!blog) {
+      return res.status(404).json({ error: "Blog not found" });
+    }
+
+    // 2. Reject if trying to access a draft without permission
+    if (blog.draft && !draft) {
+      return res.status(403).json({ error: "You cannot access draft blogs" });
+    }
+
+    // 3. Track a read (if not in edit mode)
+    if (mode !== "edit") {
+      await Read.create({ blog_id, user_id: req.user || 0 }); // Simple insert (no duplicates check)
+    }
+
+    // 4. Get activity counts (likes, comments, reads)
+    const [total_likes, total_comments, total_reads] = await Promise.all([
+      Like.count({ where: { blog_id } }),
+      Comment.count({ where: { blog_id } }),
+      Read.count({ where: { blog_id } }),
+    ]);
+
+    // 5. Increment author's read count (if not edit mode)
+    if (incrementVal && blog.author) {
+      await User.increment("total_reads", { where: { user_id: blog.author } });
+    }
+
+    // 6. Return the raw data (let frontend parse JSON strings if needed)
+    return res.status(200).json({
+      blog: {
+        ...blog.get({ plain: true }),
+        total_likes,
+        total_comments,
+        total_reads,
+      },
+    });
+  } catch (err) {
+    console.error("Error in /get-blog:", err);
+    return res.status(500).json({ error: "Failed to fetch blog" });
+  }
+});
+
+server.post("/handle-like", verifyJWT, async (req, res) => {
+  // Validate request body structure first
+  if (!req.body || typeof req.body !== "object") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid request format",
+      error: "Expected JSON object",
+    });
+  }
+
+  const { blog_id, isLiked } = req.body;
+  const user_id = req.user;
+
+  // Validate input types
+  if (typeof isLiked !== "boolean") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid isLiked value",
+      error: "isLiked must be true or false",
+    });
+  }
+
+  if (!blog_id || typeof blog_id !== "string") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid blog ID",
+      error: "blog_id must be a non-empty string",
+    });
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const trimmedBlogId = blog_id.trim();
+
+    // Debug logging
+    console.log("Processing like action:", {
+      blog_id: trimmedBlogId,
+      user_id,
+      action: isLiked ? "like" : "unlike",
+    });
+
+    // FIRST: Get the blog with author info
+    const blog = await Blog.findOne({
+      where: { blog_id: trimmedBlogId },
+      include: [
+        {
+          model: User,
+          as: "blogAuthor",
+          attributes: ["user_id", "fullname", "username", "profile_img"],
+        },
+      ],
+      transaction,
+      lock: transaction.LOCK.UPDATE, // Lock the row for update
+    });
+
+    console.log("Blog Author : ", blog.author);
+    if (!blog) {
+      await transaction.rollback();
+      return res.status(404).json({ error: "Blog not found" });
+    }
+
+    // Get the user who is liking/unliking
+    const user = await User.findOne({
+      where: { user_id },
+      attributes: ["user_id", "fullname", "username", "profile_img"],
+      transaction,
+    });
+
+    if (!user) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    let result;
+    let total_likes;
+
+    if (isLiked) {
+      // LIKE ACTION: Try to create like
+      try {
+        await Like.create(
+          {
+            blog_id: trimmedBlogId,
+            user_id,
+          },
+          { transaction }
+        );
+
+        result = { status: "created" };
+
+        // Create notification ONLY if:
+        // 1. Like was created successfully
+        // 2. User is not liking their own blog
+        const blogAuthorId = blog.author || blog?.blogAuthor?.user_id;
+        console.log("Creating notification for:", {
+          blogAuthorId: blogAuthorId,
+          currentUser: user_id,
+          condition: blogAuthorId !== user_id,
+        });
+
+        if (blogAuthorId && blogAuthorId !== user_id) {
+          await Notification.create(
+            {
+              type: "like",
+              blog: trimmedBlogId,
+              notification_for: blogAuthorId,
+              user: user_id,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+            { transaction }
+          );
+        }
+      } catch (createErr) {
+        if (createErr.name === "SequelizeUniqueConstraintError") {
+          result = { status: "already_exists" };
+        } else {
+          throw createErr;
+        }
+      }
+    } else {
+      // UNLIKE ACTION: Delete from both likes and notifications
+      const deletedLikeCount = await Like.destroy({
+        where: { blog_id: trimmedBlogId, user_id },
+        transaction,
+      });
+
+      // Also delete the corresponding notification
+      const deletedNotificationCount = await Notification.destroy({
+        where: {
+          blog: trimmedBlogId,
+          user: user_id,
+          type: "like",
+        },
+        transaction,
+      });
+
+      console.log(
+        `Deleted ${deletedLikeCount} likes and ${deletedNotificationCount} notifications`
+      );
+
+      result = {
+        status: deletedLikeCount > 0 ? "deleted" : "not_found",
+        deletedLikes: deletedLikeCount,
+        deletedNotifications: deletedNotificationCount,
+      };
+    }
+
+    // Get updated count
+    total_likes = await Like.count({
+      where: { blog_id: trimmedBlogId },
+      transaction,
+    });
+
+    await transaction.commit();
+
+    // Determine final like status
+    const finalLikeStatus = isLiked
+      ? result.status === "created"
+        ? true
+        : false
+      : result.status === "deleted"
+      ? false
+      : true;
+
+    console.log("Operation completed:", {
+      result,
+      total_likes,
+      finalLikeStatus,
+    });
+
+    return res.json({
+      success: true,
+      total_likes,
+      isLiked: finalLikeStatus,
+      user: {
+        user_id: user.user_id,
+        fullname: user.fullname,
+        username: user.username,
+        profile_img: user.profile_img,
+      },
+    });
+  } catch (err) {
+    await transaction.rollback();
+
+    console.error("Like operation failed:", {
+      errorName: err.name,
+      errorMessage: err.message,
+      validationErrors: err.errors?.map((e) => e.message),
+      stack: err.stack,
+    });
+
+    const errorResponse = {
+      success: false,
+      message: "Error processing like action",
+    };
+
+    if (err.name === "SequelizeValidationError") {
+      errorResponse.error = "Data validation failed";
+      errorResponse.details = err.errors.map((e) => ({
+        field: e.path,
+        message: e.message,
+      }));
+    } else if (err.name === "SequelizeForeignKeyConstraintError") {
+      errorResponse.error = "Invalid reference (blog or user doesn't exist)";
+    } else {
+      errorResponse.error = "Database operation failed";
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      errorResponse.debug = {
+        error: err.name,
+        message: err.message,
+      };
+    }
+
+    return res.status(500).json(errorResponse);
+  }
+});
+
+server.post("/check-like", verifyJWT, async (req, res) => {
+  try {
+    const { blog_id } = req.body;
+    const user_id = req.user;
+
+    const like = await Like.findOne({
+      where: { blog_id, user_id },
+    });
+
+    //  // 2. Optional: Check notification if needed
+    const notificationExists = await Notification.findOne({
+      where: {
+        user: user_id,
+        type: "like",
+        blog: blog_id,
+      },
+    });
+
+    res.json({
+      isLiked: !!like,
+      hasNotification: !!notificationExists, // Include if needed
+    });
+  } catch (err) {
+    console.error("Check like error:", err);
+    res.status(500).json({ error: "Error checking like status" });
+  }
+});
+
+server.post("/add-comment", verifyJWT, async (req, res) => {
+  // Validate request body structure first
+  if (!req.body || typeof req.body !== "object") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid request format",
+      error: "Expected JSON object",
+    });
+  }
+
+  const { blog_id, comment, replying_to } = req.body;
+  const user_id = req.user;
+
+  // Validate input
+  if (!blog_id || typeof blog_id !== "string") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid blog ID",
+      error: "blog_id must be a non-empty string",
+    });
+  }
+
+  if (!comment || typeof comment !== "string" || comment.trim().length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid comment",
+      error: "comment must be a non-empty string",
+    });
+  }
+
+  if (comment.trim().length > 1000) {
+    return res.status(400).json({
+      success: false,
+      message: "Comment too long",
+      error: "Comment must be under 1000 characters",
+    });
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const trimmedBlogId = blog_id.trim();
+    const trimmedComment = comment.trim();
+
+    // Debug logging
+    console.log("Processing comment action:", {
+      blog_id: trimmedBlogId,
+      user_id,
+      isReply: !!replying_to,
+      replying_to,
+    });
+
+    // 1. Get the blog with author info
+    const blog = await Blog.findOne({
+      where: { blog_id: trimmedBlogId },
+      include: [
+        {
+          model: User,
+          as: "blogAuthor",
+          attributes: ["user_id", "fullname", "username", "profile_img"],
+        },
+      ],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!blog) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        error: "Blog not found",
+      });
+    }
+
+    // 2. Get the user who is commenting
+    const user = await User.findOne({
+      where: { user_id },
+      attributes: ["user_id", "fullname", "username", "profile_img"],
+      transaction,
+    });
+
+    if (!user) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // 3. If this is a reply, validate parent comment exists
+    let parentComment = null;
+    if (replying_to) {
+      // ✅ FIXED: Simplified query without problematic includes
+      parentComment = await Comment.findOne({
+        where: { comment_id: replying_to },
+        attributes: ["comment_id", "commented_by", "children"], // Only get what we need
+        transaction,
+      });
+
+      if (!parentComment) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          error: "Parent comment not found",
+        });
+      }
+    }
+
+    // 4. Generate unique comment ID
+    const comment_id = `comment_${nanoid()}`;
+
+    // 5. Create the comment
+    const newComment = await Comment.create(
+      {
+        comment_id,
+        blog_id: trimmedBlogId,
+        blog_author: blog.author || blog?.blogAuthor?.user_id,
+        comment: trimmedComment,
+        commented_by: user_id,
+        isReply: !!replying_to,
+        parent_comment_id: replying_to || null,
+        children: [], // Initialize as empty array
+      },
+      { transaction }
+    );
+
+    // 6. If this is a reply, update parent comment's children array
+    if (replying_to && parentComment) {
+      const currentChildren = parentComment.children || [];
+      const updatedChildren = [...currentChildren, comment_id];
+
+      await Comment.update(
+        { children: updatedChildren },
+        {
+          where: { comment_id: replying_to },
+          transaction,
+        }
+      );
+    }
+
+    // 7. Create notification for blog author (if commenter is not the blog author)
+    const blogAuthorId = blog.author || blog?.blogAuthor?.user_id;
+
+    if (blogAuthorId && blogAuthorId !== user_id) {
+      await Notification.create(
+        {
+          type: replying_to ? "reply" : "comment",
+          blog: trimmedBlogId,
+          notification_for: blogAuthorId,
+          user: user_id,
+          comment_id: newComment.comment_id,
+          reply: replying_to ? newComment.comment_id : null,
+          replied_on_comment: replying_to ? parentComment.comment_id : null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        { transaction }
+      );
+    }
+
+    // 8. If this is a reply, also notify the parent comment author (if different from blog author and commenter)
+    if (replying_to && parentComment) {
+      const parentCommentAuthorId = parentComment.commented_by;
+
+      if (
+        parentCommentAuthorId &&
+        parentCommentAuthorId !== user_id &&
+        parentCommentAuthorId !== blogAuthorId
+      ) {
+        await Notification.create(
+          {
+            type: "reply",
+            blog: trimmedBlogId,
+            notification_for: parentCommentAuthorId,
+            user: user_id,
+            comment_id: newComment.comment_id,
+            reply: newComment.comment_id,
+            replied_on_comment: parentComment.comment_id,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          { transaction }
+        );
+      }
+    }
+
+    // 9. Get updated total comments count
+    const total_comments = await Comment.count({
+      where: { blog_id: trimmedBlogId },
+      transaction,
+    });
+
+    await transaction.commit();
+
+    console.log("Comment created successfully:", {
+      comment_id,
+      blog_id: trimmedBlogId,
+      isReply: !!replying_to,
+      total_comments,
+    });
+
+    // 10. Return the created comment with user info
+    return res.json({
+      success: true,
+      message: replying_to
+        ? "Reply added successfully"
+        : "Comment added successfully",
+      comment: {
+        comment_id: newComment.comment_id,
+        blog_id: newComment.blog_id,
+        comment: newComment.comment,
+        commented_by: newComment.commented_by,
+        isReply: newComment.isReply,
+        parent_comment_id: newComment.parent_comment_id,
+        children: newComment.children,
+        createdAt: newComment.createdAt,
+        commentAuthor: {
+          user_id: user.user_id,
+          fullname: user.fullname,
+          username: user.username,
+          profile_img: user.profile_img,
+        },
+      },
+      total_comments,
+    });
+  } catch (err) {
+    await transaction.rollback();
+
+    console.error("Comment operation failed:", {
+      errorName: err.name,
+      errorMessage: err.message,
+      validationErrors: err.errors?.map((e) => e.message),
+      stack: err.stack,
+    });
+
+    const errorResponse = {
+      success: false,
+      message: "Error adding comment",
+    };
+
+    if (err.name === "SequelizeValidationError") {
+      errorResponse.error = "Data validation failed";
+      errorResponse.details = err.errors.map((e) => ({
+        field: e.path,
+        message: e.message,
+      }));
+    } else if (err.name === "SequelizeForeignKeyConstraintError") {
+      errorResponse.error = "Invalid reference (blog or user doesn't exist)";
+    } else if (err.name === "SequelizeUniqueConstraintError") {
+      errorResponse.error = "Duplicate comment ID generated";
+    } else {
+      errorResponse.error = "Database operation failed";
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      errorResponse.debug = {
+        error: err.name,
+        message: err.message,
+      };
+    }
+
+    return res.status(500).json(errorResponse);
+  }
+});
+
+// IMPROVED: Get replies for a specific comment with better pagination
+server.post("/get-comment-replies", async (req, res) => {
+  const { comment_id, skip = 0 } = req.body;
+  const maxLimit = 5;
+
+  if (!comment_id || typeof comment_id !== "string") {
+    return res.status(400).json({
+      success: false,
+      error: "comment_id is required and must be a string",
+    });
+  }
+
+  try {
+    // Get direct replies to the comment
+    const replies = await Comment.findAll({
+      where: {
+        parent_comment_id: comment_id,
+        isReply: true,
+      },
+      include: [
+        {
+          model: User,
+          as: "commentedBy",
+          attributes: ["user_id", "username", "fullname", "profile_img"],
+          required: true,
+        },
+      ],
+      attributes: [
+        "comment_id",
+        "blog_id",
+        "comment",
+        "commented_by",
+        "isReply",
+        "parent_comment_id",
+        "children",
+        "createdAt",
+        "updatedAt",
+      ],
+      order: [["createdAt", "ASC"]], // Oldest replies first
+      offset: parseInt(skip),
+      limit: maxLimit,
+    });
+
+    // Get total count of replies for this comment
+    const totalReplies = await Comment.count({
+      where: {
+        parent_comment_id: comment_id,
+        isReply: true,
+      },
+    });
+
+    // Process replies to ensure children array is properly formatted
+    const processedReplies = await Promise.all(
+      replies.map(async (reply) => {
+        const replyData = reply.get({ plain: true });
+
+        // Get the actual count of replies to this reply
+        const nestedRepliesCount = await Comment.count({
+          where: {
+            parent_comment_id: reply.comment_id,
+            isReply: true,
+          },
+        });
+
+        return {
+          ...replyData,
+          children: replyData.children || [],
+          total_replies: nestedRepliesCount, // Add nested reply count
+        };
+      })
+    );
+
+    const currentPage = Math.floor(skip / maxLimit) + 1;
+    const hasMore = skip + maxLimit < totalReplies;
+
+    console.log(`Found ${replies.length} replies for comment ${comment_id}`, {
+      skip,
+      total: totalReplies,
+      hasMore,
+      currentPage,
+    });
+
+    return res.status(200).json({
+      success: true,
+      replies: processedReplies,
+      pagination: {
+        total: totalReplies,
+        currentPage,
+        hasMore,
+        perPage: maxLimit,
+        loaded: skip + replies.length,
+        remaining: Math.max(0, totalReplies - (skip + replies.length)),
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching comment replies:", err);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch replies",
+      message:
+        process.env.NODE_ENV === "development"
+          ? err.message
+          : "Internal server error",
+    });
+  }
+});
+
+// IMPROVED: Get blog comments with better reply counting
+server.post("/get-blog-comments", async (req, res) => {
+  const { blog_id, skip = 0 } = req.body;
+  const maxLimit = 5;
+
+  // Validate input
+  if (!blog_id || typeof blog_id !== "string") {
+    return res.status(400).json({
+      success: false,
+      error: "blog_id is required and must be a string",
+    });
+  }
+
+  try {
+    const trimmedBlogId = blog_id.trim();
+
+    // Get parent comments (not replies) with author info
+    const comments = await Comment.findAll({
+      where: {
+        blog_id: trimmedBlogId,
+        isReply: false, // Only get parent comments, not replies
+      },
+      include: [
+        {
+          model: User,
+          as: "commentedBy",
+          attributes: ["user_id", "username", "fullname", "profile_img"],
+          required: true,
+        },
+      ],
+      attributes: [
+        "comment_id",
+        "blog_id",
+        "comment",
+        "commented_by",
+        "children",
+        "isReply",
+        "parent_comment_id",
+        "createdAt",
+        "updatedAt",
+      ],
+      order: [["createdAt", "DESC"]], // Latest comments first
+      offset: parseInt(skip),
+      limit: maxLimit,
+    });
+
+    // Get total count of parent comments for pagination
+    const totalComments = await Comment.count({
+      where: {
+        blog_id: trimmedBlogId,
+        isReply: false,
+      },
+    });
+
+    // Process comments to ensure proper data structure and get accurate reply counts
+    const processedComments = await Promise.all(
+      comments.map(async (comment) => {
+        const commentData = comment.get({ plain: true });
+
+        // Get actual reply count for this comment (direct replies only)
+        const totalRepliesCount = await Comment.count({
+          where: {
+            parent_comment_id: comment.comment_id,
+            isReply: true,
+          },
+        });
+
+        return {
+          ...commentData,
+          children: commentData.children || [],
+          total_replies: totalRepliesCount, // Add accurate reply count
+        };
+      })
+    );
+
+    const currentPage = Math.floor(skip / maxLimit) + 1;
+    const hasMore = skip + maxLimit < totalComments;
+
+    console.log(`Found ${comments.length} comments for blog ${trimmedBlogId}`, {
+      skip,
+      total: totalComments,
+      hasMore,
+      currentPage,
+    });
+
+    return res.status(200).json({
+      success: true,
+      comments: processedComments,
+      pagination: {
+        total: totalComments,
+        currentPage,
+        hasMore,
+        perPage: maxLimit,
+        loaded: skip + comments.length,
+        remaining: Math.max(0, totalComments - (skip + comments.length)),
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching blog comments:", {
+      errorName: err.name,
+      errorMessage: err.message,
+      blog_id,
+      skip,
+    });
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch comments",
+      message:
+        process.env.NODE_ENV === "development"
+          ? err.message
+          : "Internal server error",
+    });
+  }
+});
+
+// ENHANCED: Get nested replies with better pagination and depth control
+server.post("/get-nested-replies", async (req, res) => {
+  const { comment_id, max_depth = 2, skip = 0, limit = 5 } = req.body;
+
+  if (!comment_id || typeof comment_id !== "string") {
+    return res.status(400).json({
+      success: false,
+      error: "comment_id is required and must be a string",
+    });
+  }
+
+  try {
+    // Recursive function to get nested replies with pagination
+    const getNestedReplies = async (
+      parentId,
+      currentDepth = 0,
+      skipCount = 0,
+      limitCount = limit
+    ) => {
+      if (currentDepth >= max_depth) {
+        return { replies: [], hasMore: false, total: 0 };
+      }
+
+      const replies = await Comment.findAll({
+        where: {
+          parent_comment_id: parentId,
+          isReply: true,
+        },
+        include: [
+          {
+            model: User,
+            as: "commentedBy",
+            attributes: ["user_id", "username", "fullname", "profile_img"],
+            required: true,
+          },
+        ],
+        attributes: [
+          "comment_id",
+          "blog_id",
+          "comment",
+          "commented_by",
+          "isReply",
+          "parent_comment_id",
+          "children",
+          "createdAt",
+          "updatedAt",
+        ],
+        order: [["createdAt", "ASC"]],
+        offset: skipCount,
+        limit: limitCount,
+      });
+
+      const totalReplies = await Comment.count({
+        where: {
+          parent_comment_id: parentId,
+          isReply: true,
+        },
+      });
+
+      // For each reply, get its nested replies (if within depth limit)
+      const nestedReplies = [];
+      for (const reply of replies) {
+        const replyData = reply.get({ plain: true });
+
+        let childReplies = [];
+        let childrenMeta = { hasMore: false, total: 0 };
+
+        if (currentDepth + 1 < max_depth) {
+          const childResult = await getNestedReplies(
+            reply.comment_id,
+            currentDepth + 1,
+            0,
+            3
+          ); // Load fewer nested replies
+          childReplies = childResult.replies;
+          childrenMeta = {
+            hasMore: childResult.hasMore,
+            total: childResult.total,
+          };
+        }
+
+        nestedReplies.push({
+          ...replyData,
+          children: replyData.children || [],
+          nested_replies: childReplies,
+          children_meta: childrenMeta,
+          reply_depth: currentDepth + 1,
+        });
+      }
+
+      return {
+        replies: nestedReplies,
+        hasMore: skipCount + limitCount < totalReplies,
+        total: totalReplies,
+      };
+    };
+
+    const result = await getNestedReplies(comment_id, 0, skip, limit);
+
+    return res.status(200).json({
+      success: true,
+      nested_replies: result.replies,
+      pagination: {
+        hasMore: result.hasMore,
+        total: result.total,
+        loaded: skip + result.replies.length,
+        remaining: Math.max(0, result.total - (skip + result.replies.length)),
+      },
+      max_depth_used: max_depth,
+    });
+  } catch (err) {
+    console.error("Error fetching nested replies:", err);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch nested replies",
+      message:
+        process.env.NODE_ENV === "development"
+          ? err.message
+          : "Internal server error",
+    });
+  }
+});
+
+// // Delete comment or reply endpoint
+// server.delete("/delete-comment", verifyJWT, async (req, res) => {
+//   // Validate request body structure first
+//   if (!req.body || typeof req.body !== "object") {
+//     return res.status(400).json({
+//       success: false,
+//       message: "Invalid request format",
+//       error: "Expected JSON object",
+//     });
+//   }
+
+//   const { comment_id } = req.body;
+//   const user_id = req.user;
+
+//   // Validate input
+//   if (!comment_id || typeof comment_id !== "string") {
+//     return res.status(400).json({
+//       success: false,
+//       message: "Invalid comment ID",
+//       error: "comment_id must be a non-empty string",
+//     });
+//   }
+
+//   const transaction = await sequelize.transaction();
+
+//   try {
+//     const trimmedCommentId = comment_id.trim();
+
+//     console.log("Processing delete comment action:", {
+//       comment_id: trimmedCommentId,
+//       user_id,
+//     });
+
+//     // 1. Get the comment with full details
+//     const comment = await Comment.findOne({
+//       where: { comment_id: trimmedCommentId },
+//       attributes: [
+//         "comment_id",
+//         "blog_id",
+//         "commented_by",
+//         "isReply",
+//         "parent_comment_id",
+//         "children",
+//       ],
+//       transaction,
+//       lock: transaction.LOCK.UPDATE,
+//     });
+
+//     if (!comment) {
+//       await transaction.rollback();
+//       return res.status(404).json({
+//         success: false,
+//         error: "Comment not found",
+//       });
+//     }
+
+//     // 2. Check if user is authorized to delete this comment
+//     // Only the comment author can delete their own comment
+//     if (comment.commented_by !== user_id) {
+//       await transaction.rollback();
+//       return res.status(403).json({
+//         success: false,
+//         error: "You can only delete your own comments",
+//       });
+//     }
+
+//     // 3. Handle deletion based on comment type
+//     if (comment.isReply) {
+//       // If it's a reply, remove it from parent's children array
+//       if (comment.parent_comment_id) {
+//         const parentComment = await Comment.findOne({
+//           where: { comment_id: comment.parent_comment_id },
+//           attributes: ["children"],
+//           transaction,
+//         });
+
+//         if (parentComment && parentComment.children) {
+//           const updatedChildren = parentComment.children.filter(
+//             (childId) => childId !== trimmedCommentId
+//           );
+
+//           await Comment.update(
+//             { children: updatedChildren },
+//             {
+//               where: { comment_id: comment.parent_comment_id },
+//               transaction,
+//             }
+//           );
+//         }
+//       }
+
+//       // Delete the reply
+//       await Comment.destroy({
+//         where: { comment_id: trimmedCommentId },
+//         transaction,
+//       });
+//     } else {
+//       // If it's a parent comment, we need to handle its replies
+//       const hasReplies = comment.children && comment.children.length > 0;
+
+//       if (hasReplies) {
+//         // Delete all replies first
+//         await Comment.destroy({
+//           where: {
+//             comment_id: {
+//               [Op.in]: comment.children,
+//             },
+//           },
+//           transaction,
+//         });
+
+//         // Delete related notifications for replies
+//         await Notification.destroy({
+//           where: {
+//             comment_id: {
+//               [Op.in]: comment.children,
+//             },
+//           },
+//           transaction,
+//         });
+//       }
+
+//       // Delete the parent comment
+//       await Comment.destroy({
+//         where: { comment_id: trimmedCommentId },
+//         transaction,
+//       });
+//     }
+
+//     // 4. Delete related notifications
+//     await Notification.destroy({
+//       where: {
+//         [Op.or]: [
+//           { comment_id: trimmedCommentId },
+//           { reply: trimmedCommentId },
+//           { replied_on_comment: trimmedCommentId },
+//         ],
+//       },
+//       transaction,
+//     });
+
+//     // 5. Get updated total comments count for the blog
+//     const total_comments = await Comment.count({
+//       where: { blog_id: comment.blog_id },
+//       transaction,
+//     });
+
+//     await transaction.commit();
+
+//     console.log("Comment deleted successfully:", {
+//       comment_id: trimmedCommentId,
+//       blog_id: comment.blog_id,
+//       isReply: comment.isReply,
+//       total_comments,
+//     });
+
+//     return res.json({
+//       success: true,
+//       message: comment.isReply
+//         ? "Reply deleted successfully"
+//         : "Comment deleted successfully",
+//       deleted_comment_id: trimmedCommentId,
+//       isReply: comment.isReply,
+//       blog_id: comment.blog_id,
+//       total_comments,
+//     });
+//   } catch (err) {
+//     await transaction.rollback();
+
+//     console.error("Comment deletion failed:", {
+//       errorName: err.name,
+//       errorMessage: err.message,
+//       stack: err.stack,
+//     });
+
+//     const errorResponse = {
+//       success: false,
+//       message: "Error deleting comment",
+//     };
+
+//     if (err.name === "SequelizeForeignKeyConstraintError") {
+//       errorResponse.error = "Cannot delete comment due to database constraints";
+//     } else {
+//       errorResponse.error = "Database operation failed";
+//     }
+
+//     if (process.env.NODE_ENV === "development") {
+//       errorResponse.debug = {
+//         error: err.name,
+//         message: err.message,
+//       };
+//     }
+
+//     return res.status(500).json(errorResponse);
+//   }
+// });
+
+// Bulk delete comments (optional - for admin purposes)
+server.delete("/delete-comments-bulk", verifyJWT, async (req, res) => {
+  const { comment_ids, blog_id } = req.body;
+  const user_id = req.user;
+
+  // Validate input
+  if (!comment_ids || !Array.isArray(comment_ids) || comment_ids.length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: "comment_ids must be a non-empty array",
+    });
+  }
+
+  if (!blog_id || typeof blog_id !== "string") {
+    return res.status(400).json({
+      success: false,
+      error: "blog_id is required and must be a string",
+    });
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    // Check if user is the blog author (only blog author can bulk delete)
+    const blog = await Blog.findOne({
+      where: { blog_id: blog_id.trim() },
+      attributes: ["author"],
+      transaction,
+    });
+
+    if (!blog) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        error: "Blog not found",
+      });
+    }
+
+    // Check authorization - only blog author can bulk delete comments
+    if (blog.author !== user_id) {
+      await transaction.rollback();
+      return res.status(403).json({
+        success: false,
+        error: "Only blog authors can bulk delete comments",
+      });
+    }
+
+    // Get all comments to be deleted
+    const commentsToDelete = await Comment.findAll({
+      where: {
+        comment_id: {
+          [Op.in]: comment_ids,
+        },
+        blog_id: blog_id.trim(),
+      },
+      attributes: ["comment_id", "children", "isReply"],
+      transaction,
+    });
+
+    if (commentsToDelete.length === 0) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        error: "No comments found to delete",
+      });
+    }
+
+    // Collect all comment IDs including replies
+    const allCommentIds = [];
+    commentsToDelete.forEach((comment) => {
+      allCommentIds.push(comment.comment_id);
+      if (comment.children && comment.children.length > 0) {
+        allCommentIds.push(...comment.children);
+      }
+    });
+
+    // Delete all comments and replies
+    await Comment.destroy({
+      where: {
+        comment_id: {
+          [Op.in]: allCommentIds,
+        },
+      },
+      transaction,
+    });
+
+    // Delete related notifications
+    await Notification.destroy({
+      where: {
+        [Op.or]: [
+          { comment_id: { [Op.in]: allCommentIds } },
+          { reply: { [Op.in]: allCommentIds } },
+          { replied_on_comment: { [Op.in]: allCommentIds } },
+        ],
+      },
+      transaction,
+    });
+
+    // Get updated total comments count
+    const total_comments = await Comment.count({
+      where: { blog_id: blog_id.trim() },
+      transaction,
+    });
+
+    await transaction.commit();
+
+    console.log("Bulk comment deletion successful:", {
+      deleted_count: allCommentIds.length,
+      blog_id: blog_id.trim(),
+      total_comments,
+    });
+
+    return res.json({
+      success: true,
+      message: `Successfully deleted ${allCommentIds.length} comments`,
+      deleted_count: allCommentIds.length,
+      blog_id: blog_id.trim(),
+      total_comments,
+    });
+  } catch (err) {
+    await transaction.rollback();
+
+    console.error("Bulk comment deletion failed:", {
+      errorName: err.name,
+      errorMessage: err.message,
+    });
+
+    return res.status(500).json({
+      success: false,
+      message: "Error deleting comments",
+      error:
+        process.env.NODE_ENV === "development"
+          ? err.message
+          : "Database operation failed",
+    });
+  }
+});
+
+server.post("/update-profile-img", verifyJWT, async (req, res) => {
+  try {
+    const { profile_img } = req.body;
+    const user_id = req.user;
+
+    if (!profile_img) {
+      return res.status(400).json({ error: "Profile image URL is required" });
+    }
+
+    await User.update({ profile_img }, { where: { user_id } });
+
+    return res.status(200).json({
+      message: "Profile image updated successfully",
+      profile_img,
+    });
+  } catch (err) {
+    console.error("Error updating profile image:", err);
+    return res.status(500).json({
+      error: "Failed to update profile image",
+      details: process.env.NODE_ENV === "development" ? err.message : null,
+    });
+  }
+});
+server.post("/update-profile", verifyJWT, async (req, res) => {
+  try {
+    const user_id = req.user;
+    const {
+      username,
+      bio,
+      facebook,
+      instagram,
+      twitter,
+      youtube,
+      github,
+      website,
+      personal_city,
+      personal_country,
+      personal_state,
+      personal_street,
+      personal_zip_code,
+      profession_id,
+      professional_city,
+      professional_country,
+      professional_state,
+      professional_street,
+      professional_zip_code,
+    } = req.body;
+
+    // Validate username
+    if (!username || username.length < 3) {
+      return res
+        .status(400)
+        .json({ error: "Username must be at least 3 characters" });
+    }
+
+    // Check if username is already taken by another user
+    const existingUser = await User.findOne({
+      where: {
+        username,
+        user_id: { [Op.ne]: user_id },
+      },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: "Username is already taken" });
+    }
+
+    // Validate social URLs if provided
+    const validateUrl = (url) => {
+      if (!url) return true;
+      try {
+        new URL(url.startsWith("http") ? url : `https://${url}`);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    if (facebook && !validateUrl(facebook)) {
+      return res.status(400).json({ error: "Invalid Facebook URL" });
+    }
+    if (instagram && !validateUrl(instagram)) {
+      return res.status(400).json({ error: "Invalid Instagram URL" });
+    }
+    if (twitter && !validateUrl(twitter)) {
+      return res.status(400).json({ error: "Invalid Twitter URL" });
+    }
+    if (youtube && !validateUrl(youtube)) {
+      return res.status(400).json({ error: "Invalid YouTube URL" });
+    }
+    if (github && !validateUrl(github)) {
+      return res.status(400).json({ error: "Invalid GitHub URL" });
+    }
+    if (website && !validateUrl(website)) {
+      return res.status(400).json({ error: "Invalid Website URL" });
+    }
+
+    // Update user profile
+    await User.update(
+      {
+        username,
+        bio,
+        facebook: facebook || null,
+        instagram: instagram || null,
+        twitter: twitter || null,
+        youtube: youtube || null,
+        github: github || null,
+        website: website || null,
+        personal_city: personal_city || null,
+        personal_country: personal_country || null,
+        personal_state: personal_state || null,
+        personal_street: personal_street || null,
+        personal_zip_code: personal_zip_code || null,
+        profession_id: profession_id || null,
+        professional_city: professional_city || null,
+        professional_country: professional_country || null,
+        professional_state: professional_state || null,
+        professional_street: professional_street || null,
+        professional_zip_code: professional_zip_code || null,
+      },
+      {
+        where: { user_id },
+        returning: true,
+        plain: true,
+      }
+    );
+
+    // Get updated user data
+    const updatedUser = await User.findOne({
+      where: { user_id },
+      attributes: { exclude: ["password", "google_auth"] },
+    });
+
+    return res.status(200).json({
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.error("Error updating profile:", err);
+    return res.status(500).json({
+      error: "Failed to update profile",
+      details: process.env.NODE_ENV === "development" ? err.message : null,
+    });
+  }
+});
+
+// // Fixed notification endpoints
+// server.get("/new-notification", verifyJWT, async (req, res) => {
+//   try {
+//     const user_id = req.user;
+//     console.log("Checking notifications for user:", user_id);
+
+//     const notification = await Notification.findOne({
+//       where: {
+//         notification_for: user_id,
+//         seen: false,
+//         user: { [Op.ne]: user_id },
+//       },
+//     });
+
+//     console.log("Found notification:", notification);
+
+//     return res.status(200).json({
+//       new_notification_available: !!notification,
+//     });
+//   } catch (err) {
+//     console.error("Error checking notifications:", err);
+//     return res.status(500).json({
+//       error: "Failed to check notifications",
+//       details: process.env.NODE_ENV === "development" ? err.message : null,
+//     });
+//   }
+// });
+
+// server.post("/notifications", verifyJWT, async (req, res) => {
+//   const user_id = req.user;
+//   const { page = 1, filter = "all", deletedDocCount = 0 } = req.body;
+//   const maxLimit = 10;
+
+//   try {
+    
+//     const offset = Math.max(0, (page - 1) * maxLimit - deletedDocCount);
+//     const whereClause = {
+//       notification_for: user_id,
+//       user: { [Op.ne]: user_id },
+//     };
+
+//     if (filter !== "all") {
+//       whereClause.type = filter;
+//     }
+//     const totalNotifications = await Notification.count({
+//       where: {
+//         notification_for: user_id,
+//         user: { [Op.ne]: user_id },
+//       },
+//     });
+
+//     const { count: total, rows: notifications } =
+//       await Notification.findAndCountAll({
+//         where: whereClause,
+//         include: [
+//           {
+//             model: User,
+//             as: "notificationUser",
+//             attributes: ["user_id", "username", "fullname", "profile_img"],
+//             required: true,
+//           },
+//           {
+//             model: Blog,
+//             as: "notificationBlog",
+//             attributes: ["blog_id", "title"],
+//             required: false,
+//           },
+//           {
+//             model: Comment,
+//             as: "notificationComment", // This is the reply comment
+//             attributes: ["comment_id", "comment"],
+//             required: false,
+//           },
+//         ],
+//         attributes: [
+//           "id",
+//           "type",
+//           "seen",
+//           "reply",
+//           "replied_on_comment",
+//           "createdAt",
+//         ],
+//         order: [["createdAt", "DESC"]],
+//         offset: offset,
+//         limit: maxLimit,
+//         distinct: true,
+//       });
+//     // Filter out notifications where blog is null (drafted blogs)
+//     const validNotifications = notifications.filter(
+//       (n) => n.notificationBlog !== null
+//     );
+
+//     // For reply notifications, fetch the original comments
+//     const formattedNotifications = await Promise.all(
+//       validNotifications.map(async (notification) => {
+//         const plainNotif = notification.get({ plain: true });
+        
+//         let originalComment = null;
+        
+//         // If this is a reply notification, fetch the original comment
+//         if (plainNotif.type === 'reply' && plainNotif.replied_on_comment) {
+//           try {
+//             originalComment = await Comment.findOne({
+//               where: { comment_id: plainNotif.replied_on_comment },
+//               attributes: ["comment_id", "comment"],
+//             });
+            
+//             if (originalComment) {
+//               originalComment = originalComment.get({ plain: true });
+//             }
+//           } catch (err) {
+//             console.error('Error fetching original comment:', err);
+//           }
+//         }
+
+//         return {
+//           _id: plainNotif.id,
+//           type: plainNotif.type,
+//           seen: plainNotif.seen,
+//           reply: plainNotif.reply,
+//           replied_on_comment: plainNotif.replied_on_comment,
+//           original_comment: originalComment, // Add the original comment content
+//           createdAt: plainNotif.createdAt,
+//           user: plainNotif.notificationUser,
+//           blog: plainNotif.notificationBlog,
+//           comment: plainNotif.notificationComment, // This is the reply
+//         };
+//       })
+//     );
+
+//     // Mark valid notifications as seen
+//     const notificationIds = validNotifications.map((n) => n.id);
+//     if (notificationIds.length > 0) {
+//       await Notification.update(
+//         { seen: true },
+//         { where: { id: { [Op.in]: notificationIds } } }
+//       );
+//     }
+
+//     return res.status(200).json({
+//       notifications: formattedNotifications,
+//       totalDocs: validNotifications.length,
+//       currentPage: parseInt(page),
+//       perPage: maxLimit,
+//       totalPages: Math.ceil(validNotifications.length / maxLimit),
+//       debug:
+//         process.env.NODE_ENV === "development"
+//           ? {
+//               totalNotificationsInDb: totalNotifications,
+//               whereClause,
+//               offset,
+//               filteredCount: validNotifications.length,
+//             }
+//           : undefined,
+//     });
+//   } catch (err) {
+//     console.error("Error fetching notifications:", {
+//       error: err.message,
+//       stack: err.stack,
+//       body: req.body,
+//     });
+//     return res.status(500).json({
+//       error: "Failed to fetch notifications",
+//       details: process.env.NODE_ENV === "development" ? err.message : null,
+//     });
+//   }
+// });
+
+// server.post("/all-notifications-count", verifyJWT, async (req, res) => {
+//   const user_id = req.user;
+//   const { filter = "all" } = req.body;
+
+//   try {
+//     console.log("Counting notifications for user:", user_id, "Filter:", filter);
+
+//     // Build the where clause
+//     const whereClause = {
+//       notification_for: user_id,
+//       user: { [Op.ne]: user_id },
+//     };
+
+//     // Add filter if not "all"
+//     if (filter !== "all") {
+//       whereClause.type = filter;
+//     }
+
+//     // Count notifications with the filter
+//     const count = await Notification.count({
+//       where: whereClause,
+//     });
+
+//     console.log("Notification count:", count);
+
+//     return res.status(200).json({ totalDocs: count });
+//   } catch (err) {
+//     console.error("Error counting notifications:", {
+//       error: err.message,
+//       stack: err.stack,
+//       userId: user_id,
+//       filter: filter,
+//     });
+//     return res.status(500).json({
+//       error: "Failed to count notifications",
+//       details: process.env.NODE_ENV === "development" ? err.message : null,
+//     });
+//   }
+// });
+
+server.delete("/delete-notification", verifyJWT, async (req, res) => {
+  // Validate request body structure first
+  if (!req.body || typeof req.body !== "object") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid request format",
+      error: "Expected JSON object",
+    });
+  }
+
+  const { notification_id } = req.body;
+  const user_id = req.user;
+
+  // Validate input
+  if (!notification_id || (typeof notification_id !== "string" && typeof notification_id !== "number")) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid notification ID",
+      error: "notification_id must be a non-empty string or number",
+    });
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    console.log("Processing delete notification action:", {
+      notification_id,
+      user_id,
+    });
+
+    // 1. Find the notification
+    const notification = await Notification.findOne({
+      where: { 
+        id: notification_id,
+        notification_for: user_id // Ensure user can only delete their own notifications
+      },
+      attributes: ["id", "type", "notification_for"],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!notification) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        error: "Notification not found or you don't have permission to delete it",
+      });
+    }
+
+    // 2. Check if user is authorized to delete this notification
+    if (notification.notification_for !== user_id) {
+      await transaction.rollback();
+      return res.status(403).json({
+        success: false,
+        error: "You can only delete your own notifications",
+      });
+    }
+
+    // 3. Delete the notification
+    await Notification.destroy({
+      where: { id: notification_id },
+      transaction,
+    });
+
+    await transaction.commit();
+
+    console.log("Notification deleted successfully:", {
+      notification_id,
+      user_id,
+      type: notification.type,
+    });
+
+    return res.json({
+      success: true,
+      message: "Notification deleted successfully",
+      deleted_notification_id: notification_id,
+    });
+
+  } catch (err) {
+    await transaction.rollback();
+
+    console.error("Notification deletion failed:", {
+      errorName: err.name,
+      errorMessage: err.message,
+      stack: err.stack,
+    });
+
+    const errorResponse = {
+      success: false,
+      message: "Error deleting notification",
+    };
+
+    if (err.name === "SequelizeForeignKeyConstraintError") {
+      errorResponse.error = "Cannot delete notification due to database constraints";
+    } else {
+      errorResponse.error = "Database operation failed";
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      errorResponse.debug = {
+        error: err.name,
+        message: err.message,
+      };
+    }
+
+    return res.status(500).json(errorResponse);
+  }
+});
+
+// FIXED: Main notifications endpoint
+server.post("/notifications", verifyJWT, async (req, res) => {
+  const user_id = req.user;
+  const { page = 1, filter = "all", deletedDocCount = 0 } = req.body;
+  const maxLimit = 10;
+
+  try {
+    const offset = Math.max(0, (page - 1) * maxLimit - deletedDocCount);
+    
+    // FIXED: Base where clause - include own replies
+    let whereClause = {
+      notification_for: user_id,
+      [Op.or]: [
+        // Show all notifications from others
+        { user: { [Op.ne]: user_id } },
+        // Show own replies only (not own comments/likes on own posts)
+        { 
+          user: user_id, 
+          type: 'reply'
+        }
+      ]
+    };
+
+    // FIXED: Apply filter on top of base clause
+    if (filter !== "all") {
+      // For specific filters, we need to modify the OR condition
+      if (filter === "reply") {
+        // For reply filter: show all replies (others + own)
+        whereClause = {
+          notification_for: user_id,
+          type: 'reply'
+        };
+      } else {
+        // For like/comment filters: only show others' notifications
+        whereClause = {
+          notification_for: user_id,
+          type: filter,
+          user: { [Op.ne]: user_id }
+        };
+      }
+    }
+
+    console.log("Notification whereClause:", JSON.stringify(whereClause, null, 2));
+    console.log("User ID:", user_id, "Filter:", filter);
+
+    const { count: total, rows: notifications } = await Notification.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          as: "notificationUser",
+          attributes: ["user_id", "username", "fullname", "profile_img"],
+          required: true,
+        },
+        {
+          model: Blog,
+          as: "notificationBlog",
+          attributes: ["blog_id", "title"],
+          required: false,
+        },
+        {
+          model: Comment,
+          as: "notificationComment",
+          attributes: ["comment_id", "comment"],
+          required: false,
+        },
+      ],
+      attributes: [
+        "id",
+        "type",
+        "seen",
+        "reply",
+        "replied_on_comment",
+        "user",
+        "comment_id",
+        "blog",
+        "createdAt",
+      ],
+      order: [["createdAt", "DESC"]],
+      offset: offset,
+      limit: maxLimit,
+      distinct: true,
+    });
+
+    console.log(`Found ${notifications.length} notifications`);
+    console.log("Notifications with ownership:", notifications.slice(0, 3).map(n => ({
+      id: n.id,
+      type: n.type,
+      user: n.user,
+      isOwn: n.user === user_id
+    })));
+
+    const validNotifications = notifications.filter(
+      (n) => n.notificationBlog !== null
+    );
+
+    const formattedNotifications = await Promise.all(
+      validNotifications.map(async (notification) => {
+        const plainNotif = notification.get({ plain: true });
+        
+        let originalComment = null;
+        
+        if (plainNotif.type === 'reply' && plainNotif.replied_on_comment) {
+          try {
+            originalComment = await Comment.findOne({
+              where: { comment_id: plainNotif.replied_on_comment },
+              attributes: ["comment_id", "comment"],
+            });
+            
+            if (originalComment) {
+              originalComment = originalComment.get({ plain: true });
+            }
+          } catch (err) {
+            console.error('Error fetching original comment:', err);
+          }
+        }
+
+        // FIXED: Correctly identify own replies
+        const isOwnReply = plainNotif.user === user_id && plainNotif.type === 'reply';
+        
+        return {
+          _id: plainNotif.id,
+          type: plainNotif.type,
+          seen: plainNotif.seen,
+          reply: plainNotif.reply,
+          replied_on_comment: plainNotif.replied_on_comment,
+          original_comment: originalComment,
+          createdAt: plainNotif.createdAt,
+          user: plainNotif.notificationUser,
+          blog: plainNotif.notificationBlog,
+          comment: plainNotif.notificationComment,
+          comment_id: plainNotif.comment_id,
+          isOwnReply: isOwnReply, // This flag is crucial for frontend
+        };
+      })
+    );
+
+    // FIXED: Only mark others' notifications as seen (not own replies)
+    const unseenOthersNotifications = validNotifications
+      .filter(n => n.user !== user_id && !n.seen)
+      .map(n => n.id);
+    
+    if (unseenOthersNotifications.length > 0) {
+      await Notification.update(
+        { seen: true },
+        { where: { id: { [Op.in]: unseenOthersNotifications } } }
+      );
+    }
+
+    return res.status(200).json({
+      notifications: formattedNotifications,
+      totalDocs: validNotifications.length,
+      currentPage: parseInt(page),
+      perPage: maxLimit,
+      totalPages: Math.ceil(validNotifications.length / maxLimit),
+      debug: process.env.NODE_ENV === "development" ? {
+        whereClause,
+        offset,
+        totalFound: notifications.length,
+        validCount: validNotifications.length,
+        ownRepliesCount: formattedNotifications.filter(n => n.isOwnReply).length,
+      } : undefined,
+    });
+  } catch (err) {
+    console.error("Error fetching notifications:", {
+      error: err.message,
+      stack: err.stack,
+      body: req.body,
+    });
+    return res.status(500).json({
+      error: "Failed to fetch notifications",
+      details: process.env.NODE_ENV === "development" ? err.message : null,
+    });
+  }
+});
+
+// FIXED: Count endpoint
+server.post("/all-notifications-count", verifyJWT, async (req, res) => {
+  const user_id = req.user;
+  const { filter = "all" } = req.body;
+
+  try {
+    let whereClause = {
+      notification_for: user_id,
+      [Op.or]: [
+        { user: { [Op.ne]: user_id } },
+        { user: user_id, type: 'reply' }
+      ]
+    };
+
+    if (filter !== "all") {
+      if (filter === "reply") {
+        whereClause = {
+          notification_for: user_id,
+          type: 'reply'
+        };
+      } else {
+        whereClause = {
+          notification_for: user_id,
+          type: filter,
+          user: { [Op.ne]: user_id }
+        };
+      }
+    }
+
+    const count = await Notification.count({
+      where: whereClause,
+    });
+
+    console.log("Notification count:", count, "for filter:", filter);
+
+    return res.status(200).json({ totalDocs: count });
+  } catch (err) {
+    console.error("Error counting notifications:", err);
+    return res.status(500).json({
+      error: "Failed to count notifications",
+      details: process.env.NODE_ENV === "development" ? err.message : null,
+    });
+  }
+});
+
+// 4. ADD NEW DELETE COMMENT ENDPOINT
+server.delete("/delete-comment", verifyJWT, async (req, res) => {
+  if (!req.body || typeof req.body !== "object") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid request format",
+      error: "Expected JSON object",
+    });
+  }
+
+  const { comment_id } = req.body;
+  const user_id = req.user;
+
+  if (!comment_id || typeof comment_id !== "string") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid comment ID",
+      error: "comment_id must be a non-empty string",
+    });
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    console.log("Processing delete comment action:", {
+      comment_id,
+      user_id,
+    });
+
+    // 1. Find and verify ownership
+    const comment = await Comment.findOne({
+      where: { 
+        comment_id,
+        commented_by: user_id // Ensure user can only delete their own comments
+      },
+      attributes: ["comment_id", "commented_by", "parent_comment_id", "children"],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!comment) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        error: "Comment not found or you don't have permission to delete it",
+      });
+    }
+
+    // 2. If this comment has a parent, remove it from parent's children array
+    if (comment.parent_comment_id) {
+      const parentComment = await Comment.findOne({
+        where: { comment_id: comment.parent_comment_id },
+        attributes: ["comment_id", "children"],
+        transaction,
+      });
+
+      if (parentComment && parentComment.children) {
+        const updatedChildren = parentComment.children.filter(
+          child => child !== comment_id
+        );
+        
+        await Comment.update(
+          { children: updatedChildren },
+          {
+            where: { comment_id: comment.parent_comment_id },
+            transaction,
+          }
+        );
+      }
+    }
+
+    // 3. Delete any child comments (if this comment has replies)
+    if (comment.children && comment.children.length > 0) {
+      await Comment.destroy({
+        where: { comment_id: { [Op.in]: comment.children } },
+        transaction,
+      });
+
+      // Delete notifications for child comments
+      await Notification.destroy({
+        where: { comment_id: { [Op.in]: comment.children } },
+        transaction,
+      });
+    }
+
+    // 4. Delete the comment itself
+    await Comment.destroy({
+      where: { comment_id },
+      transaction,
+    });
+
+    // 5. Delete associated notifications
+    await Notification.destroy({
+      where: { comment_id },
+      transaction,
+    });
+
+    await transaction.commit();
+
+    console.log("Comment deleted successfully:", {
+      comment_id,
+      user_id,
+    });
+
+    return res.json({
+      success: true,
+      message: "Comment deleted successfully",
+      deleted_comment_id: comment_id,
+    });
+
+  } catch (err) {
+    await transaction.rollback();
+
+    console.error("Comment deletion failed:", {
+      errorName: err.name,
+      errorMessage: err.message,
+      stack: err.stack,
+    });
+
+    const errorResponse = {
+      success: false,
+      message: "Error deleting comment",
+    };
+
+    if (err.name === "SequelizeForeignKeyConstraintError") {
+      errorResponse.error = "Cannot delete comment due to database constraints";
+    } else {
+      errorResponse.error = "Database operation failed";
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      errorResponse.debug = {
+        error: err.name,
+        message: err.message,
+      };
+    }
+
+    return res.status(500).json(errorResponse);
+  }
+});
 // Port Setup
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
