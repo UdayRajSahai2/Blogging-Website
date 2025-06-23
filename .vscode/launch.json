@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "chrome",
+        "request": "launch",
+        "name": "Debug Vite React",
+        "url": "http://localhost:5173",
+        "webRoot": "${workspaceFolder}",
+        "sourceMapPathOverrides": {
+          "/src/*": "${webRoot}/src/*",
+          "../src/*": "${webRoot}/src/*"
+        },
+        "resolveSourceMapLocations": [
+          "${workspaceFolder}/**",
+          "!**/node_modules/**"
+        ],
+        "skipFiles": ["node_modules/**"],
+        "trace": true,
+        "showAsyncStacks": true
+      }
+    ]
+  }

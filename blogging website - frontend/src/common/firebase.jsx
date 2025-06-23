@@ -1,12 +1,8 @@
-// Import the functions you need from the SDKs you need
+// firebase.js
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import {getAuth, GoogleAuthProvider, signInWithPopup} from "firebase/auth";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyAsOFT-JkTn_1jFikRdGYEt6Vd9TwMOI7Y",
   authDomain: "reactjs-blogging-website-ac6e9.firebaseapp.com",
@@ -21,30 +17,65 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 
-//google Authentication 
-
+// Google Authentication Setup
 const provider = new GoogleAuthProvider();
 const auth = getAuth();
 
+// Add these scopes to ensure we get the required information
+provider.addScope('email');
+provider.addScope('profile');
+
+// Force account selection to avoid cached login issues
+provider.setCustomParameters({
+  prompt: 'select_account'
+});
+
 export const authWithGoogle = async () => {
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-  
-      // Get the ID token (access token)
-      const idToken = await user.getIdToken();
-  
-      // Return the user data along with the access token
-      return {
-        access_token: idToken, // This is the token required for server-side verification
-        user: {
-          email: user.email,
-          name: user.displayName,
-          picture: user.photoURL,
-        },
-      };
-    } catch (err) {
-      console.error("Google Auth Error:", err);
-      throw err; // Propagate the error so it can be handled by the caller
+  try {
+    console.log("🚀 Starting Google authentication...");
+    
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    
+    console.log("✅ Google sign-in successful");
+    console.log("User info:", {
+      email: user.email,
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+      uid: user.uid
+    });
+
+    // Verify we have required data
+    if (!user.email || !user.displayName) {
+      throw new Error("Missing required user information from Google");
     }
-  };
+
+    // Get the ID token
+    const idToken = await user.getIdToken();
+    console.log("✅ ID token obtained:", idToken ? "Yes" : "No");
+    
+    if (!idToken) {
+      throw new Error("Failed to obtain ID token");
+    }
+
+    // Return just the user object (not wrapped in an object)
+    // This matches what your frontend expects
+    return user;
+
+  } catch (error) {
+    console.error("❌ Google Auth Error:", error);
+    
+    // Handle specific Firebase errors
+    if (error.code === 'auth/popup-closed-by-user') {
+      throw new Error("Sign-in was cancelled by user");
+    } else if (error.code === 'auth/popup-blocked') {
+      throw new Error("Popup was blocked. Please allow popups and try again");
+    } else if (error.code === 'auth/cancelled-popup-request') {
+      throw new Error("Multiple popup requests detected. Please wait and try again");
+    } else if (error.code === 'auth/internal-error') {
+      throw new Error("Internal authentication error. Please try again");
+    }
+    
+    throw error;
+  }
+};

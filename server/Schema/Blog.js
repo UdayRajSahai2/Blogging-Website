@@ -32,8 +32,8 @@ const Blog = sequelize.define("Blog", {
         },
     },
     activity: {
-        type: DataTypes.JSON, // Store likes/comments as JSON
-    },
+        type: DataTypes.JSON,
+      },
     draft: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,

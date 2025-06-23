@@ -6,6 +6,7 @@ const Comment = sequelize.define("Comment", {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
+         primaryKey: true, // Add this line to make it the primary key
     },
     blog_id: {
         type: DataTypes.STRING,

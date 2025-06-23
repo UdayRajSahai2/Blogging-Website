@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import logo from "../imgs/logo.png";
 import AnimationWrapper from "../common/page-animation";
 import defaultBanner from "../imgs/blog banner.png";
@@ -28,18 +28,22 @@ const BlogEditor = () => {
     if (!textEditor.isReady) {
       setTextEditor(
         new EditorJS({
-          holderId: "textEditor",
+          holder: "textEditor",
           data: content,
           tools: tools,
           placeholder: "Let's write an awesome story",
+          onReady: () => {
+            console.log("Editor ready with blocks:", content.blocks); // Verify render
+          }
         })
       );
     }
-  }, []);
+  }, [content]);
 
   let {
     userAuth: { access_token },
   } = useContext(UserContext);
+  let {blog_id} = useParams();
   let navigate = useNavigate();
 
   const handleBannerUpload = (e) => {
@@ -81,22 +85,21 @@ const BlogEditor = () => {
   };
 
   const handlePublishEvent = () => {
-    if (!banner.length) {
+    if (!banner) {
       return toast.error("Upload a blog banner to publish it");
     }
-    if (!title.length) {
+    if (!title) {
       return toast.error("Write blog title to publish it");
     }
     if (textEditor.isReady) {
       textEditor
         .save()
         .then((data) => {
-          if (data.blocks.length) {
-            setBlog({ ...blog, content: data });
-            setEditorState("publish");
-          } else {
-            return toast.error("Write something in your blog to publish it ");
+          if (!data?.blocks?.length) {
+            return toast.error("Write something in your blog to publish it ");           
           }
+          setBlog({ ...blog, content: data });
+            setEditorState("publish");
         })
         .catch((err) => {
           console.log(err);
@@ -124,7 +127,7 @@ const BlogEditor = () => {
           draft: true,
         };
         axios
-          .post(import.meta.env.VITE_SERVER_DOMAIN + "/create-blog", blogObj, {
+          .post(import.meta.env.VITE_SERVER_DOMAIN + "/create-blog", {...blogObj,id:blog_id}, {
             headers: {
               Authorization: `Bearer ${access_token}`,
             },

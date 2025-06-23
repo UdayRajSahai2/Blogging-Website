@@ -2,6 +2,7 @@ import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js"; // Adjust based on your DB config
 
 import Blog from './Blog.js';
+
 const User = sequelize.define(
   "User",
   {
@@ -10,17 +11,100 @@ const User = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
+    
+    // NEW: Split name fields
+    first_name: {
+      type: DataTypes.STRING,
+      allowNull: true, // Initially allow null for backward compatibility
+      validate: { 
+        len: [1, 100],
+        notEmpty: true 
+      },
+    },
+    last_name: {
+      type: DataTypes.STRING,
+      allowNull: true, // Initially allow null for backward compatibility
+      validate: { 
+        len: [1, 100],
+        notEmpty: true 
+      },
+    },
+    
+    // LEGACY: Keep fullname for backward compatibility (will be deprecated)
     fullname: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true, // Changed to allow null since we're moving to first_name/last_name
       validate: { len: [3, 255] },
     },
+    
     email: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
       validate: { isEmail: true },
     },
+    
+    // NEW: Mobile number field
+    mobile_number: {
+      type: DataTypes.STRING(15), // International format can be up to 15 digits
+      allowNull: true, // Initially allow null for backward compatibility
+      validate: {
+        is: /^[+]?[1-9]\d{1,14}$/, // International mobile number format
+      },
+      unique: true,
+    },
+    
+    // NEW: OTP verification fields
+    email_verified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    mobile_verified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    email_otp: {
+      type: DataTypes.STRING(6),
+      allowNull: true,
+    },
+    mobile_otp: {
+      type: DataTypes.STRING(6),
+      allowNull: true,
+    },
+    otp_expires_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    
+    // NEW: Customer ID with location codes
+    customer_id: {
+      type: DataTypes.STRING(50), // Will store the abbreviated customer ID
+      allowNull: true,
+      unique: true,
+    },
+    
+    // NEW: Location code fields (stored as codes in database)
+    country_code: {
+      type: DataTypes.STRING(3), // 3 digit country code
+      allowNull: true,
+    },
+    state_code: {
+      type: DataTypes.STRING(2), // 2 digit state code
+      allowNull: true,
+    },
+    district_code: {
+      type: DataTypes.STRING(2), // 2 digit district code
+      allowNull: true,
+    },
+    block_code: {
+      type: DataTypes.STRING(2), // 2 digit block code
+      allowNull: true,
+    },
+    village_code: {
+      type: DataTypes.STRING(2), // 2 digit village code
+      allowNull: true,
+    },
+    
     password: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -114,27 +198,117 @@ const User = sequelize.define(
 
     // Blogs (MySQL does not support MongoDB's `ObjectId`)
     blogs: {
-      type: DataTypes.JSON, // Alternatively, create a separate Blog model and use associations
+      type: DataTypes.JSON,
       defaultValue: [],
     },
   },
   {
-    timestamps: true, // Automatically adds createdAt & updatedAt
+    timestamps: true,
     tableName: "users",
     indexes: [
       {
         unique: true,
         fields: ['email'],
-        name: 'email_unique' // Named unique constraint
+        name: 'email_unique'
       },
       {
         unique: true,
         fields: ['username'],
-        name: 'username_unique' // Named unique constraint
+        name: 'username_unique'
+      },
+      {
+        unique: true,
+        fields: ['mobile_number'],
+        name: 'mobile_unique',
+        where: {
+          mobile_number: {
+            [sequelize.Sequelize.Op.ne]: null
+          }
+        }
+      },
+      {
+        unique: true,
+        fields: ['customer_id'],
+        name: 'customer_id_unique',
+        where: {
+          customer_id: {
+            [sequelize.Sequelize.Op.ne]: null
+          }
+        }
       }
-    ]
+    ],
+    hooks: {
+      // Hook to automatically generate fullname from first_name and last_name
+      beforeCreate: (user, options) => {
+        if (user.first_name && user.last_name && !user.fullname) {
+          user.fullname = `${user.first_name} ${user.last_name}`;
+        }
+      },
+      beforeUpdate: (user, options) => {
+        if (user.first_name && user.last_name) {
+          user.fullname = `${user.first_name} ${user.last_name}`;
+        }
+      }
+    }
   }
 );
 
+// Instance method to get full name
+User.prototype.getFullName = function() {
+  if (this.first_name && this.last_name) {
+    return `${this.first_name} ${this.last_name}`;
+  }
+  return this.fullname || '';
+};
+
+// Instance method to split existing fullname into first and last name
+User.prototype.splitFullName = function() {
+  if (this.fullname && !this.first_name && !this.last_name) {
+    const nameParts = this.fullname.trim().split(' ');
+    if (nameParts.length >= 2) {
+      this.first_name = nameParts[0];
+      this.last_name = nameParts.slice(1).join(' '); // Handle middle names
+    } else {
+      this.first_name = this.fullname;
+      this.last_name = '';
+    }
+  }
+  return { first_name: this.first_name, last_name: this.last_name };
+};
+
+// Static method to migrate existing users
+User.migrateFullNamesToSeparateFields = async function() {
+  try {
+    const usersWithFullNameOnly = await User.findAll({
+      where: {
+        fullname: {
+          [sequelize.Sequelize.Op.ne]: null
+        },
+        first_name: null,
+        last_name: null
+      }
+    });
+
+    console.log(`Found ${usersWithFullNameOnly.length} users to migrate`);
+
+    for (const user of usersWithFullNameOnly) {
+      const nameParts = user.fullname.trim().split(' ');
+      const first_name = nameParts[0] || '';
+      const last_name = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+      await user.update({
+        first_name,
+        last_name
+      });
+
+      console.log(`Migrated user ${user.user_id}: ${user.fullname} -> ${first_name} ${last_name}`);
+    }
+
+    return usersWithFullNameOnly.length;
+  } catch (error) {
+    console.error('Error migrating fullnames:', error);
+    throw error;
+  }
+};
 
 export default User;

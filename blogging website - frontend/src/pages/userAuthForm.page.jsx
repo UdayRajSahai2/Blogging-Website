@@ -1,4 +1,4 @@
-import { useContext, useRef } from "react";
+import { useContext, useRef, useState } from "react";
 import AnimationWrapper from "../common/page-animation";
 import InputBox from "../components/input.component";
 import googleIcon from "../imgs/google.png";
@@ -10,78 +10,92 @@ import { UserContext } from "../App";
 import { Navigate } from "react-router-dom";
 import { authWithGoogle } from "../common/firebase";
 
-
 const UserAuthForm = ({ type }) => {
-  let {userAuth: {access_token},setUserAuth} = useContext(UserContext);
-  console.log(access_token);
+  let { userAuth: { access_token }, setUserAuth } = useContext(UserContext);
+  const formElement = useRef();
+  const [mobileNumber, setMobileNumber] = useState('');
+  
   let serverRoute = type === "sign-in" ? "/signin" : "/signup";
 
-  const userAuthThroughServer = (serverRoute,formData) => {
-      axios.post(import.meta.env.VITE_SERVER_DOMAIN + serverRoute,formData).then(({data}) => {
-        storeInSession("user",JSON.stringify(data));
-        setUserAuth(data)
+  const userAuthThroughServer = (serverRoute, formData) => {
+    let loadingToast = toast.loading("Authenticating...");
+    
+    axios.post(import.meta.env.VITE_SERVER_DOMAIN + serverRoute, formData)
+      .then(({ data }) => {
+        toast.dismiss(loadingToast);
+        storeInSession("user", JSON.stringify(data));
+        setUserAuth(data);
+        toast.success(`Welcome ${data.first_name}!`);
       })
-      .catch(({response}) => {
-        toast.error(response.data.error)
-      })
-  }
+      .catch(({ response }) => {
+        toast.dismiss(loadingToast);
+        toast.error(response?.data?.error || "Authentication failed");
+      });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    let emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/; // regex for email
+    
+    let emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
     let passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{12,}$/;
+    let mobileRegex = /^[+]?[0-9]{10,15}$/;
 
-    let form = new FormData(formElement);
+    let form = new FormData(formElement.current);
     let formData = {};
+    
     for (let [key, value] of form.entries()) {
       formData[key] = value;
     }
-    console.log(formData);
-
-    let { fullname, email, password } = formData;
-    if (fullname) {
-      if (fullname.length < 3) {
-        return toast.error("Fullname must be at least 3 letters long");
+    
+    let { first_name, last_name, email, password, mobile_number } = formData;
+    
+    if (type !== "sign-in") {
+      if (!first_name || first_name.length < 1) {
+        return toast.error("First name is required");
+      }
+      if (!last_name || last_name.length < 1) {
+        return toast.error("Last name is required");
+      }
+      if (mobile_number && !mobileRegex.test(mobile_number)) {
+        return toast.error("Mobile number is invalid");
       }
     }
-    if (!email.length) {
-      return toast.error("Enter email");
-    }
-    if (!emailRegex.test(email)) {
+    
+    if (!email || !emailRegex.test(email)) {
       return toast.error("Email is invalid");
     }
-    if (!passwordRegex.test(password)) {
-      return toast.error("Password must be at least 12 characters long and include at least one numeric digit, one lowercase letter, one uppercase letter, and one special character.");
+    if (!password || !passwordRegex.test(password)) {
+      return toast.error("Password must be at least 12 characters with uppercase, lowercase, number and special character");
     }
-    userAuthThroughServer(serverRoute,formData)
+    
+    userAuthThroughServer(serverRoute, formData);
   };
+
   const handleGoogleAuth = async (e) => {
     e.preventDefault();
+    let loadingToast = toast.loading("Signing in with Google...");
+    
     try {
       const user = await authWithGoogle();
-      if (!user) throw new Error("Google authentication failed");
-  
-      const idToken = await user.getIdToken(); // Get ID token from Firebase
-      console.log("Google Auth User:", user);
-      console.log("Google Access Token:", idToken);
-  
-      // Send the token to the backend
-      axios.post(import.meta.env.VITE_SERVER_DOMAIN + "/google-auth", {
-        access_token: idToken,
-      })
-      .then(({ data }) => {
-        storeInSession("user", JSON.stringify(data));
-        setUserAuth(data);
-      })
-      .catch(({ response }) => {
-        toast.error(response.data.error);
-      });
+      const idToken = await user.getIdToken();
+      
+      const response = await axios.post(
+        import.meta.env.VITE_SERVER_DOMAIN + "/google-auth", 
+        { access_token: idToken },
+        { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
+      );
+
+      toast.dismiss(loadingToast);
+      storeInSession("user", JSON.stringify(response.data));
+      setUserAuth(response.data);
+      toast.success(`Welcome ${response.data.first_name}!`);
     } catch (error) {
+      toast.dismiss(loadingToast);
       console.error("Google Auth Error:", error);
-      toast.error("Google sign-in failed. Please try again.");
+      toast.error(error.response?.data?.error || "Google sign-in failed");
     }
   };
-  
-  
+
   return (
     access_token ? 
     <Navigate to="/" />
@@ -89,32 +103,58 @@ const UserAuthForm = ({ type }) => {
     <AnimationWrapper keyValue={type}>
       <section className="h-cover flex items-center justify-center">
         <Toaster />
-        <form id="formElement" className="w-[80%] max-w-[400px]">
+        <form ref={formElement} className="w-[80%] max-w-[400px]">
           <h1 className="text-4xl font-gelasio capitalize text-center mb-24">   
             {type === "sign-in" ? "Welcome Back" : "Join us today"}
           </h1>
-          {type !== "sign-in" ? (
-            <InputBox
-              name="fullname"
-              type="text"
-              placeholder="Full name"
-              icon="fi-rr-user"
-            />
-          ) : (
-            ""
+          
+          {type !== "sign-in" && (
+            <>
+              <div className="flex gap-4 mb-4">
+                <InputBox
+                  name="first_name"
+                  type="text"
+                  placeholder="First name"
+                  icon="fi-rr-user"
+                  className="flex-1"
+                  required
+                />
+                <InputBox
+                  name="last_name"
+                  type="text"
+                  placeholder="Last name"
+                  icon="fi-rr-user"
+                  className="flex-1"
+                  required
+                />
+              </div>
+              <InputBox
+                name="mobile_number"
+                type="tel"
+                placeholder="Mobile number"
+                icon="fi-rr-mobile-notch"
+                value={mobileNumber}
+                onChange={(e) => setMobileNumber(e.target.value)}
+              />
+            </>
           )}
+          
           <InputBox
             name="email"
             type="email"
             placeholder="Email"
             icon="fi-rr-envelope"
+            required
           />
+          
           <InputBox
             name="password"
             type="password"
             placeholder="Password"
             icon="fi-rr-key"
+            required
           />
+          
           <button
             className="btn-dark center mt-14"
             type="submit"
@@ -122,15 +162,22 @@ const UserAuthForm = ({ type }) => {
           >
             {type.replace("-", " ")}
           </button>
+          
           <div className="relative w-full flex items-center gap-2 my-10 opacity-10 uppercase text-black font-bold">
             <hr className="w-1/2 border-black" />
             <p>or</p>
             <hr className="w-1/2 border-black" />
           </div>
-          <button className="btn-dark flex items-center justify-center gap-4 w-[90%] center" onClick={handleGoogleAuth}>
-            <img src={googleIcon} className="w-5"/>
+          
+          <button 
+            className="btn-dark flex items-center justify-center gap-4 w-[90%] center" 
+            onClick={handleGoogleAuth}
+            type="button"
+          >
+            <img src={googleIcon} className="w-5" alt="Google" />
             continue with google
           </button>
+          
           {type === "sign-in" ? (
             <p className="mt-6 text-dark-grey text-xl text-center">
               Don't have an account ?
@@ -151,4 +198,5 @@ const UserAuthForm = ({ type }) => {
     </AnimationWrapper>
   );
 };
+
 export default UserAuthForm;
