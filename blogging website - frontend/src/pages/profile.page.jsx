@@ -12,6 +12,7 @@ import BlogPostCard from "../components/blog-post.component";
 import NoDataMessage from "../components/nodata.component";
 import LoadMoreDataBtn from "../components/load-more.component";
 import PageNotFound from "./404.page";
+import VolunteerDashboard from "../components/volunteer-dashboard.component";
 
 export const profileDataStructure = {
   fullname: "",
@@ -169,8 +170,8 @@ const ProfilePage = () => {
           </div>
           <div className="max-md:mt-12 w-full">
             <InPageNavigation
-              routes={["Blogs published", "About"]}
-              defaultHidden={["About"]}
+              routes={username === profile_username ? ["Blogs published", "Volunteer Dashboard", "About"] : ["Blogs published", "About"]}
+              defaultHidden={username === profile_username ? ["Volunteer Dashboard", "About"] : ["About"]}
             >
               <>
                 {blogs === null ? (
@@ -191,6 +192,10 @@ const ProfilePage = () => {
                 )}
                 <LoadMoreDataBtn state={blogs} fetchDataFun={getBlogs} />
               </>
+              {username === profile_username ? (
+                <VolunteerDashboard />
+              ) : null}
+              
               <AboutUser
                 bio={bio}
                 social_links={social_links}

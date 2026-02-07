@@ -83,26 +83,57 @@ const User = sequelize.define(
       unique: true,
     },
     
-    // NEW: Location code fields (stored as codes in database)
+    // Location code fields (denormalized for performance, linked to location tables)
+    // These store codes that reference the normalized location tables
     country_code: {
-      type: DataTypes.STRING(3), // 3 digit country code
+      type: DataTypes.STRING(3), // 3 digit country code (e.g., 'IND')
       allowNull: true,
+      comment: 'References countries.country_code for fast access',
     },
     state_code: {
-      type: DataTypes.STRING(2), // 2 digit state code
+      type: DataTypes.STRING(2), // 2 digit state code (e.g., '29')
       allowNull: true,
+      comment: 'References states.state_code for fast access',
     },
     district_code: {
-      type: DataTypes.STRING(2), // 2 digit district code
+      type: DataTypes.STRING(4), // 4 digit district code (e.g., '2901')
       allowNull: true,
+      comment: 'References districts.district_code for fast access',
     },
     block_code: {
-      type: DataTypes.STRING(2), // 2 digit block code
+      type: DataTypes.STRING(6), // 6 digit block code (e.g., '290101')
       allowNull: true,
+      comment: 'References blocks.block_code for fast access',
     },
     village_code: {
-      type: DataTypes.STRING(2), // 2 digit village code
+      type: DataTypes.STRING(6), // 6 digit village code (e.g., '290101001')
       allowNull: true,
+      comment: 'References villages.village_code for fast access',
+    },
+    
+    // NEW: Live Location Tracking for "Near Me" functionality
+    current_latitude: {
+      type: DataTypes.DECIMAL(10, 8), // Precision for GPS coordinates
+      allowNull: true,
+    },
+    current_longitude: {
+      type: DataTypes.DECIMAL(11, 8), // Precision for GPS coordinates
+      allowNull: true,
+    },
+    location_updated_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    is_location_public: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false, // Users can choose to share their location
+    },
+    
+    // NEW: Profile ID for hierarchical profession categorization
+    profile_id: {
+      type: DataTypes.STRING(10), // Format: CC-SC-SSC (Category-SubCategory-SubSubCategory)
+      allowNull: true,
+      comment: 'Format: 2-digit category + 2-digit subcategory + 2-digit sub-subcategory (e.g., "01-02-03" for Doctor-Cardiologist-Interventional)',
     },
     
     password: {
@@ -235,6 +266,57 @@ const User = sequelize.define(
             [sequelize.Sequelize.Op.ne]: null
           }
         }
+      },
+      // NEW: Indexes for location-based queries
+      {
+        fields: ['current_latitude', 'current_longitude'],
+        name: 'location_coordinates_idx'
+      },
+      {
+        fields: ['is_location_public'],
+        name: 'location_public_idx'
+      },
+      {
+        fields: ['profile_id'],
+        name: 'profile_id_idx'
+      },
+      {
+        fields: ['profession_id', 'is_location_public'],
+        name: 'profession_location_idx'
+      },
+      // Location code indexes for fast filtering
+      {
+        fields: ['country_code'],
+        name: 'user_country_code_idx'
+      },
+      {
+        fields: ['state_code'],
+        name: 'user_state_code_idx'
+      },
+      {
+        fields: ['district_code'],
+        name: 'user_district_code_idx'
+      },
+      {
+        fields: ['block_code'],
+        name: 'user_block_code_idx'
+      },
+      {
+        fields: ['village_code'],
+        name: 'user_village_code_idx'
+      },
+      // Composite indexes for location-based queries
+      {
+        fields: ['country_code', 'state_code'],
+        name: 'user_country_state_idx'
+      },
+      {
+        fields: ['state_code', 'district_code'],
+        name: 'user_state_district_idx'
+      },
+      {
+        fields: ['district_code', 'block_code'],
+        name: 'user_district_block_idx'
       }
     ],
     hooks: {
@@ -252,63 +334,5 @@ const User = sequelize.define(
     }
   }
 );
-
-// Instance method to get full name
-User.prototype.getFullName = function() {
-  if (this.first_name && this.last_name) {
-    return `${this.first_name} ${this.last_name}`;
-  }
-  return this.fullname || '';
-};
-
-// Instance method to split existing fullname into first and last name
-User.prototype.splitFullName = function() {
-  if (this.fullname && !this.first_name && !this.last_name) {
-    const nameParts = this.fullname.trim().split(' ');
-    if (nameParts.length >= 2) {
-      this.first_name = nameParts[0];
-      this.last_name = nameParts.slice(1).join(' '); // Handle middle names
-    } else {
-      this.first_name = this.fullname;
-      this.last_name = '';
-    }
-  }
-  return { first_name: this.first_name, last_name: this.last_name };
-};
-
-// Static method to migrate existing users
-User.migrateFullNamesToSeparateFields = async function() {
-  try {
-    const usersWithFullNameOnly = await User.findAll({
-      where: {
-        fullname: {
-          [sequelize.Sequelize.Op.ne]: null
-        },
-        first_name: null,
-        last_name: null
-      }
-    });
-
-    console.log(`Found ${usersWithFullNameOnly.length} users to migrate`);
-
-    for (const user of usersWithFullNameOnly) {
-      const nameParts = user.fullname.trim().split(' ');
-      const first_name = nameParts[0] || '';
-      const last_name = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-
-      await user.update({
-        first_name,
-        last_name
-      });
-
-      console.log(`Migrated user ${user.user_id}: ${user.fullname} -> ${first_name} ${last_name}`);
-    }
-
-    return usersWithFullNameOnly.length;
-  } catch (error) {
-    console.error('Error migrating fullnames:', error);
-    throw error;
-  }
-};
 
 export default User;

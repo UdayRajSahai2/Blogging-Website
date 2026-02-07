@@ -14,24 +14,48 @@ import ChangePassword from "./pages/change-password.page";
 import EditProfile from "./pages/edit-profile.page";
 import Notification from "./pages/notifications.page";
 
-
 export const UserContext = createContext({});
+
 const App = () => {
   const [userAuth, setUserAuth] = useState({});
+  const [pageState, setPageState] = useState("home");
+
   useEffect(() => {
     let userInSession = lookInSession("user");
     userInSession
       ? setUserAuth(JSON.parse(userInSession))
       : setUserAuth({ access_token: null });
   }, []);
+
+  const loadBlogByCategory = (category) => {
+    // If clicking the same category, go back to home
+    if (pageState === category) {
+      setPageState("home");
+      return;
+    }
+    // Set the category as pageState
+    setPageState(category);
+  };
+
   return (
     <UserContext.Provider value={{ userAuth, setUserAuth }}>
       <Routes>
         <Route path="/editor" element={<Editor />}></Route>
         <Route path="/editor/:blog_id" element={<Editor />}></Route>
-        <Route path="/" element={<Navbar />}>
-          <Route index element={<HomePage />} />
-           <Route path="dashboard" element={<SideNav />}>
+        <Route path="/" element={
+          <Navbar 
+            onInterestClick={loadBlogByCategory}
+            activeInterest={pageState} 
+          />
+        }>
+          <Route index element={
+            <HomePage 
+              key={pageState}  
+              pageState={pageState} 
+              setPageState={setPageState}
+            />
+          } />
+          <Route path="dashboard" element={<SideNav />}>
             <Route path="notifications" element={<Notification />} />
           </Route>
           <Route path="settings" element={<SideNav />}>

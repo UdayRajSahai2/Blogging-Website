@@ -5,7 +5,11 @@ import Like from "./Like.js";
 import Read from "./Read.js";
 import Notification from "./Notification.js";
 import Profession from "./Professions.js";
-
+import UserIPHistory from "./UserIPHistory.js"; // <-- Add this import
+import Donor from "./Donor.js";
+import Donation from "./Donation.js";
+import Expenditure from "./Expenditure.js";
+import BalanceSnapshot from "./BalanceSnapshot.js";
 // Function to set up all associations
 const setupAssociations = () => {
   // Create models object
@@ -17,6 +21,11 @@ const setupAssociations = () => {
     Read,
     Notification,
     Profession,
+    UserIPHistory, 
+    Donor,
+    Donation,
+    Expenditure,
+    BalanceSnapshot,
   };
 
   // Define associations for User
@@ -29,6 +38,7 @@ const setupAssociations = () => {
   });
   User.hasMany(Notification, { foreignKey: "user", as: "sentNotifications" });
   User.belongsTo(Profession, { foreignKey: "profession_id", as: "profession" });
+   User.hasMany(UserIPHistory, { foreignKey: "user_id", as: "ipHistory" });
 
   // Define associations for Blog
   Blog.belongsTo(User, { foreignKey: "author", as: "blogAuthor" });
@@ -130,6 +140,18 @@ const setupAssociations = () => {
     as: "childProfessions",
   });
 
+ 
+  UserIPHistory.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
+  // Donations domain associations
+  User.hasOne(Donor, { foreignKey: "user_id", as: "donorProfile" });
+  Donor.belongsTo(User, { foreignKey: "user_id", as: "user" });
+  Donor.hasMany(Donation, { foreignKey: "donor_id", as: "donations" });
+  Donation.belongsTo(Donor, { foreignKey: "donor_id", as: "donor" });
+  Donation.belongsTo(User, { foreignKey: "user_id", targetKey: "user_id", as: "user" });
+
+  // Expenditure is global (not per user) for initiatives
+  // BalanceSnapshot is global periodic snapshot
   console.log("✅ All associations set up successfully!");
 
   return models;
@@ -143,5 +165,10 @@ export {
   Read,
   Notification,
   Profession,
+  UserIPHistory,
+  Donor,
+  Donation,
+  Expenditure,
+  BalanceSnapshot,
   setupAssociations,
 };

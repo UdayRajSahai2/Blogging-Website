@@ -1,0 +1,162 @@
+[
+  {
+    "state": "Andhra Pradesh",
+    "tin": "37",
+    "state_code": "AD"
+  },
+  {
+    "state": "Arunachal Pradesh",
+    "tin": "12",
+    "state_code": "AR"
+  },
+  {
+    "state": "Assam",
+    "tin": "18",
+    "state_code": "AS"
+  },
+  {
+    "state": "Bihar",
+    "tin": "10",
+    "state_code": "BR"
+  },
+  {
+    "state": "Chattisgarh",
+    "tin": "22",
+    "state_code": "CG"
+  },
+  {
+    "state": "Delhi",
+    "tin": "07",
+    "state_code": "DL"
+  },
+  {
+    "state": "Goa",
+    "tin": "30",
+    "state_code": "GA"
+  },
+  {
+    "state": "Gujarat",
+    "tin": "24",
+    "state_code": "GJ"
+  },
+  {
+    "state": "Haryana",
+    "tin": "06",
+    "state_code": "HR"
+  },
+  {
+    "state": "Himachal Pradesh",
+    "tin": "02",
+    "state_code": "HP"
+  },
+  {
+    "state": "Jammu and Kashmir",
+    "tin": "01",
+    "state_code": "JK"
+  },
+  {
+    "state": "Jharkhand",
+    "tin": "20",
+    "state_code": "JH"
+  },
+  {
+    "state": "Karnataka",
+    "tin": "29",
+    "state_code": "KA"
+  },
+  {
+    "state": "Kerala",
+    "tin": "32",
+    "state_code": "KL"
+  },
+  {
+    "state": "Lakshadweep Islands",
+    "tin": "31",
+    "state_code": "LD"
+  },
+  {
+    "state": "Madhya Pradesh",
+    "tin": "23",
+    "state_code": "MP"
+  },
+  {
+    "state": "Maharashtra",
+    "tin": "27",
+    "state_code": "MH"
+  },
+  {
+    "state": "Manipur",
+    "tin": "14",
+    "state_code": "MN"
+  },
+  {
+    "state": "Meghalaya",
+    "tin": "17",
+    "state_code": "ML"
+  },
+  {
+    "state": "Mizoram",
+    "tin": "15",
+    "state_code": "MZ"
+  },
+  {
+    "state": "Nagaland",
+    "tin": "13",
+    "state_code": "NL"
+  },
+  {
+    "state": "Odisha",
+    "tin": "21",
+    "state_code": "OD"
+  },
+  {
+    "state": "Pondicherry",
+    "tin": "34",
+    "state_code": "PY"
+  },
+  {
+    "state": "Punjab",
+    "tin": "03",
+    "state_code": "PB"
+  },
+  {
+    "state": "Rajasthan",
+    "tin": "08",
+    "state_code": "RJ"
+  },
+  {
+    "state": "Sikkim",
+    "tin": "11",
+    "state_code": "SK"
+  },
+  {
+    "state": "Tamil Nadu",
+    "tin": "33",
+    "state_code": "TN"
+  },
+  {
+    "state": "Telangana",
+    "tin": "36",
+    "state_code": "TS"
+  },
+  {
+    "state": "Tripura",
+    "tin": "16",
+    "state_code": "TR"
+  },
+  {
+    "state": "Uttar Pradesh",
+    "tin": "09",
+    "state_code": "UP"
+  },
+  {
+    "state": "Uttarakhand",
+    "tin": "05",
+    "state_code": "UK"
+  },
+  {
+    "state": "West Bengal",
+    "tin": "19",
+    "state_code": "WB"
+  }
+]

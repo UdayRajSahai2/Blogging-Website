@@ -7,13 +7,14 @@ import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import cors from "cors";
 import admin from "firebase-admin";
-import serviceAccountKey from "./reactjs-blogging-website-ac6e9-firebase-adminsdk-fbsvc-9c580bec3f.json" assert { type: "json" };
+import serviceAccountKey from "./data/reactjs-blogging-website-ac6e9-firebase-adminsdk-fbsvc-9c580bec3f.json" with { type: "json" };
 import { getAuth } from "firebase-admin/auth";
 import aws from "aws-sdk";
 import { Op } from "sequelize";
 // import multer from 'multer';
 // import path from 'path';
 
+import { generateOTP, sendEmailOTP, sendSMSOTP } from "./utils/otp.js";
 import {
   User,
   Profession,
@@ -22,11 +23,37 @@ import {
   Like,
   Read,
   Notification,
+  UserIPHistory,
+  Donor,
+  Donation,
+  Expenditure,
+  BalanceSnapshot,
   setupAssociations,
 } from "./Schema/associations.js";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+import { generateCustomerIdFromLocation } from "./utils/customerIdFromLocation.js";
+import axios from "axios"; // Add at the top if not present
+import Razorpay from "razorpay";
+import crypto from "crypto";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Set up associations
-setupAssociations({ User, Blog, Comment, Notification, Profession });
+setupAssociations({
+  User,
+  Blog,
+  Comment,
+  Notification,
+  Profession,
+  UserIPHistory,
+  Donor,
+  Donation,
+  Expenditure,
+  BalanceSnapshot,
+});
 
 // Log associations to verify they are correctly imported
 console.log("User associations in server.js:", User.associations);
@@ -63,6 +90,12 @@ const generateUploadURL = async () => {
     ContentType: "image/jpeg",
   });
 };
+
+// Razorpay instance
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID || "",
+  key_secret: process.env.RAZORPAY_KEY_SECRET || "",
+});
 
 const verifyJWT = (req, res, next) => {
   const authHeader = req.headers["authorization"];
@@ -128,6 +161,7 @@ const connectDB = async () => {
     await Blog.sync(syncOptions);
     await Like.sync(syncOptions);
     await Read.sync(syncOptions);
+    await UserIPHistory.sync(syncOptions);
     // await Comment.sync({ alter: true });
     // await Notification.sync({ alter: true });
     console.log("✅ All tables are ready!");
@@ -145,8 +179,27 @@ let passwordRegex =
 
 let mobileRegex = /^[+]?[0-9]{10,15}$/;
 
+function getClientIp(req) {
+  return (
+    req.headers["x-forwarded-for"]?.split(",").shift() ||
+    req.socket?.remoteAddress ||
+    null
+  );
+}
+
+// In-memory store for pending signups (for demo; use Redis in production)
+const pendingSignups = {};
+
 server.post("/signup", async (req, res) => {
-  let { first_name, last_name, email, password, mobile_number } = req.body;
+  let {
+    first_name,
+    last_name,
+    email,
+    password,
+    mobile_number,
+    latitude,
+    longitude,
+  } = req.body;
 
   if (!first_name || first_name.length < 1) {
     return res.status(403).json({ error: "❌ First name is required" });
@@ -166,12 +219,85 @@ server.post("/signup", async (req, res) => {
   if (mobile_number && !mobileRegex.test(mobile_number)) {
     return res.status(403).json({ error: "❌ Mobile number is invalid" });
   }
+  if (latitude == null || longitude == null) {
+    return res.status(400).json({
+      error: "❌ Location (latitude and longitude) is required for signup",
+    });
+  }
 
   try {
+    // Use OpenStreetMap Nominatim for reverse geocoding
+    let nominatimUrl = process.env.NOMINATIM_URL;
+    if (nominatimUrl) {
+      nominatimUrl = nominatimUrl
+        .replace(/\{lat\}/g, latitude)
+        .replace(/\{lon\}/g, longitude);
+    }
+    const geoRes = await axios.get(nominatimUrl, {
+      headers: { "User-Agent": "mern-blog-app/1.0" },
+    });
+    console.log("geoRes: ", geoRes);
+    const address = geoRes.data.address || {};
+    console.log("address: ", address);
+    const country = address.country || "India";
+    const state = address.state || address.state_district || "";
+    console.log("state: ", state);
+    const district =
+      address.county || address.city_district || address.state_district || "";
+    const blockOrSub =
+      address.city_district ||
+      address.county ||
+      address.residential ||
+      address.city ||
+      address.suburb ||
+      "";
+    const village =
+      address.village ||
+      address.city ||
+      address.city_district ||
+      address.county ||
+      address.residential ||
+      address.town ||
+      address.suburb ||
+      "";
+
+    if (!country || !state || !district || !blockOrSub || !village) {
+      return res.status(400).json({
+        error:
+          "❌ Could not determine full location from coordinates. Please try again from a more specific location.",
+      });
+    }
+
+    // Generate customer_id and abbr using LGD data
+    const { customer_id, abbr, codes } = generateCustomerIdFromLocation({
+      country,
+      state,
+      district,
+      blockOrSub,
+      village,
+    });
     const hashed_password = await bcrypt.hash(password, 10);
     let username = await generateUsername(email);
 
-    let user = await User.create({
+    // Check if email or mobile already exists in DB
+    const existingUser = await User.findOne({
+      where: { [Op.or]: [{ email }, { mobile_number }] },
+    });
+    if (existingUser) {
+      if (existingUser.email === email) {
+        return res.status(400).json({ error: "❌ Email already exists" });
+      }
+      if (existingUser.mobile_number === mobile_number) {
+        return res
+          .status(400)
+          .json({ error: "❌ Mobile number already exists" });
+      }
+    }
+
+    // Generate OTP and store all signup data in memory
+    const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+    pendingSignups[email] = {
       first_name,
       last_name,
       email,
@@ -179,20 +305,30 @@ server.post("/signup", async (req, res) => {
       username,
       mobile_number: mobile_number || null,
       google_auth: false,
-    });
+      customer_id,
+      country_code: codes.country,
+      state_code: codes.state,
+      district_code: codes.district,
+      block_code: codes.block,
+      village_code: codes.village,
+      latitude,
+      longitude,
+      otp,
+      otpExpires,
+      abbr,
+      otpVerified: false,
+    };
 
-    return res.status(200).json(formatDatatoSend(user));
+    await sendEmailOTP(email, otp);
+    await sendSMSOTP(mobile_number, otp);
+
+    return res.status(200).json({ message: "OTP sent to your email/mobile" });
   } catch (error) {
     console.error("Signup error:", error);
-    if (error.name === "SequelizeUniqueConstraintError") {
-      if (error.errors.some((e) => e.path === "email")) {
-        return res.status(400).json({ error: "❌ Email already exists" });
-      }
-      if (error.errors.some((e) => e.path === "mobile_number")) {
-        return res
-          .status(400)
-          .json({ error: "❌ Mobile number already exists" });
-      }
+    if (error.message && error.message.includes("No matching village")) {
+      return res.status(400).json({
+        error: "❌ Invalid location data: village not found in LGD data",
+      });
     }
     return res.status(500).json({ error: "❌ Server error during signup" });
   }
@@ -272,7 +408,7 @@ server.post("/change-password", verifyJWT, async (req, res) => {
 });
 
 server.post("/signin", async (req, res) => {
-  let { email, password } = req.body;
+  let { email, password, latitude, longitude } = req.body;
 
   // Input validation
   if (!email || !password) {
@@ -282,7 +418,7 @@ server.post("/signin", async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ where: { email } });
+    let user = await User.findOne({ where: { email } });
 
     if (!user) {
       return res.status(403).json({ error: "❌ Email not found" });
@@ -295,6 +431,123 @@ server.post("/signin", async (req, res) => {
         return res.status(403).json({ error: "❌ Incorrect password" });
       }
 
+      // --- Generate customer_id if missing (like signup) ---
+      if (!user.customer_id) {
+        if (latitude == null || longitude == null) {
+          // Return clear error so frontend can prompt for location
+          return res.status(400).json({
+            error: "Location required to generate customer_id for this user",
+          });
+        }
+        try {
+          // Use OpenStreetMap Nominatim for reverse geocoding (like signup)
+          let nominatimUrl = process.env.NOMINATIM_URL;
+          if (nominatimUrl) {
+            nominatimUrl = nominatimUrl
+              .replace(/\{lat\}/g, latitude)
+              .replace(/\{lon\}/g, longitude);
+          }
+          const geoRes = await axios.get(nominatimUrl, {
+            headers: { "User-Agent": "mern-blog-app/1.0" },
+          });
+          const address = geoRes.data.address || {};
+          const country = address.country || "India";
+          const state = address.state || address.state_district || "";
+          const district =
+            address.county ||
+            address.city_district ||
+            address.state_district ||
+            "";
+          const blockOrSub =
+            address.city_district ||
+            address.county ||
+            address.residential ||
+            address.city ||
+            address.suburb ||
+            "";
+          const village =
+            address.village ||
+            address.city ||
+            address.city_district ||
+            address.county ||
+            address.residential ||
+            address.town ||
+            address.suburb ||
+            "";
+
+          if (country && state && district && blockOrSub && village) {
+            // Generate customer_id and abbr using LGD data (like signup)
+            const { customer_id, abbr, codes } = generateCustomerIdFromLocation(
+              { country, state, district, blockOrSub, village }
+            );
+            if (customer_id) {
+              await user.update({
+                customer_id,
+                abbr,
+                country_code: codes.country,
+                state_code: codes.state,
+                district_code: codes.district,
+                block_code: codes.block,
+                village_code: codes.village,
+                current_latitude: latitude, 
+                current_longitude: longitude,
+                location_updated_at: new Date(), // Add this to track when location was updated
+              });
+              
+              // Reload user data after update
+              user = await User.findOne({ where: { email } });
+              
+              console.log("User updated with location:", {
+                user_id: user.user_id,
+                customer_id: user.customer_id,
+                abbr: user.abbr,
+                country_code: user.country_code,
+                state_code: user.state_code,
+                district_code: user.district_code,
+                block_code: user.block_code,
+                village_code: user.village_code,
+                current_latitude: user.current_latitude,
+                current_longitude: user.current_longitude,
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Error generating customer_id on signin:", err);
+          // Do not block signin if customer_id generation fails
+        }
+      } else {
+        // customer_id exists, so only update lat/lon if user has moved
+        if (
+          latitude != null &&
+          longitude != null &&
+          (user.current_latitude !== latitude ||
+            user.current_longitude !== longitude)
+        ) {
+          await user.update({
+            current_latitude: latitude,
+            current_longitude: longitude,
+            location_updated_at: new Date(), // Add this to track when location was updated
+          });
+          
+          // Reload user data after update
+          user = await User.findOne({ where: { email } });
+          
+          console.log("User location updated (lat/lon only):", {
+            user_id: user.user_id,
+            current_latitude: user.current_latitude,
+            current_longitude: user.current_longitude,
+          });
+        }
+      }
+      // --- End customer_id logic ---
+      const ip_address = getClientIp(req);
+      if (user && ip_address) {
+        await UserIPHistory.create({
+          user_id: user.user_id,
+          ip_address,
+          created_at: new Date(),
+        });
+      }
       return res.json(formatDatatoSend(user));
     } else {
       return res.status(403).json({
@@ -462,7 +715,11 @@ server.post("/latest-blogs", async (req, res) => {
 
   try {
     // Calculate offset for pagination
-    const offset = (page - 1) * maxLimit;
+    let offset = (page - 1) * maxLimit;
+    if (req.body.fetchAll) {
+      maxLimit = null;
+      offset = null;
+    }
 
     // Fetch all published blogs with author information
     const blogs = await Blog.findAll({
@@ -532,7 +789,7 @@ server.post("/latest-blogs", async (req, res) => {
           raw: true,
         }),
 
-        // Count only parent comments (where parent is null)
+        // Count only parent comments (where parent_comment_id is null)
         Comment.findAll({
           attributes: [
             "blog_id",
@@ -540,7 +797,7 @@ server.post("/latest-blogs", async (req, res) => {
           ],
           where: {
             blog_id: blogIds,
-            parent: null,
+            parent_comment_id: null,
           },
           group: ["blog_id"],
           raw: true,
@@ -665,7 +922,7 @@ server.get("/trending-blogs", async (req, res) => {
           raw: true,
         }),
 
-        // Count only parent comments (where parent is null)
+        // Count only parent comments (where parent_comment_id is null)
         Comment.findAll({
           attributes: [
             "blog_id",
@@ -673,7 +930,7 @@ server.get("/trending-blogs", async (req, res) => {
           ],
           where: {
             blog_id: blogIds,
-            parent: null,
+            parent_comment_id: null,
           },
           group: ["blog_id"],
           raw: true,
@@ -744,7 +1001,7 @@ server.post("/search-blogs", async (req, res) => {
   }
 
   try {
-    const offset = (page - 1) * maxLimit;
+    let offset = (page - 1) * maxLimit;
     let whereClause = { draft: false };
 
     // Add eliminate_blog condition if provided
@@ -799,6 +1056,10 @@ server.post("/search-blogs", async (req, res) => {
         ...(whereClause[Op.and] || []), // Preserve existing conditions
         { author: author },
       ];
+    }
+    if (req.body.fetchAll) {
+      maxLimit = null;
+      offset = null;
     }
 
     const { count: totalBlogs, rows: blogs } = await Blog.findAndCountAll({
@@ -2037,203 +2298,6 @@ server.post("/get-nested-replies", async (req, res) => {
   }
 });
 
-// // Delete comment or reply endpoint
-// server.delete("/delete-comment", verifyJWT, async (req, res) => {
-//   // Validate request body structure first
-//   if (!req.body || typeof req.body !== "object") {
-//     return res.status(400).json({
-//       success: false,
-//       message: "Invalid request format",
-//       error: "Expected JSON object",
-//     });
-//   }
-
-//   const { comment_id } = req.body;
-//   const user_id = req.user;
-
-//   // Validate input
-//   if (!comment_id || typeof comment_id !== "string") {
-//     return res.status(400).json({
-//       success: false,
-//       message: "Invalid comment ID",
-//       error: "comment_id must be a non-empty string",
-//     });
-//   }
-
-//   const transaction = await sequelize.transaction();
-
-//   try {
-//     const trimmedCommentId = comment_id.trim();
-
-//     console.log("Processing delete comment action:", {
-//       comment_id: trimmedCommentId,
-//       user_id,
-//     });
-
-//     // 1. Get the comment with full details
-//     const comment = await Comment.findOne({
-//       where: { comment_id: trimmedCommentId },
-//       attributes: [
-//         "comment_id",
-//         "blog_id",
-//         "commented_by",
-//         "isReply",
-//         "parent_comment_id",
-//         "children",
-//       ],
-//       transaction,
-//       lock: transaction.LOCK.UPDATE,
-//     });
-
-//     if (!comment) {
-//       await transaction.rollback();
-//       return res.status(404).json({
-//         success: false,
-//         error: "Comment not found",
-//       });
-//     }
-
-//     // 2. Check if user is authorized to delete this comment
-//     // Only the comment author can delete their own comment
-//     if (comment.commented_by !== user_id) {
-//       await transaction.rollback();
-//       return res.status(403).json({
-//         success: false,
-//         error: "You can only delete your own comments",
-//       });
-//     }
-
-//     // 3. Handle deletion based on comment type
-//     if (comment.isReply) {
-//       // If it's a reply, remove it from parent's children array
-//       if (comment.parent_comment_id) {
-//         const parentComment = await Comment.findOne({
-//           where: { comment_id: comment.parent_comment_id },
-//           attributes: ["children"],
-//           transaction,
-//         });
-
-//         if (parentComment && parentComment.children) {
-//           const updatedChildren = parentComment.children.filter(
-//             (childId) => childId !== trimmedCommentId
-//           );
-
-//           await Comment.update(
-//             { children: updatedChildren },
-//             {
-//               where: { comment_id: comment.parent_comment_id },
-//               transaction,
-//             }
-//           );
-//         }
-//       }
-
-//       // Delete the reply
-//       await Comment.destroy({
-//         where: { comment_id: trimmedCommentId },
-//         transaction,
-//       });
-//     } else {
-//       // If it's a parent comment, we need to handle its replies
-//       const hasReplies = comment.children && comment.children.length > 0;
-
-//       if (hasReplies) {
-//         // Delete all replies first
-//         await Comment.destroy({
-//           where: {
-//             comment_id: {
-//               [Op.in]: comment.children,
-//             },
-//           },
-//           transaction,
-//         });
-
-//         // Delete related notifications for replies
-//         await Notification.destroy({
-//           where: {
-//             comment_id: {
-//               [Op.in]: comment.children,
-//             },
-//           },
-//           transaction,
-//         });
-//       }
-
-//       // Delete the parent comment
-//       await Comment.destroy({
-//         where: { comment_id: trimmedCommentId },
-//         transaction,
-//       });
-//     }
-
-//     // 4. Delete related notifications
-//     await Notification.destroy({
-//       where: {
-//         [Op.or]: [
-//           { comment_id: trimmedCommentId },
-//           { reply: trimmedCommentId },
-//           { replied_on_comment: trimmedCommentId },
-//         ],
-//       },
-//       transaction,
-//     });
-
-//     // 5. Get updated total comments count for the blog
-//     const total_comments = await Comment.count({
-//       where: { blog_id: comment.blog_id },
-//       transaction,
-//     });
-
-//     await transaction.commit();
-
-//     console.log("Comment deleted successfully:", {
-//       comment_id: trimmedCommentId,
-//       blog_id: comment.blog_id,
-//       isReply: comment.isReply,
-//       total_comments,
-//     });
-
-//     return res.json({
-//       success: true,
-//       message: comment.isReply
-//         ? "Reply deleted successfully"
-//         : "Comment deleted successfully",
-//       deleted_comment_id: trimmedCommentId,
-//       isReply: comment.isReply,
-//       blog_id: comment.blog_id,
-//       total_comments,
-//     });
-//   } catch (err) {
-//     await transaction.rollback();
-
-//     console.error("Comment deletion failed:", {
-//       errorName: err.name,
-//       errorMessage: err.message,
-//       stack: err.stack,
-//     });
-
-//     const errorResponse = {
-//       success: false,
-//       message: "Error deleting comment",
-//     };
-
-//     if (err.name === "SequelizeForeignKeyConstraintError") {
-//       errorResponse.error = "Cannot delete comment due to database constraints";
-//     } else {
-//       errorResponse.error = "Database operation failed";
-//     }
-
-//     if (process.env.NODE_ENV === "development") {
-//       errorResponse.debug = {
-//         error: err.name,
-//         message: err.message,
-//       };
-//     }
-
-//     return res.status(500).json(errorResponse);
-//   }
-// });
-
 // Bulk delete comments (optional - for admin purposes)
 server.delete("/delete-comments-bulk", verifyJWT, async (req, res) => {
   const { comment_ids, blog_id } = req.body;
@@ -2412,7 +2476,11 @@ server.post("/update-profile", verifyJWT, async (req, res) => {
       personal_state,
       personal_street,
       personal_zip_code,
-      profession_id,
+      profession_id, // Keep for backward compatibility
+      // NEW FIELDS for hierarchy selection
+      domain_id,      // Level 0 profession
+      field_id,       // Level 1 profession  
+      specialty_id,   // Level 2 profession
       professional_city,
       professional_country,
       professional_state,
@@ -2468,36 +2536,66 @@ server.post("/update-profile", verifyJWT, async (req, res) => {
     if (website && !validateUrl(website)) {
       return res.status(400).json({ error: "Invalid Website URL" });
     }
+     // Handle profession hierarchy and profile_id generation
+    let finalProfessionId = profession_id;
+    let profile_id = null;
+
+    // If domain->field->specialty selection is provided, use that
+    if (domain_id && field_id && specialty_id) {
+      try {
+        const { generateProfileId } = await import('./utils/profileIdGenerator.js');
+        const professionResult = await generateProfileId(
+          domain_id,
+          field_id,
+          specialty_id
+        );
+        
+        profile_id = professionResult.profile_id;
+        finalProfessionId = specialty_id; // Store the most specific profession
+
+      } catch (error) {
+        console.error('Error generating profile_id:', error);
+        return res.status(400).json({ 
+          error: "Invalid profession selection", 
+          details: error.message 
+        });
+      }
+    }
+
+    // Prepare update data
+    const updateData = {
+      username,
+      bio,
+      facebook: facebook || null,
+      instagram: instagram || null,
+      twitter: twitter || null,
+      youtube: youtube || null,
+      github: github || null,
+      website: website || null,
+      personal_city: personal_city || null,
+      personal_country: personal_country || null,
+      personal_state: personal_state || null,
+      personal_street: personal_street || null,
+      personal_zip_code: personal_zip_code || null,
+      profession_id: finalProfessionId || null,
+      professional_city: professional_city || null,
+      professional_country: professional_country || null,
+      professional_state: professional_state || null,
+      professional_street: professional_street || null,
+      professional_zip_code: professional_zip_code || null,
+    };
+
+    // Only update profile_id if it was generated
+    if (profile_id !== null) {
+      updateData.profile_id = profile_id;
+    }
 
     // Update user profile
-    await User.update(
-      {
-        username,
-        bio,
-        facebook: facebook || null,
-        instagram: instagram || null,
-        twitter: twitter || null,
-        youtube: youtube || null,
-        github: github || null,
-        website: website || null,
-        personal_city: personal_city || null,
-        personal_country: personal_country || null,
-        personal_state: personal_state || null,
-        personal_street: personal_street || null,
-        personal_zip_code: personal_zip_code || null,
-        profession_id: profession_id || null,
-        professional_city: professional_city || null,
-        professional_country: professional_country || null,
-        professional_state: professional_state || null,
-        professional_street: professional_street || null,
-        professional_zip_code: professional_zip_code || null,
-      },
-      {
-        where: { user_id },
-        returning: true,
-        plain: true,
-      }
-    );
+    await User.update(updateData, {
+      where: { user_id },
+      returning: true,
+      plain: true,
+    });
 
     // Get updated user data
     const updatedUser = await User.findOne({
@@ -2518,214 +2616,6 @@ server.post("/update-profile", verifyJWT, async (req, res) => {
   }
 });
 
-// // Fixed notification endpoints
-// server.get("/new-notification", verifyJWT, async (req, res) => {
-//   try {
-//     const user_id = req.user;
-//     console.log("Checking notifications for user:", user_id);
-
-//     const notification = await Notification.findOne({
-//       where: {
-//         notification_for: user_id,
-//         seen: false,
-//         user: { [Op.ne]: user_id },
-//       },
-//     });
-
-//     console.log("Found notification:", notification);
-
-//     return res.status(200).json({
-//       new_notification_available: !!notification,
-//     });
-//   } catch (err) {
-//     console.error("Error checking notifications:", err);
-//     return res.status(500).json({
-//       error: "Failed to check notifications",
-//       details: process.env.NODE_ENV === "development" ? err.message : null,
-//     });
-//   }
-// });
-
-// server.post("/notifications", verifyJWT, async (req, res) => {
-//   const user_id = req.user;
-//   const { page = 1, filter = "all", deletedDocCount = 0 } = req.body;
-//   const maxLimit = 10;
-
-//   try {
-    
-//     const offset = Math.max(0, (page - 1) * maxLimit - deletedDocCount);
-//     const whereClause = {
-//       notification_for: user_id,
-//       user: { [Op.ne]: user_id },
-//     };
-
-//     if (filter !== "all") {
-//       whereClause.type = filter;
-//     }
-//     const totalNotifications = await Notification.count({
-//       where: {
-//         notification_for: user_id,
-//         user: { [Op.ne]: user_id },
-//       },
-//     });
-
-//     const { count: total, rows: notifications } =
-//       await Notification.findAndCountAll({
-//         where: whereClause,
-//         include: [
-//           {
-//             model: User,
-//             as: "notificationUser",
-//             attributes: ["user_id", "username", "fullname", "profile_img"],
-//             required: true,
-//           },
-//           {
-//             model: Blog,
-//             as: "notificationBlog",
-//             attributes: ["blog_id", "title"],
-//             required: false,
-//           },
-//           {
-//             model: Comment,
-//             as: "notificationComment", // This is the reply comment
-//             attributes: ["comment_id", "comment"],
-//             required: false,
-//           },
-//         ],
-//         attributes: [
-//           "id",
-//           "type",
-//           "seen",
-//           "reply",
-//           "replied_on_comment",
-//           "createdAt",
-//         ],
-//         order: [["createdAt", "DESC"]],
-//         offset: offset,
-//         limit: maxLimit,
-//         distinct: true,
-//       });
-//     // Filter out notifications where blog is null (drafted blogs)
-//     const validNotifications = notifications.filter(
-//       (n) => n.notificationBlog !== null
-//     );
-
-//     // For reply notifications, fetch the original comments
-//     const formattedNotifications = await Promise.all(
-//       validNotifications.map(async (notification) => {
-//         const plainNotif = notification.get({ plain: true });
-        
-//         let originalComment = null;
-        
-//         // If this is a reply notification, fetch the original comment
-//         if (plainNotif.type === 'reply' && plainNotif.replied_on_comment) {
-//           try {
-//             originalComment = await Comment.findOne({
-//               where: { comment_id: plainNotif.replied_on_comment },
-//               attributes: ["comment_id", "comment"],
-//             });
-            
-//             if (originalComment) {
-//               originalComment = originalComment.get({ plain: true });
-//             }
-//           } catch (err) {
-//             console.error('Error fetching original comment:', err);
-//           }
-//         }
-
-//         return {
-//           _id: plainNotif.id,
-//           type: plainNotif.type,
-//           seen: plainNotif.seen,
-//           reply: plainNotif.reply,
-//           replied_on_comment: plainNotif.replied_on_comment,
-//           original_comment: originalComment, // Add the original comment content
-//           createdAt: plainNotif.createdAt,
-//           user: plainNotif.notificationUser,
-//           blog: plainNotif.notificationBlog,
-//           comment: plainNotif.notificationComment, // This is the reply
-//         };
-//       })
-//     );
-
-//     // Mark valid notifications as seen
-//     const notificationIds = validNotifications.map((n) => n.id);
-//     if (notificationIds.length > 0) {
-//       await Notification.update(
-//         { seen: true },
-//         { where: { id: { [Op.in]: notificationIds } } }
-//       );
-//     }
-
-//     return res.status(200).json({
-//       notifications: formattedNotifications,
-//       totalDocs: validNotifications.length,
-//       currentPage: parseInt(page),
-//       perPage: maxLimit,
-//       totalPages: Math.ceil(validNotifications.length / maxLimit),
-//       debug:
-//         process.env.NODE_ENV === "development"
-//           ? {
-//               totalNotificationsInDb: totalNotifications,
-//               whereClause,
-//               offset,
-//               filteredCount: validNotifications.length,
-//             }
-//           : undefined,
-//     });
-//   } catch (err) {
-//     console.error("Error fetching notifications:", {
-//       error: err.message,
-//       stack: err.stack,
-//       body: req.body,
-//     });
-//     return res.status(500).json({
-//       error: "Failed to fetch notifications",
-//       details: process.env.NODE_ENV === "development" ? err.message : null,
-//     });
-//   }
-// });
-
-// server.post("/all-notifications-count", verifyJWT, async (req, res) => {
-//   const user_id = req.user;
-//   const { filter = "all" } = req.body;
-
-//   try {
-//     console.log("Counting notifications for user:", user_id, "Filter:", filter);
-
-//     // Build the where clause
-//     const whereClause = {
-//       notification_for: user_id,
-//       user: { [Op.ne]: user_id },
-//     };
-
-//     // Add filter if not "all"
-//     if (filter !== "all") {
-//       whereClause.type = filter;
-//     }
-
-//     // Count notifications with the filter
-//     const count = await Notification.count({
-//       where: whereClause,
-//     });
-
-//     console.log("Notification count:", count);
-
-//     return res.status(200).json({ totalDocs: count });
-//   } catch (err) {
-//     console.error("Error counting notifications:", {
-//       error: err.message,
-//       stack: err.stack,
-//       userId: user_id,
-//       filter: filter,
-//     });
-//     return res.status(500).json({
-//       error: "Failed to count notifications",
-//       details: process.env.NODE_ENV === "development" ? err.message : null,
-//     });
-//   }
-// });
-
 server.delete("/delete-notification", verifyJWT, async (req, res) => {
   // Validate request body structure first
   if (!req.body || typeof req.body !== "object") {
@@ -2740,7 +2630,10 @@ server.delete("/delete-notification", verifyJWT, async (req, res) => {
   const user_id = req.user;
 
   // Validate input
-  if (!notification_id || (typeof notification_id !== "string" && typeof notification_id !== "number")) {
+  if (
+    !notification_id ||
+    (typeof notification_id !== "string" && typeof notification_id !== "number")
+  ) {
     return res.status(400).json({
       success: false,
       message: "Invalid notification ID",
@@ -2758,9 +2651,9 @@ server.delete("/delete-notification", verifyJWT, async (req, res) => {
 
     // 1. Find the notification
     const notification = await Notification.findOne({
-      where: { 
+      where: {
         id: notification_id,
-        notification_for: user_id // Ensure user can only delete their own notifications
+        notification_for: user_id, // Ensure user can only delete their own notifications
       },
       attributes: ["id", "type", "notification_for"],
       transaction,
@@ -2771,7 +2664,8 @@ server.delete("/delete-notification", verifyJWT, async (req, res) => {
       await transaction.rollback();
       return res.status(404).json({
         success: false,
-        error: "Notification not found or you don't have permission to delete it",
+        error:
+          "Notification not found or you don't have permission to delete it",
       });
     }
 
@@ -2803,7 +2697,6 @@ server.delete("/delete-notification", verifyJWT, async (req, res) => {
       message: "Notification deleted successfully",
       deleted_notification_id: notification_id,
     });
-
   } catch (err) {
     await transaction.rollback();
 
@@ -2819,7 +2712,8 @@ server.delete("/delete-notification", verifyJWT, async (req, res) => {
     };
 
     if (err.name === "SequelizeForeignKeyConstraintError") {
-      errorResponse.error = "Cannot delete notification due to database constraints";
+      errorResponse.error =
+        "Cannot delete notification due to database constraints";
     } else {
       errorResponse.error = "Database operation failed";
     }
@@ -2835,7 +2729,7 @@ server.delete("/delete-notification", verifyJWT, async (req, res) => {
   }
 });
 
-// FIXED: Main notifications endpoint
+// CORRECTED: Main notifications endpoint
 server.post("/notifications", verifyJWT, async (req, res) => {
   const user_id = req.user;
   const { page = 1, filter = "all", deletedDocCount = 0 } = req.body;
@@ -2843,89 +2737,99 @@ server.post("/notifications", verifyJWT, async (req, res) => {
 
   try {
     const offset = Math.max(0, (page - 1) * maxLimit - deletedDocCount);
-    
-    // FIXED: Base where clause - include own replies
+
+    // CORRECTED: Base where clause to properly include own replies
     let whereClause = {
-      notification_for: user_id,
       [Op.or]: [
-        // Show all notifications from others
-        { user: { [Op.ne]: user_id } },
-        // Show own replies only (not own comments/likes on own posts)
-        { 
-          user: user_id, 
-          type: 'reply'
-        }
-      ]
+        // Case 1: All notifications FOR the user FROM others
+        {
+          notification_for: user_id,
+          user: { [Op.ne]: user_id },
+        },
+        // Case 2: Own replies (notifications where user replied to someone else's comment)
+        {
+          notification_for: user_id,
+          user: user_id,
+          type: "reply",
+        },
+      ],
     };
 
-    // FIXED: Apply filter on top of base clause
+    // CORRECTED: Apply filter logic
     if (filter !== "all") {
-      // For specific filters, we need to modify the OR condition
       if (filter === "reply") {
-        // For reply filter: show all replies (others + own)
+        // Show all replies: others' replies to user + user's own replies
         whereClause = {
           notification_for: user_id,
-          type: 'reply'
+          type: "reply",
         };
       } else {
         // For like/comment filters: only show others' notifications
         whereClause = {
           notification_for: user_id,
           type: filter,
-          user: { [Op.ne]: user_id }
+          user: { [Op.ne]: user_id },
         };
       }
     }
 
-    console.log("Notification whereClause:", JSON.stringify(whereClause, null, 2));
+    console.log(
+      "Notification whereClause:",
+      JSON.stringify(whereClause, null, 2)
+    );
     console.log("User ID:", user_id, "Filter:", filter);
 
-    const { count: total, rows: notifications } = await Notification.findAndCountAll({
-      where: whereClause,
-      include: [
-        {
-          model: User,
-          as: "notificationUser",
-          attributes: ["user_id", "username", "fullname", "profile_img"],
-          required: true,
-        },
-        {
-          model: Blog,
-          as: "notificationBlog",
-          attributes: ["blog_id", "title"],
-          required: false,
-        },
-        {
-          model: Comment,
-          as: "notificationComment",
-          attributes: ["comment_id", "comment"],
-          required: false,
-        },
-      ],
-      attributes: [
-        "id",
-        "type",
-        "seen",
-        "reply",
-        "replied_on_comment",
-        "user",
-        "comment_id",
-        "blog",
-        "createdAt",
-      ],
-      order: [["createdAt", "DESC"]],
-      offset: offset,
-      limit: maxLimit,
-      distinct: true,
-    });
+    const { count: total, rows: notifications } =
+      await Notification.findAndCountAll({
+        where: whereClause,
+        include: [
+          {
+            model: User,
+            as: "notificationUser",
+            attributes: ["user_id", "username", "fullname", "profile_img"],
+            required: true,
+          },
+          {
+            model: Blog,
+            as: "notificationBlog",
+            attributes: ["blog_id", "title"],
+            required: false,
+          },
+          {
+            model: Comment,
+            as: "notificationComment",
+            attributes: ["comment_id", "comment"],
+            required: false,
+          },
+        ],
+        attributes: [
+          "id",
+          "type",
+          "seen",
+          "reply",
+          "replied_on_comment",
+          "user",
+          "comment_id",
+          "blog",
+          "createdAt",
+        ],
+        order: [["createdAt", "DESC"]],
+        offset: offset,
+        limit: maxLimit,
+        distinct: true,
+      });
 
     console.log(`Found ${notifications.length} notifications`);
-    console.log("Notifications with ownership:", notifications.slice(0, 3).map(n => ({
-      id: n.id,
-      type: n.type,
-      user: n.user,
-      isOwn: n.user === user_id
-    })));
+    console.log(
+      "Notifications with ownership:",
+      notifications.slice(0, 3).map((n) => ({
+        id: n.id,
+        type: n.type,
+        user: n.user,
+        notification_for: n.notification_for,
+        isOwn: n.user === user_id,
+      }))
+    );
 
     const validNotifications = notifications.filter(
       (n) => n.notificationBlog !== null
@@ -2934,27 +2838,28 @@ server.post("/notifications", verifyJWT, async (req, res) => {
     const formattedNotifications = await Promise.all(
       validNotifications.map(async (notification) => {
         const plainNotif = notification.get({ plain: true });
-        
+
         let originalComment = null;
-        
-        if (plainNotif.type === 'reply' && plainNotif.replied_on_comment) {
+
+        if (plainNotif.type === "reply" && plainNotif.replied_on_comment) {
           try {
             originalComment = await Comment.findOne({
               where: { comment_id: plainNotif.replied_on_comment },
               attributes: ["comment_id", "comment"],
             });
-            
+
             if (originalComment) {
               originalComment = originalComment.get({ plain: true });
             }
           } catch (err) {
-            console.error('Error fetching original comment:', err);
+            console.error("Error fetching original comment:", err);
           }
         }
 
-        // FIXED: Correctly identify own replies
-        const isOwnReply = plainNotif.user === user_id && plainNotif.type === 'reply';
-        
+        // CORRECTED: Properly identify own replies
+        const isOwnReply =
+          plainNotif.user === user_id && plainNotif.type === "reply";
+
         return {
           _id: plainNotif.id,
           type: plainNotif.type,
@@ -2967,16 +2872,19 @@ server.post("/notifications", verifyJWT, async (req, res) => {
           blog: plainNotif.notificationBlog,
           comment: plainNotif.notificationComment,
           comment_id: plainNotif.comment_id,
-          isOwnReply: isOwnReply, // This flag is crucial for frontend
+          isOwnReply: isOwnReply,
+          // Add these flags for better frontend handling
+          canDelete: isOwnReply, // Only own replies can be deleted
+          isDeletable: isOwnReply,
         };
       })
     );
 
-    // FIXED: Only mark others' notifications as seen (not own replies)
+    // CORRECTED: Only mark others' notifications as seen (not own replies)
     const unseenOthersNotifications = validNotifications
-      .filter(n => n.user !== user_id && !n.seen)
-      .map(n => n.id);
-    
+      .filter((n) => n.user !== user_id && !n.seen)
+      .map((n) => n.id);
+
     if (unseenOthersNotifications.length > 0) {
       await Notification.update(
         { seen: true },
@@ -2990,13 +2898,21 @@ server.post("/notifications", verifyJWT, async (req, res) => {
       currentPage: parseInt(page),
       perPage: maxLimit,
       totalPages: Math.ceil(validNotifications.length / maxLimit),
-      debug: process.env.NODE_ENV === "development" ? {
-        whereClause,
-        offset,
-        totalFound: notifications.length,
-        validCount: validNotifications.length,
-        ownRepliesCount: formattedNotifications.filter(n => n.isOwnReply).length,
-      } : undefined,
+      debug:
+        process.env.NODE_ENV === "development"
+          ? {
+              whereClause,
+              offset,
+              totalFound: notifications.length,
+              validCount: validNotifications.length,
+              ownRepliesCount: formattedNotifications.filter(
+                (n) => n.isOwnReply
+              ).length,
+              othersNotificationsCount: formattedNotifications.filter(
+                (n) => !n.isOwnReply
+              ).length,
+            }
+          : undefined,
     });
   } catch (err) {
     console.error("Error fetching notifications:", {
@@ -3021,21 +2937,21 @@ server.post("/all-notifications-count", verifyJWT, async (req, res) => {
       notification_for: user_id,
       [Op.or]: [
         { user: { [Op.ne]: user_id } },
-        { user: user_id, type: 'reply' }
-      ]
+        { user: user_id, type: "reply" },
+      ],
     };
 
     if (filter !== "all") {
       if (filter === "reply") {
         whereClause = {
           notification_for: user_id,
-          type: 'reply'
+          type: "reply",
         };
       } else {
         whereClause = {
           notification_for: user_id,
           type: filter,
-          user: { [Op.ne]: user_id }
+          user: { [Op.ne]: user_id },
         };
       }
     }
@@ -3087,11 +3003,16 @@ server.delete("/delete-comment", verifyJWT, async (req, res) => {
 
     // 1. Find and verify ownership
     const comment = await Comment.findOne({
-      where: { 
+      where: {
         comment_id,
-        commented_by: user_id // Ensure user can only delete their own comments
+        commented_by: user_id, // Ensure user can only delete their own comments
       },
-      attributes: ["comment_id", "commented_by", "parent_comment_id", "children"],
+      attributes: [
+        "comment_id",
+        "commented_by",
+        "parent_comment_id",
+        "children",
+      ],
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
@@ -3114,9 +3035,9 @@ server.delete("/delete-comment", verifyJWT, async (req, res) => {
 
       if (parentComment && parentComment.children) {
         const updatedChildren = parentComment.children.filter(
-          child => child !== comment_id
+          (child) => child !== comment_id
         );
-        
+
         await Comment.update(
           { children: updatedChildren },
           {
@@ -3165,7 +3086,6 @@ server.delete("/delete-comment", verifyJWT, async (req, res) => {
       message: "Comment deleted successfully",
       deleted_comment_id: comment_id,
     });
-
   } catch (err) {
     await transaction.rollback();
 
@@ -3196,8 +3116,1018 @@ server.delete("/delete-comment", verifyJWT, async (req, res) => {
     return res.status(500).json(errorResponse);
   }
 });
+
+server.post("/verify-email-otp", async (req, res) => {
+  const { email, otp } = req.body;
+  const pending = pendingSignups[email];
+  if (!pending)
+    return res.status(404).json({ error: "Signup not found or expired" });
+  if (pending.otp === otp && pending.otpExpires > new Date()) {
+    pending.otpVerified = true;
+    return res.json({ success: true });
+  } else {
+    return res.status(400).json({ error: "Invalid or expired OTP" });
+  }
+});
+
+server.post("/complete-signup", async (req, res) => {
+  const { email } = req.body;
+  const pending = pendingSignups[email];
+  if (!pending)
+    return res.status(404).json({ error: "Signup not found or expired" });
+  if (!pending.otpVerified)
+    return res.status(400).json({ error: "OTP not verified" });
+  try {
+    // Double-check email/mobile uniqueness
+    const existingUser = await User.findOne({
+      where: {
+        [Op.or]: [
+          { email: pending.email },
+          { mobile_number: pending.mobile_number },
+        ],
+      },
+    });
+    if (existingUser) {
+      if (existingUser.email === pending.email) {
+        return res.status(400).json({ error: "❌ Email already exists" });
+      }
+      if (existingUser.mobile_number === pending.mobile_number) {
+        return res
+          .status(400)
+          .json({ error: "❌ Mobile number already exists" });
+      }
+    }
+    let user = await User.create({
+      first_name: pending.first_name,
+      last_name: pending.last_name,
+      email: pending.email,
+      password: pending.password,
+      username: pending.username,
+      mobile_number: pending.mobile_number,
+      google_auth: false,
+      customer_id: pending.customer_id,
+      country_code: pending.country_code,
+      state_code: pending.state_code,
+      district_code: pending.district_code,
+      block_code: pending.block_code,
+      village_code: pending.village_code,
+      latitude: pending.latitude,
+      longitude: pending.longitude,
+    });
+    // Log IP address for signup
+    const ip_address = getClientIp(req);
+    if (user && ip_address) {
+      await UserIPHistory.create({
+        user_id: user.user_id,
+        ip_address,
+        created_at: new Date(),
+      });
+    }
+    delete pendingSignups[email]; // Clean up
+    return res.status(200).json({
+      ...formatDatatoSend(user),
+      customer_id: pending.customer_id,
+      abbr: pending.abbr,
+    });
+  } catch (error) {
+    console.error("Complete signup error:", error);
+    return res
+      .status(500)
+      .json({ error: "❌ Server error during account creation" });
+  }
+});
+
+// --- LOCATION TRACKING ENDPOINTS ---
+
+// POST /update-location
+server.post("/update-location", verifyJWT, async (req, res) => {
+  try {
+    const { latitude, longitude } = req.body;
+    const user_id = req.user;
+
+    if (typeof latitude !== "number" || typeof longitude !== "number") {
+      return res.status(400).json({
+        error: "Latitude and longitude are required and must be numbers",
+      });
+    }
+    if (latitude < -90 || latitude > 90) {
+      return res.status(400).json({ error: "Invalid latitude" });
+    }
+    if (longitude < -180 || longitude > 180) {
+      return res.status(400).json({ error: "Invalid longitude" });
+    }
+
+    const user = await User.findByPk(user_id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    await user.update({
+      current_latitude: latitude,
+      current_longitude: longitude,
+      location_updated_at: new Date()
+    });
+    return res.status(200).json({
+      message: "Location updated successfully",
+      location: { latitude, longitude },
+    });
+  } catch (error) {
+    console.error("Error updating location:", error);
+    return res.status(500).json({ error: "Failed to update location" });
+  }
+});
+
+// POST /toggle-location-privacy
+server.post("/toggle-location-privacy", verifyJWT, async (req, res) => {
+  try {
+    const user_id = req.user;
+    const { is_public } = req.body;
+    if (typeof is_public !== "boolean") {
+      return res.status(400).json({ error: "is_public must be a boolean" });
+    }
+    const user = await User.findByPk(user_id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    await user.update({ is_location_public: is_public });
+    return res.status(200).json({
+      message: `Location is now ${is_public ? "public" : "private"}`,
+      is_location_public: is_public,
+    });
+  } catch (error) {
+    console.error("Error toggling location privacy:", error);
+    return res.status(500).json({ error: "Failed to update location privacy" });
+  }
+});
+
+// POST /find-nearby-users
+server.post("/find-nearby-users", async (req, res) => {
+  try {
+    const {
+      latitude,
+      longitude,
+      radius_km = 10,
+      profession_id = null,
+      limit = 20,
+      include_non_public = false,
+    } = req.body;
+    if (typeof latitude !== "number" || typeof longitude !== "number") {
+      return res.status(400).json({
+        error: "Latitude and longitude are required and must be numbers",
+      });
+    }
+    if (
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      return res.status(400).json({ error: "Invalid coordinates" });
+    }
+    const Op = sequelize.Sequelize.Op;
+    const haversinePublic = sequelize.literal(`
+      (6371 * acos(
+        cos(radians(${latitude})) * 
+        cos(radians(current_latitude)) * 
+        cos(radians(current_longitude) - radians(${longitude})) + 
+        sin(radians(${latitude})) * 
+        sin(radians(current_latitude))
+      ))
+    `);
+    let users = await User.findAll({
+      where: {
+        is_location_public: true,
+        current_latitude: { [Op.ne]: null },
+        current_longitude: { [Op.ne]: null },
+        ...(profession_id ? { profession_id } : {})
+      },
+      attributes: [
+        "fullname",
+        "username",
+        "profile_img",
+        "bio",
+        "profile_id",
+        "profession_id",
+        [haversinePublic, 'distance']
+      ],
+      include: [
+        {
+          model: Profession,
+          as: 'profession',
+          attributes: ['name']
+        }
+      ],
+      having: sequelize.literal(`distance <= ${radius_km}`),
+      order: [['distance', 'ASC']],
+      limit
+    });
+    if ((!users || users.length === 0) && include_non_public === true) {
+      const haversine = sequelize.literal(`
+        (6371 * acos(
+          cos(radians(${latitude})) * 
+          cos(radians(current_latitude)) * 
+          cos(radians(current_longitude) - radians(${longitude})) + 
+          sin(radians(${latitude})) * 
+          sin(radians(current_latitude))
+        ))
+      `);
+      users = await User.findAll({
+        where: {
+          current_latitude: { [Op.ne]: null },
+          current_longitude: { [Op.ne]: null },
+          ...(profession_id ? { profession_id } : {})
+        },
+        attributes: [
+          "fullname",
+          "username",
+          "profile_img",
+          "bio",
+          "profile_id",
+          "profession_id",
+          [haversine, 'distance']
+        ],
+        include: [
+          {
+            model: Profession,
+            as: 'profession',
+            attributes: ['name']
+          }
+        ],
+        having: sequelize.literal(`distance <= ${radius_km}`),
+        order: [['distance', 'ASC']],
+        limit
+      });
+    }
+    return res.status(200).json({
+      users,
+      count: users.length,
+      search_radius: radius_km,
+    });
+  } catch (error) {
+    console.error("Error finding nearby users:", error);
+    return res.status(500).json({ error: "Failed to find nearby users" });
+  }
+});
+
+// --- PROFILE ID MANAGEMENT ENDPOINTS ---
+
+// Get all domains (level 0)
+server.get("/professions/domains", async (req, res) => {
+  try {
+    const domains = await Profession.findAll({
+      where: { 
+        level: 0, 
+        parent_id: null 
+      },
+      order: [['name', 'ASC']]
+    });
+
+    return res.status(200).json({
+      message: "Domains retrieved successfully",
+      data: domains
+    });
+  } catch (error) {
+    console.error("Error getting domains:", error);
+    return res.status(500).json({
+      error: "Failed to retrieve domains",
+      details: process.env.NODE_ENV === "development" ? error.message : null,
+    });
+  }
+});
+// Get fields by domain_id
+server.get("/professions/fields/:domain_id", async (req, res) => {
+  try {
+    const { domain_id } = req.params;
+    
+    const fields = await Profession.findAll({
+      where: { 
+        level: 1, 
+        parent_id: domain_id 
+      },
+      order: [['name', 'ASC']]
+    });
+
+    return res.status(200).json({
+      message: "Fields retrieved successfully",
+      data: fields
+    });
+  } catch (error) {
+    console.error("Error getting fields:", error);
+    return res.status(500).json({
+      error: "Failed to retrieve fields",
+      details: process.env.NODE_ENV === "development" ? error.message : null,
+    });
+  }
+});
+
+// Get specialties by field_id
+server.get("/professions/specialties/:field_id", async (req, res) => {
+  try {
+    const { field_id } = req.params;
+    const { Op } = await import('sequelize');
+    
+    // Get detailed occupations (level 3) instead of broad groups (level 2)
+    const specialties = await Profession.findAll({
+      where: { 
+        level: 3,
+        parent_id: {
+          [Op.in]: sequelize.literal(`(
+            SELECT profession_id FROM Professions 
+            WHERE level = 2 AND parent_id = ${field_id}
+          )`)
+        }
+      },
+      order: [['name', 'ASC']]
+    });
+
+    return res.status(200).json({
+      message: "Specialties retrieved successfully",
+      data: specialties
+    });
+  } catch (error) {
+    console.error("Error getting specialties:", error);
+    return res.status(500).json({
+      error: "Failed to retrieve specialties",
+      details: process.env.NODE_ENV === "development" ? error.message : null,
+    });
+  }
+});
+
+// Get profession details by profile_id
+server.get("/professions/profile/:profile_id", async (req, res) => {
+  try {
+    const { profile_id } = req.params;
+    const professionDetails = await getProfessionNamesFromProfileId(profile_id);
+    
+    return res.status(200).json({
+      message: "Profession details retrieved successfully",
+      data: professionDetails
+    });
+  } catch (error) {
+    console.error("Error getting profession by profile_id:", error);
+    return res.status(400).json({
+      error: "Failed to retrieve profession details",
+      details: error.message
+    });
+  }
+});
+
+// Import profession data from JSON file (admin endpoint)
+server.post("/professions/import", async (req, res) => {
+  try {
+    const { importProfessionData } = await import('../utils/import-profession-data.js');
+    const result = await importProfessionData();
+    
+    return res.status(200).json({
+      message: "Profession data imported successfully",
+      data: result
+    });
+  } catch (error) {
+    console.error("Error importing profession data:", error);
+    return res.status(500).json({
+      error: "Failed to import profession data",
+      details: process.env.NODE_ENV === "development" ? error.message : null,
+    });
+  }
+});
+
+        // Get profession statistics
+        server.get("/professions/stats", async (req, res) => {
+          try {
+            const { getProfessionStats } = await import('../utils/import-profession-data.js');
+            const stats = await getProfessionStats();
+            
+            return res.status(200).json({
+              message: "Profession statistics retrieved successfully",
+              data: stats
+            });
+          } catch (error) {
+            console.error("Error getting profession stats:", error);
+            return res.status(500).json({
+              error: "Failed to retrieve profession statistics",
+              details: process.env.NODE_ENV === "development" ? error.message : null,
+            });
+          }
+        });
+
+        // Search professions for suggestions
+        server.get("/professions/search", async (req, res) => {
+          try {
+            const { query, level } = req.query;
+            
+            if (!query || query.trim().length < 2) {
+              return res.status(400).json({
+                error: "Search query must be at least 2 characters long"
+              });
+            }
+
+            const { Profession } = await import('./Schema/associations.js');
+            const { Op } = await import('sequelize');
+
+            const whereClause = {
+              name: {
+                [Op.like]: `%${query.trim()}%`
+              }
+            };
+
+            if (level !== undefined) {
+              whereClause.level = parseInt(level);
+            }
+
+            const results = await Profession.findAll({
+              where: whereClause,
+              limit: 10,
+              order: [['name', 'ASC']]
+            });
+
+            return res.status(200).json({
+              message: "Profession search completed successfully",
+              data: results
+            });
+          } catch (error) {
+            console.error("Error searching professions:", error);
+            return res.status(500).json({
+              error: "Failed to search professions",
+              details: process.env.NODE_ENV === "development" ? error.message : null,
+            });
+          }
+        });
+// Import profession data on startup if not already imported
+const initializeProfessionData = async () => {
+  try {
+    const { getProfessionStats } = await import('./utils/import-profession-data.js');
+    const stats = await getProfessionStats();
+    
+    if (stats.total === 0) {
+      console.log('📊 No profession data found. Importing from JSON file...');
+      const { importProfessionData } = await import('./utils/import-profession-data.js');
+      await importProfessionData();
+      console.log('✅ Profession data imported successfully');
+    } else {
+      console.log(`📊 Profession data already loaded: ${stats.domains} domains, ${stats.fields} fields, ${stats.specialties} specialties`);
+    }
+  } catch (error) {
+    console.error('❌ Error initializing profession data:', error);
+  }
+};
+
+// ==================== DONOR & DONATION API ENDPOINTS ====================
+
+// Create Razorpay order (amount in INR)
+server.post("/payment/create-order", verifyJWT, async (req, res) => {
+  try {
+    const { amount, currency = "INR", receipt } = req.body;
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: "Valid amount is required" });
+    }
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error("Razorpay keys not configured");
+      return res.status(500).json({ error: "Razorpay keys not configured" });
+    }
+    
+    console.log("Creating order for amount:", amount);
+    const order = await razorpay.orders.create({
+      amount: Math.round(parseFloat(amount) * 100),
+      currency,
+      receipt: receipt || `rcpt_${Date.now()}`,
+    });
+    console.log("Order created:", order.id);
+    res.json({ order });
+  } catch (error) {
+    console.error("Error creating Razorpay order:", error);
+    res.status(500).json({ error: `Failed to create payment order: ${error.message}` });
+  }
+});
+
+// Verify Razorpay signature
+server.post("/payment/verify", verifyJWT, async (req, res) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ error: "Missing payment verification data" });
+    }
+    const generatedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+    const isValid = generatedSignature === razorpay_signature;
+    res.json({ valid: isValid });
+  } catch (error) {
+    console.error("Error verifying payment signature:", error);
+    res.status(500).json({ error: "Failed to verify payment" });
+  }
+});
+
+// Register as donor
+server.post("/register-donor", verifyJWT, async (req, res) => {
+  try {
+    const { subscription_type, purpose, customer_id } = req.body;
+    const user_id = req.user;
+
+    // Check if user is already a donor
+    const existingDonor = await Donor.findOne({ where: { user_id } });
+    if (existingDonor) {
+      return res.status(400).json({ error: "User is already registered as a donor" });
+    }
+
+    // Create donor record
+    const donor = await Donor.create({
+      user_id,
+      customer_id: customer_id || null,
+      is_subscriber: subscription_type === "repeated",
+      subscription_type: subscription_type || "one-time",
+      purpose: purpose || null,
+    });
+
+    res.status(201).json({ 
+      message: "Successfully registered as donor", 
+      donor: {
+        donor_id: donor.donor_id,
+        subscription_type: donor.subscription_type,
+        is_subscriber: donor.is_subscriber,
+        purpose: donor.purpose
+      }
+    });
+  } catch (error) {
+    console.error("Error registering donor:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get donor profile
+server.get("/donor-profile", verifyJWT, async (req, res) => {
+  try {
+    const user_id = req.user;
+    
+    const donor = await Donor.findOne({ 
+      where: { user_id },
+      include: [{
+        model: User,
+        as: "user",
+        attributes: ["user_id", "fullname", "email", "profile_img"]
+      }]
+    });
+
+    if (!donor) {
+      return res.status(404).json({ error: "Donor profile not found" });
+    }
+
+    res.json({ donor });
+  } catch (error) {
+    console.error("Error fetching donor profile:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Make a donation
+server.post("/make-donation", verifyJWT, async (req, res) => {
+  try {
+    const { amount, purpose, customer_id, payment_id, payment_signature } = req.body;
+    const user_id = req.user;
+
+    // Check if user is a registered donor
+    const donor = await Donor.findOne({ where: { user_id } });
+    if (!donor) {
+      return res.status(400).json({ error: "User must be registered as a donor first" });
+    }
+
+    // Validate amount
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: "Valid donation amount is required" });
+    }
+
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+
+    // Create donation record
+    const donation = await Donation.create({
+      donor_id: donor.donor_id,
+      user_id,
+      customer_id: customer_id || donor.customer_id,
+      purpose: purpose || donor.purpose,
+      amount: parseFloat(amount),
+      date: currentDate,
+      year,
+      payment_id: payment_id || null,
+      payment_signature: payment_signature || null,
+      payment_status: payment_id ? 'completed' : 'pending',
+    });
+
+    res.status(201).json({ 
+      message: "Donation recorded successfully", 
+      donation: {
+        donation_id: donation.donation_id,
+        amount: donation.amount,
+        purpose: donation.purpose,
+        date: donation.date,
+        year: donation.year
+      }
+    });
+  } catch (error) {
+    console.error("Error making donation:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get user's donation history
+server.get("/donation-history", verifyJWT, async (req, res) => {
+  try {
+    const user_id = req.user;
+    const { year, limit = 50 } = req.query;
+
+    const whereClause = { user_id };
+    if (year) {
+      whereClause.year = parseInt(year);
+    }
+
+    const donations = await Donation.findAll({
+      where: whereClause,
+      include: [{
+        model: Donor,
+        as: "donor",
+        attributes: ["subscription_type", "is_subscriber"]
+      }],
+      order: [["date", "DESC"]],
+      limit: parseInt(limit)
+    });
+
+    res.json({ donations });
+  } catch (error) {
+    console.error("Error fetching donation history:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Add expenditure (admin only - for now, any authenticated user can add)
+server.post("/add-expenditure", verifyJWT, async (req, res) => {
+  try {
+    const { 
+      initiative, 
+      amount, 
+      invoice_number, 
+      by_whom, 
+      expense_details, 
+      evidence_copy_url 
+    } = req.body;
+
+    if (!initiative || !amount || amount <= 0) {
+      return res.status(400).json({ error: "Initiative and valid amount are required" });
+    }
+
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+
+    const expenditure = await Expenditure.create({
+      initiative,
+      amount: parseFloat(amount),
+      date: currentDate,
+      year,
+      invoice_number: invoice_number || null,
+      by_whom: by_whom || null,
+      expense_details: expense_details || null,
+      evidence_copy_url: evidence_copy_url || null,
+    });
+
+    res.status(201).json({ 
+      message: "Expenditure recorded successfully", 
+      expenditure: {
+        expenditure_id: expenditure.expenditure_id,
+        initiative: expenditure.initiative,
+        amount: expenditure.amount,
+        date: expenditure.date,
+        year: expenditure.year
+      }
+    });
+  } catch (error) {
+    console.error("Error adding expenditure:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get expenditure history
+server.get("/expenditure-history", async (req, res) => {
+  try {
+    const { year, limit = 50 } = req.query;
+
+    const whereClause = {};
+    if (year) {
+      whereClause.year = parseInt(year);
+    }
+
+    const expenditures = await Expenditure.findAll({
+      where: whereClause,
+      order: [["date", "DESC"]],
+      limit: parseInt(limit)
+    });
+
+    res.json({ expenditures });
+  } catch (error) {
+    console.error("Error fetching expenditure history:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Add balance snapshot
+server.post("/add-balance-snapshot", verifyJWT, async (req, res) => {
+  try {
+    const { balance_amount } = req.body;
+
+    if (balance_amount === undefined || balance_amount < 0) {
+      return res.status(400).json({ error: "Valid balance amount is required" });
+    }
+
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+
+    const balanceSnapshot = await BalanceSnapshot.create({
+      balance_amount: parseFloat(balance_amount),
+      date: currentDate,
+      year,
+    });
+
+    res.status(201).json({ 
+      message: "Balance snapshot recorded successfully", 
+      balanceSnapshot: {
+        snapshot_id: balanceSnapshot.snapshot_id,
+        balance_amount: balanceSnapshot.balance_amount,
+        date: balanceSnapshot.date,
+        year: balanceSnapshot.year
+      }
+    });
+  } catch (error) {
+    console.error("Error adding balance snapshot:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get balance history
+server.get("/balance-history", async (req, res) => {
+  try {
+    const { year, limit = 50 } = req.query;
+
+    const whereClause = {};
+    if (year) {
+      whereClause.year = parseInt(year);
+    }
+
+    const balanceSnapshots = await BalanceSnapshot.findAll({
+      where: whereClause,
+      order: [["date", "DESC"]],
+      limit: parseInt(limit)
+    });
+
+    res.json({ balanceSnapshots });
+  } catch (error) {
+    console.error("Error fetching balance history:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get donation analytics for profile dashboard
+server.get("/donation-analytics", verifyJWT, async (req, res) => {
+  try {
+    const user_id = req.user;
+    const { year } = req.query;
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+
+    // Get user's donations for the year
+    const donations = await Donation.findAll({
+      where: { 
+        user_id,
+        year: currentYear 
+      },
+      include: [{
+        model: Donor,
+        as: "donor",
+        attributes: ["subscription_type"]
+      }],
+      order: [["date", "ASC"]]
+    });
+
+    // Calculate cumulative donations
+    let cumulative = 0;
+    const donationData = donations.map(donation => {
+      cumulative += parseFloat(donation.amount);
+      return {
+        date: donation.date,
+        amount: parseFloat(donation.amount),
+        cumulative,
+        purpose: donation.purpose,
+        subscription_type: donation.donor.subscription_type
+      };
+    });
+
+    // Get total donations by purpose
+    const purposeTotals = await Donation.findAll({
+      where: { 
+        user_id,
+        year: currentYear 
+      },
+      attributes: [
+        'purpose',
+        [sequelize.fn('SUM', sequelize.col('amount')), 'total_amount']
+      ],
+      group: ['purpose'],
+      raw: true
+    });
+
+    // Get total donations by subscription type
+    const subscriptionTotals = await Donation.findAll({
+      where: { 
+        user_id,
+        year: currentYear 
+      },
+      include: [{
+        model: Donor,
+        as: "donor",
+        attributes: ["subscription_type"]
+      }],
+      attributes: [
+        [sequelize.fn('SUM', sequelize.col('Donation.amount')), 'total_amount']
+      ],
+      group: ['donor.subscription_type'],
+      raw: true
+    });
+
+    res.json({
+      donationData,
+      purposeTotals,
+      subscriptionTotals,
+      totalDonated: cumulative,
+      year: currentYear
+    });
+  } catch (error) {
+    console.error("Error fetching donation analytics:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get overall financial summary
+server.get("/financial-summary", async (req, res) => {
+  try {
+    const { year } = req.query;
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+
+    // Get total donations for the year
+    const totalDonations = await Donation.sum('amount', {
+      where: { year: currentYear }
+    }) || 0;
+
+    // Get total expenditures for the year
+    const totalExpenditures = await Expenditure.sum('amount', {
+      where: { year: currentYear }
+    }) || 0;
+
+    // Get latest balance
+    const latestBalance = await BalanceSnapshot.findOne({
+      where: { year: currentYear },
+      order: [["date", "DESC"]]
+    });
+
+    // Get donations by purpose
+    const donationsByPurpose = await Donation.findAll({
+      where: { year: currentYear },
+      attributes: [
+        'purpose',
+        [sequelize.fn('SUM', sequelize.col('amount')), 'total_amount']
+      ],
+      group: ['purpose'],
+      raw: true
+    });
+
+    // Get expenditures by initiative
+    const expendituresByInitiative = await Expenditure.findAll({
+      where: { year: currentYear },
+      attributes: [
+        'initiative',
+        [sequelize.fn('SUM', sequelize.col('amount')), 'total_amount']
+      ],
+      group: ['initiative'],
+      raw: true
+    });
+
+    res.json({
+      year: currentYear,
+      totalDonations: parseFloat(totalDonations),
+      totalExpenditures: parseFloat(totalExpenditures),
+      currentBalance: latestBalance ? parseFloat(latestBalance.balance_amount) : 0,
+      donationsByPurpose,
+      expendituresByInitiative
+    });
+  } catch (error) {
+    console.error("Error fetching financial summary:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get payment details and bank account info
+server.get("/payment-details", verifyJWT, async (req, res) => {
+  try {
+    const { payment_id } = req.query;
+    
+    if (!payment_id) {
+      return res.status(400).json({ error: "Payment ID is required" });
+    }
+
+    // Get donation details
+    const donation = await Donation.findOne({
+      where: { payment_id },
+      include: [{
+        model: Donor,
+        as: "donor",
+        include: [{
+          model: User,
+          as: "user",
+          attributes: ["fullname", "email"]
+        }]
+      }]
+    });
+
+    if (!donation) {
+      return res.status(404).json({ error: "Payment not found" });
+    }
+
+    // Get Razorpay payment details (if you want to fetch from Razorpay API)
+    let razorpayPaymentDetails = null;
+    try {
+      if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+        const payment = await razorpay.payments.fetch(payment_id);
+        razorpayPaymentDetails = {
+          status: payment.status,
+          method: payment.method,
+          bank: payment.bank,
+          wallet: payment.wallet,
+          vpa: payment.vpa,
+          email: payment.email,
+          contact: payment.contact,
+          fee: payment.fee,
+          tax: payment.tax,
+          created_at: payment.created_at
+        };
+      }
+    } catch (error) {
+      console.error("Error fetching Razorpay payment details:", error);
+    }
+
+    res.json({
+      donation: {
+        donation_id: donation.donation_id,
+        amount: donation.amount,
+        purpose: donation.purpose,
+        date: donation.date,
+        payment_status: donation.payment_status,
+        transfer_status: donation.transfer_status,
+        bank_account: donation.bank_account,
+        donor: donation.donor
+      },
+      razorpay_details: razorpayPaymentDetails,
+      bank_account_info: {
+        account_holder: "Connect Me Foundation", // Your organization name
+        account_number: "****1234", // Masked account number
+        ifsc_code: "HDFC0001234", // Your bank's IFSC
+        bank_name: "HDFC Bank", // Your bank name
+        branch: "Main Branch, Mumbai"
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching payment details:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Update bank account for a donation (admin function)
+server.post("/update-bank-account", verifyJWT, async (req, res) => {
+  try {
+    const { donation_id, bank_account, transfer_status } = req.body;
+    
+    const donation = await Donation.findByPk(donation_id);
+    if (!donation) {
+      return res.status(404).json({ error: "Donation not found" });
+    }
+
+    await donation.update({
+      bank_account: bank_account || donation.bank_account,
+      transfer_status: transfer_status || donation.transfer_status
+    });
+
+    res.json({ 
+      message: "Bank account updated successfully",
+      donation: {
+        donation_id: donation.donation_id,
+        bank_account: donation.bank_account,
+        transfer_status: donation.transfer_status
+      }
+    });
+  } catch (error) {
+    console.error("Error updating bank account:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Port Setup
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  
+  // Initialize profession data after server starts
+  await initializeProfessionData();
 });

@@ -7,6 +7,7 @@ import Loader from "../components/loader.component";
 import { Toaster, toast } from "react-hot-toast";
 import InputBox from "../components/input.component";
 import { storeInSession } from "../common/session";
+import ProfessionSelector from "../components/profession-selector.component";
 
 const EditProfile = () => {
   let bioLimit = 500;
@@ -19,6 +20,11 @@ const EditProfile = () => {
   const [charactersLeft, setCharactersLeft] = useState(bioLimit);
   const [updatedProfileImg, setUpdatedProfileImg] = useState(null);
   const uploadButtonRef = useRef(null); // 🔧 added ref
+  
+  // Profession selection state
+  const [selectedDomain, setSelectedDomain] = useState('');
+  const [selectedField, setSelectedField] = useState('');
+  const [selectedSpecialty, setSelectedSpecialty] = useState('');
 
   let {
     fullname,
@@ -54,6 +60,17 @@ const EditProfile = () => {
         .then(({ data }) => {
           setProfile(data);
           setCharactersLeft(bioLimit - (data.bio ? data.bio.length : 0));
+          
+          // Set profession selections if profile_id exists
+          if (data.profile_id) {
+            // Parse profile_id to get profession details
+            // This will be handled by the backend when we load the profile
+            // For now, we'll set empty values and let the user select
+            setSelectedDomain('');
+            setSelectedField('');
+            setSelectedSpecialty('');
+          }
+          
           setLoading(false);
         })
         .catch((err) => {
@@ -140,6 +157,13 @@ const EditProfile = () => {
 
     for (let [key, value] of form.entries()) {
       formData[key] = value;
+    }
+
+    // Add profession data to form
+    if (selectedDomain && selectedField && selectedSpecialty) {
+      formData.domain_id = selectedDomain;
+      formData.field_id = selectedField;
+      formData.specialty_id = selectedSpecialty;
     }
 
     let loadingToast = toast.loading("Updating profile...");
@@ -252,6 +276,19 @@ const EditProfile = () => {
               <p className="mt-1 text-dark-grey">
                 {charactersLeft} characters left
               </p>
+
+              <p className="my-6 text-dark-grey">
+                Select your professional background
+              </p>
+              
+              <ProfessionSelector
+                selectedDomain={selectedDomain}
+                selectedField={selectedField}
+                selectedSpecialty={selectedSpecialty}
+                onDomainChange={setSelectedDomain}
+                onFieldChange={setSelectedField}
+                onSpecialtyChange={setSelectedSpecialty}
+              />
 
               <p className="my-6 text-dark-grey">
                 Add your social handles below

@@ -90,7 +90,7 @@ const SideNav = () => {
               className="sidebar-link"
             >
               <i className="fi fi-rr-file-edit"></i>
-              Write
+              Post your blog
             </NavLink>
 
             <h1 className="text-xl text-dark-grey mt-20 mb-3">Settings</h1>

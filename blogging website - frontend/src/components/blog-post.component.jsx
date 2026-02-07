@@ -24,6 +24,9 @@ const BlogPostCard = ({ content, author }) => {
   let { fullname, profile_img, username } = author;
   return (
     <Link to={`/blog/${id}`} className="flex gap-8 items-center border-b border-grey pb-5 mb-4">
+      <div className="h-28 aspect-square bg-grey">
+        <img src={banner} className="w-full h-full aspect-square object-cover"/>
+      </div>
       <div className="w-full">
         <div className="flex gap-2 items-center mb-7">
           <img src={profile_img} className="w-6 h-6 rounded-full" />
@@ -44,10 +47,6 @@ const BlogPostCard = ({ content, author }) => {
             {total_likes || 0}
           </span>
         </div>
-      </div>
-      <div className="h-28 aspect-square bg-grey">
-        <img src={banner} className="w-full h-full aspect-square object-cover"/>
-
       </div>
     </Link>
   );
