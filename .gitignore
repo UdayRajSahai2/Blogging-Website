@@ -5,3 +5,5 @@ node_modules/
 blogging website - frontend/node_modules/
 server/node_modules/
 server/*.json
+# Large data file (over GitHub 100MB limit) - keep locally only
+server/data/village-lgd-codes.json
