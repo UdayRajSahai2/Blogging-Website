@@ -1,12 +1,18 @@
-".env" 
-"blogging website - frontend"/.env
-server/.env
+.env
 node_modules/
-blogging website - frontend/node_modules/
+frontend/node_modules/
+frontend/.env
+frontend/src/common/firebase.jsx
+
+
+server/.env
 server/node_modules/
 server/*.json
 # Large data file (over GitHub 100MB limit) - keep locally only
 server/data/village-lgd-codes.json
+
 # Firebase/Google credentials - never commit
 server/data/*firebase*.json
 server/data/*-firebase-adminsdk-*.json
+server/env.txt
+server/config/firebase-service-account.json

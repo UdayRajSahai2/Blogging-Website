@@ -18,7 +18,7 @@ This system implements a hierarchical profession categorization based on the Sta
    - Creates hierarchical structure in database
    - Extracts codes from SOC codes for profile ID generation
 
-3. **Profile ID Generation** (`server/utils/profileIdGenerator.js`)
+3. **Profile ID Generation** (`server/utils/profile-id.generator.js`)
    - Generates 6-digit profile IDs: `DDFFSS` format
    - Validates profession hierarchy
    - Provides utility functions for parsing and retrieving profession details
@@ -45,11 +45,13 @@ This system implements a hierarchical profession categorization based on the Sta
 ## Profile ID Format
 
 The profile ID is a 6-digit code in the format `DDFFSS`:
+
 - **DD**: 2-digit domain code (from SOC major group)
-- **FF**: 2-digit field code (from SOC minor group)  
+- **FF**: 2-digit field code (from SOC minor group)
 - **SS**: 2-digit specialty code (from SOC broad group)
 
 Example: `110101` represents:
+
 - Domain: Management Occupations (11)
 - Field: Top Executives (10)
 - Specialty: Chief Executives (01)
@@ -66,6 +68,7 @@ node import-professions.js
 ```
 
 Or use the API endpoint:
+
 ```bash
 curl -X POST http://localhost:3000/professions/import
 ```
@@ -87,24 +90,28 @@ The profession selector is already integrated into the edit profile page. Users 
 ## API Usage Examples
 
 ### Get Available Domains
+
 ```javascript
-const response = await axios.get('/professions/domains');
+const response = await axios.get("/professions/domains");
 const domains = response.data.data;
 ```
 
 ### Get Fields for a Domain
+
 ```javascript
 const response = await axios.get(`/professions/fields/${domainId}`);
 const fields = response.data.data;
 ```
 
 ### Get Specialties for a Field
+
 ```javascript
 const response = await axios.get(`/professions/specialties/${fieldId}`);
 const specialties = response.data.data;
 ```
 
 ### Update Profile with Profession
+
 ```javascript
 const formData = {
   domain_id: selectedDomain,
@@ -113,13 +120,14 @@ const formData = {
   // ... other profile fields
 };
 
-const response = await axios.post('/update-profile', formData);
+const response = await axios.post("/update-profile", formData);
 // Response includes generated profile_id
 ```
 
 ## Data Structure
 
 ### Profession Hierarchy
+
 ```
 Domain (Level 0)
 ├── Field (Level 1)
@@ -131,7 +139,9 @@ Domain (Level 0)
 ```
 
 ### Database Records
+
 Each profession record contains:
+
 - `profession_id`: Auto-increment primary key
 - `name`: Profession name
 - `level`: Hierarchy level (0, 1, or 2)
