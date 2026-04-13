@@ -4,7 +4,7 @@ import { User, Donor } from "../models/associations.js";
 export const registerDonor = async (req, res) => {
   try {
     const { subscription_type, purpose, customer_id } = req.body;
-    const user_id = req.user;
+    const user_id = req.userId;
 
     // Check if user is already a donor
     const existingDonor = await Donor.findOne({ where: { user_id } });
@@ -40,7 +40,7 @@ export const registerDonor = async (req, res) => {
 
 export const donorProfile = async (req, res) => {
   try {
-    const user_id = req.user;
+    const user_id = req.userId;
 
     const donor = await Donor.findOne({
       where: { user_id },

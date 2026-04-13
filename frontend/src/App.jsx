@@ -1,97 +1,228 @@
-import { Route, Routes } from "react-router-dom";
-import Navbar from "./components/navbar.component";
-import UserAuthForm from "./pages/userAuthForm.page";
-import { createContext, useEffect, useState } from "react";
-import { lookInSession, removeFromSession } from "./common/session";
-import Editor from "./pages/editor.pages";
-import HomePage from "./pages/home.page";
-import SearchPage from "./pages/search.page";
-import PageNotFound from "./pages/404.page";
-import ProfilePage from "./pages/profile.page";
-import BlogPage from "./pages/blog.page";
-import SideNav from "./components/sidenavbar.component";
-import ChangePassword from "./pages/change-password.page";
-import EditProfile from "./pages/edit-profile.page";
-import Notification from "./pages/notifications.page";
-import MyBlogs from "./pages/manage-blogs.page";
-import ForgotPasswordPage from "./pages/forgot-password.page";
-import ResetPasswordPage from "./pages/reset-password.page";
+import { Route, Routes, Navigate, useLocation } from "react-router-dom";
+import { createContext, useState, Suspense, lazy, useContext } from "react";
+import { lookInSession } from "./common/session";
 
-export const UserContext = createContext({});
+import { Toaster } from "react-hot-toast";
+import "./index.css";
+
+// Components
+import SideNav from "./components/sidenavbar.component";
+import Loader from "./components/loader.component";
+import AppLayout from "./layouts/AppLayout";
+// Admin
+import AdminAppLayout from "./layouts/AdminAppLayout";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminFinance from "./pages/admin/finance/AdminFinance";
+import AdminExpenditures from "./pages/admin/finance/AdminExpenditures";
+import AdminBalance from "./pages/admin/finance/AdminBalance";
+import AdminRoute from "./routes/AdminRoute";
+import AdminBlogs from "./pages/admin/AdminBlogs";
+import AdminRoles from "./pages/admin/AdminRoles";
+import AdminRolePanel from "./components/admin/AdminRolePanel";
+
+// Other pages
+import AcademicPage from "./pages/profile/AcademicPage";
+import AcademicForm from "./components/profile/academic/AcademicForm";
+import ProfessionalProfile from "./pages/profile/ProfessionalProfile";
+import ChatPage from "./pages/chat/ChatPage";
+import DonorDashboard from "./components/donation/donor-dashboard.component";
+import OnboardingPage from "./pages/onboarding/OnboardingPage";
+import WelcomePage from "./pages/WelcomePage";
+
+// import Dashboard from "./pages/Dashboard"; //for multiple role profiles
+
+//Connections/Friends
+import FriendsPage from "./pages/connection/FriendsPage";
+import RequestsPage from "./pages/connection/RequestsPage";
+// Lazy pages
+const HomePage = lazy(() => import("./pages/home.page"));
+const UserAuthForm = lazy(() => import("./pages/userAuthForm.page"));
+const Editor = lazy(() => import("./pages/editor.pages"));
+const SearchPage = lazy(() => import("./pages/search.page"));
+const ProfilePage = lazy(() => import("./pages/profile/profile.page"));
+const BlogPage = lazy(() => import("./pages/blog.page"));
+const ChangePassword = lazy(() => import("./pages/change-password.page"));
+const EditProfile = lazy(() => import("./pages/profile/edit-profile.page"));
+const Notification = lazy(() => import("./pages/notifications.page"));
+const MyBlogs = lazy(() => import("./pages/manage-blogs.page"));
+const ForgotPasswordPage = lazy(() => import("./pages/forgot-password.page"));
+const ResetPasswordPage = lazy(() => import("./pages/reset-password.page"));
+const PageNotFound = lazy(() => import("./pages/404.page"));
+
+export const UserContext = createContext({
+  userAuth: { access_token: null },
+  setUserAuth: () => {},
+});
+
+// 🔒 Protected Route
+const ProtectedRoute = ({ user, children }) => {
+  if (!user.access_token) return <Navigate to="/signin" replace />;
+  return children;
+};
 
 const App = () => {
-  const [userAuth, setUserAuth] = useState({});
+  const [userAuth, setUserAuth] = useState(() => {
+    const sessionUser = lookInSession("user");
+    return sessionUser && sessionUser.access_token
+      ? sessionUser
+      : { access_token: null };
+  });
+  const location = useLocation();
   const [pageState, setPageState] = useState("home");
 
-  useEffect(() => {
-    const userInSession = lookInSession("user");
-
-    if (!userInSession || typeof userInSession !== "object") {
-      setUserAuth({ access_token: null });
-      return;
-    }
-
-    if (!userInSession.access_token) {
-      removeFromSession("user");
-      setUserAuth({ access_token: null });
-      return;
-    }
-
-    setUserAuth(userInSession);
-  }, []);
-
   const loadBlogByCategory = (category) => {
-    // If clicking the same category, go back to home
-    if (pageState === category) {
-      setPageState("home");
-      return;
-    }
-    // Set the category as pageState
-    setPageState(category);
+    setPageState((prev) => (prev === category ? "home" : category));
   };
 
   return (
     <UserContext.Provider value={{ userAuth, setUserAuth }}>
-      <Routes>
-        <Route path="/editor" element={<Editor />}></Route>
-        <Route path="/editor/:blog_id" element={<Editor />}></Route>
-        <Route
-          path="/"
-          element={
-            <Navbar
-              onInterestClick={loadBlogByCategory}
-              activeInterest={pageState}
-            />
-          }
-        >
+      <Toaster position="top-center" reverseOrder={false} />
+
+      <Suspense fallback={<Loader />}>
+        <Routes>
+          {/* ================= ADMIN (FULLY SEPARATE) ================= */}
+          <Route path="/admin" element={<AdminAppLayout />}>
+            <Route element={<AdminRoute />}>
+              <Route element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<AdminUsers />} />
+
+                {/* NEW */}
+                <Route path="roles">
+                  <Route index element={<Navigate to="requests" />} />
+                  <Route path="requests" element={<AdminRoles />} />
+                  <Route path="manage" element={<AdminRolePanel />} />
+                </Route>
+
+                <Route path="blogs" element={<AdminBlogs />} />
+                <Route path="finance" element={<AdminFinance />} />
+                <Route
+                  path="finance/expenditures"
+                  element={<AdminExpenditures />}
+                />
+                <Route path="finance/balance" element={<AdminBalance />} />
+              </Route>
+            </Route>
+          </Route>
+
+          {/* ================= USER APP ================= */}
           <Route
-            index
+            path="/"
             element={
-              <HomePage
-                key={pageState}
+              <AppLayout
+                loadBlogByCategory={loadBlogByCategory}
                 pageState={pageState}
-                setPageState={setPageState}
               />
             }
-          />
-          <Route path="dashboard" element={<SideNav />}>
-            <Route path="notifications" element={<Notification />} />
+          >
+            <Route
+              path="onboarding"
+              element={
+                <ProtectedRoute user={userAuth}>
+                  <OnboardingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              index
+              element={
+                <HomePage
+                  key={pageState}
+                  pageState={pageState}
+                  setPageState={setPageState}
+                />
+              }
+            />
+            {/* for multiple roles profiles  disabled */}
+            {/* <Route path="dashboard-home" element={<Dashboard />} /> */}
+
+            <Route
+              path="/editor"
+              element={
+                <ProtectedRoute user={userAuth}>
+                  <Editor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/welcome"
+              element={
+                <ProtectedRoute user={userAuth}>
+                  {!userAuth?.isOnboardingCompleted ? (
+                    <WelcomePage />
+                  ) : (
+                    <Navigate to="/" />
+                  )}
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/editor/:blog_id" element={<Editor />} />
+            <Route path="search/:query" element={<SearchPage />} />
+            <Route path="user/:id" element={<ProfilePage />} />
+            <Route path="blog/:blog_id" element={<BlogPage />} />
+
+            {/* Auth */}
+            <Route path="signin" element={<UserAuthForm type="sign-in" />} />
+            <Route path="signup" element={<UserAuthForm type="sign-up" />} />
+            <Route path="forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="reset-password" element={<ResetPasswordPage />} />
+            <Route path="chat">
+              <Route index element={<ChatPage />} />
+
+              {/*  OPEN BY CONVERSATION */}
+              <Route
+                path="conversation/:conversationId"
+                element={<ChatPage />}
+              />
+            </Route>
+            {/* Dashboard */}
+            <Route
+              path="dashboard"
+              element={
+                <ProtectedRoute user={userAuth}>
+                  <SideNav />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="donor" element={<DonorDashboard />} />
+              <Route index element={<div>Select a section</div>} />
+              <Route path="user/:id" element={<ProfilePage />} />
+              <Route path="notifications" element={<Notification />} />
+              <Route path="blogs" element={<MyBlogs />} />
+              <Route path="academics">
+                <Route index element={<AcademicPage />} />
+                <Route path="add" element={<AcademicForm />} />
+                <Route path="edit/:academic_id" element={<AcademicForm />} />
+              </Route>
+              <Route
+                path="professional-profile"
+                element={<ProfessionalProfile />}
+              />
+              <Route path="connections">
+                <Route index element={<FriendsPage />} />
+                <Route path="requests" element={<RequestsPage />} />
+              </Route>
+              <Route path="*" element={<div>Page not found</div>} />
+            </Route>
+            {/* Settings */}
+            <Route
+              path="settings"
+              element={
+                <ProtectedRoute user={userAuth}>
+                  <SideNav />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="edit-profile" element={<EditProfile />} />
+              <Route path="change-password" element={<ChangePassword />} />
+            </Route>
+            {/* 404 */}
+            <Route path="*" element={<PageNotFound />} />
           </Route>
-          <Route path="settings" element={<SideNav />}>
-            <Route path="edit-profile" element={<EditProfile />} />
-            <Route path="change-password" element={<ChangePassword />} />
-          </Route>
-          <Route path="signin" element={<UserAuthForm type="sign-in" />} />
-          <Route path="signup" element={<UserAuthForm type="sign-up" />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="search/:query" element={<SearchPage />} />
-          <Route path="user/:id" element={<ProfilePage />} />
-          <Route path="blog/:blog_id" element={<BlogPage />} />
-          <Route path="*" element={<PageNotFound />} />
-          <Route path="/dashboard/blogs" element={<MyBlogs />} />
-        </Route>
-      </Routes>
+        </Routes>
+      </Suspense>
     </UserContext.Provider>
   );
 };

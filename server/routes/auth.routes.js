@@ -11,6 +11,7 @@ import {
   forgotPassword,
   verifyForgotPasswordOTP,
   validatePasswordResetToken,
+  completeOnboarding,
 } from "../controllers/auth.controller.js";
 import {
   sendOtpLimiter,
@@ -26,7 +27,7 @@ router.post("/signup", signup);
 router.post("/google-auth", googleAuth);
 router.post("/complete-signup", completeSignup);
 router.post("/verify-email-otp", verifyEmailOtp);
-
+router.post("/complete-onboarding", verifyJWT, completeOnboarding);
 /* ---------------- Password Flow ---------------- */
 
 router.post("/forgot-password", sendOtpLimiter, forgotPassword);

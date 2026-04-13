@@ -1,3 +1,4 @@
+//server\services\otp.service.js
 import nodemailer from "nodemailer";
 
 export function generateOTP() {

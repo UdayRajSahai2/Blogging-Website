@@ -10,7 +10,7 @@ export const makeDonation = async (req, res) => {
   try {
     const { amount, purpose, customer_id, payment_id, payment_signature } =
       req.body;
-    const user_id = req.user;
+    const user_id = req.userId;
 
     // Check if user is a registered donor
     const donor = await Donor.findOne({ where: { user_id } });
@@ -62,10 +62,12 @@ export const makeDonation = async (req, res) => {
 // Get user's donation history
 export const donationHistory = async (req, res) => {
   try {
-    const user_id = req.user;
+    const user_id = req.userId;
     const { year, limit = 50 } = req.query;
 
     const whereClause = { user_id };
+
+    // Filter by year if provided
     if (year) {
       whereClause.year = parseInt(year);
     }
@@ -77,27 +79,56 @@ export const donationHistory = async (req, res) => {
           model: Donor,
           as: "donor",
           attributes: ["subscription_type", "is_subscriber"],
+          required: false,
         },
       ],
+      attributes: ["donation_id", "purpose", "amount", "date", "year"],
       order: [["date", "DESC"]],
       limit: parseInt(limit),
     });
 
-    res.json({ donations });
+    const formattedDonations = donations.map((d) => ({
+      id: d.donation_id,
+      purpose: d.purpose || "General Donation",
+      amount: d.amount || 0,
+      date: d.date,
+      donor: {
+        subscription_type: d.donor?.subscription_type || "one-time",
+        is_subscriber: d.donor?.is_subscriber || false,
+      },
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: formattedDonations.length,
+      donations: formattedDonations,
+    });
   } catch (error) {
-    console.error("Error fetching donation history:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Error fetching donation history:", {
+      message: error.message,
+      stack: error.stack,
+      sql: error.sql, // VERY useful for DB issues
+    });
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch donation history",
+    });
   }
 };
 
-// Get donation analytics for profile dashboard
+// ======================================================
+// GET DONATION ANALYTICS (YEAR + MONTH WISE)
+// ======================================================
 export const getDonationAnalytics = async (req, res) => {
   try {
-    const user_id = req.user;
+    const user_id = req.userId;
     const { year } = req.query;
     const currentYear = year ? parseInt(year) : new Date().getFullYear();
 
-    // Get user's donations for the year
+    // --------------------------------------------------
+    // Get donation list (for cumulative graph)
+    // --------------------------------------------------
     const donations = await Donation.findAll({
       where: {
         user_id,
@@ -113,20 +144,25 @@ export const getDonationAnalytics = async (req, res) => {
       order: [["date", "ASC"]],
     });
 
-    // Calculate cumulative donations
+    // --------------------------------------------------
+    // Build cumulative data
+    // --------------------------------------------------
     let cumulative = 0;
     const donationData = donations.map((donation) => {
       cumulative += parseFloat(donation.amount);
+
       return {
         date: donation.date,
         amount: parseFloat(donation.amount),
         cumulative,
         purpose: donation.purpose,
-        subscription_type: donation.donor.subscription_type,
+        subscription_type: donation.donor?.subscription_type,
       };
     });
 
-    // Get total donations by purpose
+    // --------------------------------------------------
+    // Purpose totals
+    // --------------------------------------------------
     const purposeTotals = await Donation.findAll({
       where: {
         user_id,
@@ -140,7 +176,9 @@ export const getDonationAnalytics = async (req, res) => {
       raw: true,
     });
 
-    // Get total donations by subscription type
+    // --------------------------------------------------
+    // Subscription totals
+    // --------------------------------------------------
     const subscriptionTotals = await Donation.findAll({
       where: {
         user_id,
@@ -160,10 +198,43 @@ export const getDonationAnalytics = async (req, res) => {
       raw: true,
     });
 
+    // ==================================================
+    // MONTH-WISE TOTALS (MAIN FEATURE)
+    // ==================================================
+    const monthlyTotalsRaw = await Donation.findAll({
+      where: {
+        user_id,
+        year: currentYear,
+      },
+      attributes: [
+        [sequelize.fn("MONTH", sequelize.col("date")), "month"],
+        [sequelize.fn("SUM", sequelize.col("amount")), "total_amount"],
+      ],
+      group: [sequelize.fn("MONTH", sequelize.col("date"))],
+      order: [[sequelize.fn("MONTH", sequelize.col("date")), "ASC"]],
+      raw: true,
+    });
+
+    // --------------------------------------------------
+    // Normalize missing months (VERY IMPORTANT)
+    // --------------------------------------------------
+    const monthlyTotals = Array.from({ length: 12 }, (_, i) => {
+      const found = monthlyTotalsRaw.find((m) => parseInt(m.month) === i + 1);
+
+      return {
+        month: i + 1,
+        total_amount: found ? parseFloat(found.total_amount) : 0,
+      };
+    });
+
+    // --------------------------------------------------
+    // Final response
+    // --------------------------------------------------
     res.json({
       donationData,
       purposeTotals,
       subscriptionTotals,
+      monthlyTotals, // ⭐ NEW
       totalDonated: cumulative,
       year: currentYear,
     });

@@ -1,5 +1,5 @@
 import { useContext, useRef, useState, useEffect } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import axios from "axios";
 import AnimationWrapper from "../common/page-animation";
@@ -10,12 +10,15 @@ import { UserContext } from "../App";
 import { authWithGoogle } from "../common/firebase";
 import Loader from "../components/loader.component";
 import { AUTH_API } from "../common/api";
+import AuthLeftActions from "../components/auth/AuthLeftActions";
+import AuthRightActions from "../components/auth/AuthRightActions";
+import AuthBottomActions from "../components/auth/AuthBottomActions";
 
 const UserAuthForm = ({ type }) => {
-  const {
-    userAuth: { access_token },
-    setUserAuth,
-  } = useContext(UserContext);
+  const navigate = useNavigate();
+  const { userAuth, setUserAuth } = useContext(UserContext);
+
+  const access_token = userAuth?.access_token;
   const formElement = useRef();
 
   const [mobileNumber, setMobileNumber] = useState("");
@@ -55,31 +58,61 @@ const UserAuthForm = ({ type }) => {
 
   /** ---------------- Signin / Signup ---------------- */
   const userAuthThroughServer = async (serverRoute, formData) => {
+    if (loading) return; //  prevent double submit
+
     const loadingToast = toast.loading("Authenticating...");
+    setLoading(true);
+
     try {
-      const { data } = await axios.post(AUTH_API + serverRoute, formData);
+      const { data } = await axios.post(AUTH_API + serverRoute, formData, {
+        timeout: 15000, // avoid hanging requests
+      });
+
       toast.dismiss(loadingToast);
-      storeInSession("user", JSON.stringify(data));
+
+      storeInSession("user", data);
+      storeInSession("onboarding", type === "sign-up");
       setUserAuth(data);
-      if (data.customer_id) {
+      if (type === "sign-up") {
+        console.log("FORCE onboarding (signup)");
+        navigate("/welcome");
+      } else {
+        navigate("/");
+      }
+
+      const name = data.first_name || data.fullname || "User";
+      const isNewUser = Boolean(data.isNewUser);
+
+      //  New user
+      if (isNewUser && data.customer_id) {
         setCustomerId(data.customer_id);
         setAbbr(data.abbr || "");
-        toast.success(`Your Customer ID: ${data.customer_id}`);
+        toast.success(`Welcome ${name}! Customer ID: ${data.customer_id}`);
+      } else {
+        toast.success(`Welcome back ${name}!`);
       }
-      toast.success(`Welcome ${data.first_name || data.fullname || "User"}!`);
     } catch (err) {
       toast.dismiss(loadingToast);
-      const errorMsg = err.response?.data?.error || "Authentication failed";
 
-      // Special handling for sign-in location required
-      if (
-        type === "sign-in" &&
+      const errorMsg =
+        err.response?.data?.error ||
+        (err.code === "ECONNABORTED"
+          ? "Request timed out. Please try again."
+          : "Authentication failed");
+
+      // 📍 Smart location retry (ONLY once)
+      const needsLocation =
+        typeof errorMsg === "string" &&
         errorMsg.toLowerCase().includes("location") &&
-        errorMsg.toLowerCase().includes("customer")
-      ) {
+        errorMsg.toLowerCase().includes("customer");
+
+      const alreadyTriedGeo = formData?.latitude && formData?.longitude;
+
+      if (type === "sign-in" && needsLocation && !alreadyTriedGeo) {
         toast("Sign-in requires your location to generate a customer ID.", {
           icon: "📍",
         });
+
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (position) =>
@@ -92,6 +125,7 @@ const UserAuthForm = ({ type }) => {
               toast.error(
                 "Location permission denied. Sign-in requires location.",
               ),
+            { enableHighAccuracy: false, timeout: 10000 },
           );
         } else {
           toast.error("Geolocation not supported by your browser.");
@@ -99,44 +133,65 @@ const UserAuthForm = ({ type }) => {
       } else {
         toast.error(errorMsg);
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   /** ---------------- Handle Form Submit ---------------- */
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (loading) return;
+
     if (
       !formElement.current ||
       !(formElement.current instanceof HTMLFormElement)
-    )
-      return toast.error("Form error.");
+    ) {
+      return toast.error("Form error. Please refresh.");
+    }
 
+    // 🔹 collect + trim form data
     const form = new FormData(formElement.current);
-    const formData = Object.fromEntries(form.entries());
+    const rawData = Object.fromEntries(form.entries());
+
+    const formData = Object.fromEntries(
+      Object.entries(rawData).map(([k, v]) => [k, v?.toString().trim()]),
+    );
 
     const { first_name, last_name, email, password, mobile_number } = formData;
 
-    // Sign-up specific checks
+    // 🔹 email validation (always first)
+    if (!email || !emailRegex.test(email)) {
+      return toast.error("Valid email required");
+    }
+
+    // 🔹 signup validations
     if (type !== "sign-in") {
       if (!first_name) return toast.error("First name required");
       if (!last_name) return toast.error("Last name required");
-      if (mobile_number && !mobileRegex.test(mobile_number))
-        return toast.error("Mobile number invalid");
-      if (!geo.latitude || !geo.longitude)
-        return toast.error("Location required for signup");
-      if (!passwordRegex.test(password))
+
+      if (!password) return toast.error("Password required");
+
+      if (!passwordRegex.test(password)) {
         return toast.error(
           "Password must have 12+ chars, uppercase, lowercase, number & symbol",
         );
+      }
+
+      if (mobile_number && !mobileRegex.test(mobile_number)) {
+        return toast.error("Mobile number invalid");
+      }
+
+      if (!geo.latitude || !geo.longitude) {
+        return toast.error("Location required for signup");
+      }
     } else {
-      // Sign-in: just check non-empty
+      // 🔹 sign-in validations
       if (!password) return toast.error("Password required");
     }
 
-    // Email validation (both signup/sign-in)
-    if (!email || !emailRegex.test(email)) return toast.error("Email invalid");
-
-    // Server authentication
+    // call server
     userAuthThroughServer(serverRoute, {
       ...formData,
       latitude: geo.latitude,
@@ -148,45 +203,160 @@ const UserAuthForm = ({ type }) => {
   /** ---------------- Google Auth ---------------- */
   const handleGoogleAuth = async (e) => {
     e.preventDefault();
+
+    if (loading) return;
+
     const loadingToast = toast.loading("Signing in with Google...");
+    setLoading(true);
+
     try {
       const user = await authWithGoogle();
-      const idToken = await user.getIdToken();
+
+      if (!user) {
+        toast.dismiss(loadingToast);
+        setLoading(false);
+        return toast.error("Google authentication cancelled");
+      }
+
+      const idToken = await user.getIdToken(true);
+
+      // ensure we have location
+      let latitude = geo.latitude;
+      let longitude = geo.longitude;
+
+      if (!latitude || !longitude) {
+        console.log("📍 Requesting location for Google login...");
+
+        if (navigator.geolocation) {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: false,
+              timeout: 10000,
+            });
+          });
+
+          latitude = position.coords.latitude;
+          longitude = position.coords.longitude;
+
+          setGeo({
+            latitude,
+            longitude,
+          });
+        }
+      }
+
+      console.log("Sending Google auth with location:", latitude, longitude);
+
       const { data } = await axios.post(`${AUTH_API}/google-auth`, {
         access_token: idToken,
+        latitude,
+        longitude,
       });
+
       toast.dismiss(loadingToast);
-      storeInSession("user", JSON.stringify(data));
+
+      storeInSession("user", data);
+      storeInSession("onboarding", type === "sign-up");
+      console.log("Auth response:", data);
       setUserAuth(data);
-      toast.success(`Welcome ${data.first_name}!`);
+      if (type === "sign-up") {
+        console.log("FORCE onboarding (signup)");
+        navigate("/welcome");
+      } else {
+        navigate("/");
+      }
+      const name = data.first_name || data.fullname || "User";
+      const isNewUser = Boolean(data.isNewUser);
+
+      if (isNewUser && data.customer_id) {
+        setCustomerId(data.customer_id);
+        setAbbr(data.abbr || "");
+        toast.success(`Welcome ${name}! Customer ID: ${data.customer_id}`);
+      } else {
+        toast.success(`Welcome back ${name}!`);
+      }
     } catch (err) {
       toast.dismiss(loadingToast);
-      toast.error(err.response?.data?.error || "Google sign-in failed");
+
+      const firebaseCode = err.code || "";
+      const backendMsg = err.response?.data?.error;
+
+      if (firebaseCode === "auth/popup-closed-by-user") {
+        toast("Google sign-in cancelled");
+      } else if (firebaseCode === "auth/network-request-failed") {
+        toast.error("Network error. Please check your connection.");
+      } else {
+        toast.error(backendMsg || "Google sign-in failed");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   /** ---------------- Send OTP (Signup) ---------------- */
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    if (!formElement.current) return toast.error("Form error.");
+
+    if (loading) return;
+
+    if (!formElement.current) {
+      return toast.error("Form error. Please refresh.");
+    }
+
+    if (otpSent) {
+      return toast("OTP already sent. Please check your email.");
+    }
+
+    if (!disclaimerAccepted) {
+      return toast.error("You must accept the disclaimer.");
+    }
 
     const form = new FormData(formElement.current);
-    const formData = Object.fromEntries(form.entries());
+    const rawData = Object.fromEntries(form.entries());
 
-    if (!disclaimerAccepted)
-      return toast.error("You must accept the disclaimer.");
+    // 🔹 trim all fields
+    const formData = Object.fromEntries(
+      Object.entries(rawData).map(([k, v]) => [k, v?.toString().trim()]),
+    );
+
+    const { email, mobile_number } = formData;
+
+    // 🔹 validations (important before hitting server)
+    if (!email || !emailRegex.test(email)) {
+      return toast.error("Valid email required");
+    }
+
+    if (mobile_number && !mobileRegex.test(mobile_number)) {
+      return toast.error("Invalid mobile number");
+    }
+
+    // 🔹 geo required for signup
+    if (!geo.latitude || !geo.longitude) {
+      return toast.error("Location required for signup");
+    }
 
     setLoading(true);
+
     try {
       await axios.post(`${AUTH_API}/signup`, {
         ...formData,
         latitude: geo.latitude,
         longitude: geo.longitude,
       });
+
       setOtpSent(true);
       toast.success("OTP sent to your email/mobile");
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to send OTP");
+      const msg = err.response?.data?.error || "Failed to send OTP";
+
+      //  backend message handling
+      if (msg.toLowerCase().includes("already exists")) {
+        toast.error("User already registered. Please sign in.");
+      } else if (msg.toLowerCase().includes("rate")) {
+        toast.error("Too many requests. Please wait and try again.");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -195,19 +365,57 @@ const UserAuthForm = ({ type }) => {
   /** ---------------- Verify OTP ---------------- */
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    if (!otp) return toast.error("Enter OTP");
+
+    if (loading) return;
+
+    const otpValue = otp?.toString().trim();
+
+    if (!otpValue) {
+      return toast.error("Enter OTP");
+    }
+
+    // basic OTP format check (6 digits — adjust if needed)
+    if (!/^\d{4,8}$/.test(otpValue)) {
+      return toast.error("Invalid OTP format");
+    }
+
+    if (!formElement.current) {
+      return toast.error("Form error. Please refresh.");
+    }
+
+    const email = formElement.current.email?.value;
+
+    if (!email) {
+      return toast.error("Email missing");
+    }
+
+    if (otpVerified) {
+      return toast("OTP already verified");
+    }
+
     setLoading(true);
+
     try {
       const { data } = await axios.post(`${AUTH_API}/verify-email-otp`, {
-        email: formElement.current.email.value,
-        otp,
+        email,
+        otp: otpValue,
       });
-      if (data.success) {
+
+      if (data?.success) {
         setOtpVerified(true);
         toast.success("OTP verified successfully");
-      } else toast.error("Invalid OTP");
+      } else {
+        toast.error("Invalid OTP");
+      }
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to verify OTP");
+      const msg = err.response?.data?.error || "Failed to verify OTP";
+
+      //  handling for expired OTP
+      if (msg.toLowerCase().includes("expired")) {
+        toast.error("OTP expired. Please resend OTP.");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -216,20 +424,40 @@ const UserAuthForm = ({ type }) => {
   /** ---------------- Complete Signup ---------------- */
   const handleCompleteSignup = async (e) => {
     e.preventDefault();
+
+    if (!otpVerified) {
+      return toast.error("Please verify OTP first");
+    }
+
     setLoading(true);
+
     try {
       const email = formElement.current.email.value;
+
       const { data } = await axios.post(`${AUTH_API}/complete-signup`, {
         email,
       });
-      storeInSession("user", JSON.stringify(data));
+
+      storeInSession("user", data);
+      storeInSession("onboarding", type === "sign-up");
       setUserAuth(data);
-      if (data.customer_id) {
+      if (type === "sign-up") {
+        console.log("FORCE onboarding (signup)");
+        navigate("/welcome");
+      } else {
+        navigate("/");
+      }
+      const name = data.first_name || data.fullname || "User";
+      const isNewUser = Boolean(data.isNewUser);
+
+      if (isNewUser && data.customer_id) {
         setCustomerId(data.customer_id);
         setAbbr(data.abbr || "");
-        toast.success(`Your Customer ID: ${data.customer_id}`);
+
+        toast.success(`Welcome ${name}! Customer ID: ${data.customer_id}`);
+      } else {
+        toast.success(`Welcome back ${name}!`);
       }
-      toast.success(`Welcome ${data.first_name || data.fullname || "User"}!`);
     } catch (err) {
       toast.error(err.response?.data?.error || "Signup failed");
     } finally {
@@ -239,203 +467,326 @@ const UserAuthForm = ({ type }) => {
 
   /** ---------------- JSX ---------------- */
   return access_token ? (
-    <Navigate to="/" />
+    <Navigate to={userAuth?.isOnboardingCompleted ? "/" : "/welcome"} />
   ) : (
     <AnimationWrapper keyValue={type}>
-      <section className="h-cover flex items-center justify-center relative">
+      <section className="w-full px-0 md:px-0 py-0 relative">
         <Toaster />
-        {/* Loader overlay */}
+
+        {/* Loader Overlay */}
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 z-20">
+          <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
             <Loader />
           </div>
         )}
-        <form
-          ref={formElement}
-          className="w-[80%] max-w-[400px]"
-          style={loading ? { pointerEvents: "none", opacity: 0.5 } : {}}
-        >
-          <h1 className="text-4xl font-gelasio capitalize text-center mb-24">
-            {type === "sign-in" ? "Welcome Back" : "Join us today"}
-          </h1>
 
-          {type !== "sign-in" && (
-            <>
-              <div className="flex gap-4 mb-4">
-                <InputBox
-                  name="first_name"
-                  type="text"
-                  placeholder="First name"
-                  icon="fi-rr-user"
-                  required
-                />
-                <InputBox
-                  name="last_name"
-                  type="text"
-                  placeholder="Last name"
-                  icon="fi-rr-user"
-                  required
-                />
-              </div>
-              <InputBox
-                name="mobile_number"
-                type="tel"
-                placeholder="Mobile number"
-                icon="fi-rr-mobile-notch"
-                value={mobileNumber}
-                onChange={(e) => setMobileNumber(e.target.value)}
-              />
-              {/* Removed Location Dropdowns */}
-            </>
-          )}
-
-          <InputBox
-            name="email"
-            type="email"
-            placeholder="Email"
-            icon="fi-rr-envelope"
-            required
-          />
-
-          <InputBox
-            name="password"
-            type="password"
-            placeholder="Password"
-            icon="fi-rr-key"
-            required
-          />
-
-          {/* OTP Field (show after sending OTP) */}
-          {type !== "sign-in" && otpSent && !otpVerified && (
-            <div className="mb-4">
-              <label className="block mb-1 font-medium">Enter OTP</label>
-              <input
-                className="input-box w-full"
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                maxLength={6}
-                required
-              />
-              <button
-                className="btn-dark mt-2"
-                onClick={handleVerifyOtp}
-                disabled={loading}
-              >
-                Verify OTP
-              </button>
+        <div className=" max-w-7xl ">
+          {/* 🔹 TOP GRID */}
+          {/* LEFT = 220px 
+          FORM = flexible (remaining space) 1fr
+          RIGHT = 220px */}
+          <div className="grid grid-cols-1 md:grid-cols-[240px_1fr_240px] gap-6 items-start">
+            {/* LEFT */}
+            <div className="hidden md:block">
+              <AuthLeftActions type={type} />
             </div>
-          )}
 
-          {/* Disclaimer Checkbox */}
-          {type !== "sign-in" && (
-            <div className="mb-4 flex items-start gap-2">
-              <input
-                type="checkbox"
-                id="disclaimer"
-                checked={disclaimerAccepted}
-                onChange={(e) => setDisclaimerAccepted(e.target.checked)}
-              />
-              <label htmlFor="disclaimer" className="text-xs text-gray-600">
-                By signing up, you agree to our <b>Terms of Service</b> and
-                acknowledge that your location will be used for features like
-                "Doctors Near Me". Your location data will be processed securely
-                and only used for service improvement and safety. You can
-                control your location sharing in your profile settings.
-              </label>
-            </div>
-          )}
-
-          {/* Signup/Send OTP Button */}
-          {type !== "sign-in" && !otpSent && (
-            <button
-              className="btn-dark center mt-14"
-              type="button"
-              onClick={handleSendOtp}
-              disabled={loading || !disclaimerAccepted}
-            >
-              Send OTP & Continue
-            </button>
-          )}
-
-          {/* Signup Button (after OTP verified) */}
-          {type !== "sign-in" && otpVerified && (
-            <button
-              className="btn-dark center mt-14"
-              type="button"
-              onClick={handleCompleteSignup}
-              disabled={loading || !disclaimerAccepted}
-            >
-              Sign Up
-            </button>
-          )}
-
-          {/* Sign In Button */}
-          {type === "sign-in" && (
-            <>
-              <button
-                className="btn-dark center mt-14"
-                type="submit"
-                onClick={handleSubmit}
-                disabled={loading}
+            {/* CENTER FORM */}
+            <div className="w-full">
+              <form
+                ref={formElement}
+                className="w-full bg-white px-4 pt-1 pb-5 sm:px-6 sm:pt-1 sm:pb-0 rounded-lg"
+                style={loading ? { pointerEvents: "none", opacity: 0.6 } : {}}
               >
-                Sign In
-              </button>
+                <h1 className="text-2xl sm:text-3xl font-gelasio capitalize text-center mb-0">
+                  {type === "sign-in" ? "Welcome" : "Join us today"}
+                </h1>
 
-              <p className="text-right mt-2 text-sm">
-                <Link
-                  to="/forgot-password"
-                  className={`underline ${loading ? "pointer-events-none opacity-50" : ""}`}
+                <div
+                  className="mt-0 mb-0.5 text-center space-y-1"
+                  role="region"
+                  aria-live="polite"
+                  aria-labelledby="auth-heading"
                 >
-                  Forgot password?
-                </Link>
-              </p>
-            </>
-          )}
+                  {type === "sign-in" ? (
+                    <>
+                      <h4
+                        id="auth-heading"
+                        className="text-base font-semibold text-gray-800"
+                      >
+                        Welcome — your presence here truly matters.
+                      </h4>
 
-          <div className="relative w-full flex items-center gap-2 my-10 opacity-10 uppercase text-black font-bold">
-            <hr className="w-1/2 border-black" />
-            <p>or</p>
-            <hr className="w-1/2 border-black" />
+                      <p className="text-sm text-gray-600 leading-relaxed max-w-sm mx-auto">
+                        Pick up where you left off and continue building{" "}
+                        <span className="font-medium text-gray-800">
+                          something meaningful
+                        </span>
+                        . Stay connected with{" "}
+                        <span className="font-medium text-indigo-600">
+                          people
+                        </span>
+                        , share your{" "}
+                        <span className="font-medium text-indigo-600">
+                          thoughts
+                        </span>
+                        , and grow your{" "}
+                        <span className="font-medium text-gray-800">
+                          network
+                        </span>{" "}
+                        through{" "}
+                        <span className="font-medium text-gray-800">
+                          real conversations
+                        </span>{" "}
+                        and{" "}
+                        <span className="font-medium text-green-600">
+                          meaningful interactions
+                        </span>
+                        .
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h4
+                        id="auth-heading"
+                        className="text-base font-semibold underline text-gray-800"
+                      >
+                        Create more than an account — build your identity.
+                      </h4>
+
+                      <p className="text-sm text-gray-600 leading-relaxed max-w-sm mx-auto">
+                        Start your journey by creating a profile that represents
+                        you truly.
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* SIGNUP FIELDS */}
+                {type !== "sign-in" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <InputBox
+                        name="first_name"
+                        type="text"
+                        placeholder="First name"
+                        icon="fi-rr-user"
+                        required
+                      />
+
+                      <InputBox
+                        name="last_name"
+                        type="text"
+                        placeholder="Last name"
+                        icon="fi-rr-user"
+                        required
+                      />
+                    </div>
+
+                    <InputBox
+                      name="mobile_number"
+                      type="tel"
+                      placeholder="Mobile number"
+                      icon="fi-rr-mobile-notch"
+                      value={mobileNumber}
+                      onChange={(e) => setMobileNumber(e.target.value)}
+                    />
+                  </>
+                )}
+
+                <InputBox
+                  name="email"
+                  type="email"
+                  placeholder="Email"
+                  icon="fi-rr-envelope "
+                  required
+                />
+
+                <InputBox
+                  name="password"
+                  type="password"
+                  placeholder="Password"
+                  icon="fi-rr-key"
+                  required
+                />
+
+                {/* OTP FIELD */}
+                {type !== "sign-in" && otpSent && !otpVerified && (
+                  <div className="mt-4">
+                    <label className="block mb-2 text-sm font-medium text-center">
+                      Enter OTP
+                    </label>
+
+                    <div className="flex justify-between gap-2">
+                      {[...Array(6)].map((_, i) => (
+                        <input
+                          key={i}
+                          type="text"
+                          maxLength={1}
+                          className="w-12 h-12 text-center border rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-black"
+                          value={otp[i] || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (!/^[0-9]?$/.test(value)) return;
+
+                            const newOtp = otp.split("");
+                            newOtp[i] = value;
+                            setOtp(newOtp.join(""));
+
+                            if (value && e.target.nextSibling) {
+                              e.target.nextSibling.focus();
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (
+                              e.key === "Backspace" &&
+                              !otp[i] &&
+                              e.target.previousSibling
+                            ) {
+                              e.target.previousSibling.focus();
+                            }
+                          }}
+                        />
+                      ))}
+                    </div>
+
+                    <button
+                      className="btn-dark w-full mt-4"
+                      onClick={handleVerifyOtp}
+                      disabled={loading || otp.length !== 6}
+                    >
+                      Verify OTP
+                    </button>
+                  </div>
+                )}
+
+                {/* DISCLAIMER */}
+                {type !== "sign-in" && (
+                  <div className="mt-4 flex items-start gap-3 text-xs text-gray-600 leading-relaxed">
+                    <input
+                      type="checkbox"
+                      id="disclaimer"
+                      checked={disclaimerAccepted}
+                      onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+                      className="mt-1 cursor-pointer accent-black"
+                    />
+
+                    <label htmlFor="disclaimer" className="cursor-pointer">
+                      By signing up, you agree to our{" "}
+                      <span className="font-medium underline cursor-pointer">
+                        Terms and Conditions.
+                      </span>
+                    </label>
+                  </div>
+                )}
+
+                {/* ACTION BUTTON */}
+                {type === "sign-in" ? (
+                  <button
+                    className="btn-dark w-full mt-0"
+                    type="submit"
+                    onClick={handleSubmit}
+                    disabled={loading}
+                  >
+                    Login
+                  </button>
+                ) : !otpSent ? (
+                  <button
+                    className="btn-dark w-full mt-0"
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={loading || !disclaimerAccepted}
+                  >
+                    Send OTP & Continue
+                  </button>
+                ) : otpVerified ? (
+                  <button
+                    className="btn-dark w-full mt-0"
+                    type="button"
+                    onClick={handleCompleteSignup}
+                    disabled={loading || !disclaimerAccepted}
+                  >
+                    Sign Up
+                  </button>
+                ) : null}
+
+                {/* LINKS */}
+                <div className="mt-1 flex items-center justify-center gap-2 text-sm text-gray-600 flex-wrap">
+                  {type !== "sign-in" && (
+                    <>
+                      <span>Already have an account?</span>
+                      <Link to="/signin" className="underline text-black">
+                        Sign in
+                      </Link>
+                      <span className="text-gray-400">|</span>
+                    </>
+                  )}
+
+                  {type === "sign-in" && (
+                    <>
+                      <Link to="/signup" className="underline text-black">
+                        New here? Create an account
+                      </Link>
+                      <span className="text-gray-400">|</span>
+                      <Link
+                        to="/forgot-password"
+                        className={`text-black underline ${
+                          loading ? "pointer-events-none opacity-50" : ""
+                        }`}
+                      >
+                        Forgot password
+                      </Link>
+                      <span className="text-gray-400">|</span>
+                    </>
+                  )}
+
+                  <Link to="/" className="text-black underline">
+                    Skip to home
+                  </Link>
+                </div>
+
+                {/* OR */}
+                <div className="flex items-center gap-3 my-0 text-xs uppercase text-gray-400 font-semibold">
+                  <hr className="flex-1 border-gray-300" />
+                  <p>or</p>
+                  <hr className="flex-1 border-gray-300" />
+                </div>
+
+                {/* GOOGLE */}
+                <button
+                  className="w-full border border-gray-300 rounded-lg py-2 flex items-center justify-center gap-3 hover:bg-gray-50"
+                  onClick={handleGoogleAuth}
+                  type="button"
+                >
+                  <img src={googleIcon} className="w-5" alt="Google" />
+                  Continue with Google
+                </button>
+              </form>
+            </div>
+
+            {/* RIGHT */}
+            <div className="hidden md:block">
+              <AuthRightActions type={type} />
+            </div>
           </div>
-
-          <button
-            className="btn-dark flex items-center justify-center gap-4 w-[90%] center"
-            onClick={handleGoogleAuth}
-            type="button"
-          >
-            <img src={googleIcon} className="w-5" alt="Google" />
-            continue with google
-          </button>
-
-          {type === "sign-in" ? (
-            <p className="mt-6 text-dark-grey text-xl text-center">
-              Don't have an account ?
-              <Link to="/signup" className="underline text-black text-xl ml-1">
-                Join us today
-              </Link>
-            </p>
-          ) : (
-            <p className="mt-6 text-dark-grey text-xl text-center">
-              Already a member ?
-              <Link to="/signin" className="underline text-black text-xl ml-1">
-                Sign in here
-              </Link>
-            </p>
-          )}
-        </form>
-        {/* Show customer ID and abbreviation after signup if available */}
-        {customerId && (
-          <div className="mt-6 p-4 bg-green-100 border border-green-400 rounded text-green-800 text-center">
-            <strong>Your Customer ID:</strong> {customerId}
-            <br />
-            {abbr && (
-              <span>
-                <strong>Abbreviation:</strong> {abbr}
-              </span>
-            )}
+          {/* 🔹 BOTTOM */}
+          <div className="mt-auto ">
+            <AuthBottomActions type={type} />
           </div>
-        )}
+          {/* CUSTOMER ID */}
+          {customerId && (
+            <div className="mt-6 w-full max-w-md mx-auto p-4 bg-green-50 border border-green-400 rounded-lg text-green-800 text-center shadow-sm">
+              <p className="text-sm font-medium">Your Customer ID</p>
+              <p className="text-lg font-semibold mt-1">{customerId}</p>
+
+              {abbr && (
+                <p className="text-sm mt-2 text-green-700">
+                  Abbreviation: <span className="font-medium">{abbr}</span>
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </section>
     </AnimationWrapper>
   );

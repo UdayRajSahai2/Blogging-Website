@@ -13,11 +13,21 @@ import {
 
 export const getUserBlogs = async (req, res) => {
   try {
-    const userId = req.user;
-
+    const userId = req.userId;
+    console.log("Fetching blogs for user ID:", userId);
     const blogs = await Blog.findAll({
       where: { author: userId },
-      attributes: ["blog_id", "title", "des", "banner", "draft"],
+      attributes: [
+        "blog_id",
+        "title",
+        "des",
+        "banner",
+        "draft",
+        "status", // ADD
+        "is_deleted", // ADD
+        "review_note",
+        "createdAt", // ADD
+      ],
       order: [["createdAt", "DESC"]],
     });
 
@@ -42,7 +52,10 @@ export const getLatestBlogs = async (req, res) => {
 
     // Fetch all published blogs with author information
     const blogs = await Blog.findAll({
-      where: { draft: false },
+      where: {
+        status: "published",
+        is_deleted: false,
+      },
       include: [
         {
           model: User,
@@ -165,7 +178,10 @@ export const getLatestBlogs = async (req, res) => {
 export const getAllLatestBlogsCount = async (req, res) => {
   try {
     const count = await Blog.count({
-      where: { draft: false },
+      where: {
+        status: "published",
+        is_deleted: false,
+      },
     });
 
     return res.status(200).json({ totalDocs: count });
@@ -181,7 +197,10 @@ export const getTrendingBlogs = async (req, res) => {
   try {
     // Fetch all published blogs with author information
     const blogs = await Blog.findAll({
-      where: { draft: false },
+      where: {
+        status: "published",
+        is_deleted: false,
+      },
       include: [
         {
           model: User,
@@ -305,7 +324,10 @@ export const getSearchBlogs = async (req, res) => {
 
   try {
     let offset = (page - 1) * maxLimit;
-    let whereClause = { draft: false };
+    let whereClause = {
+      status: "published",
+      is_deleted: false,
+    };
 
     // Add eliminate_blog condition if provided
     if (eliminate_blog) {
@@ -466,7 +488,10 @@ export const getSearchBlogsCount = async (req, res) => {
   let { tag, author, query } = req.body;
 
   try {
-    let whereClause = { draft: false };
+    let whereClause = {
+      status: "published",
+      is_deleted: false,
+    };
 
     if (tag) {
       const normalizedTag = tag.toLowerCase().trim();
@@ -516,7 +541,7 @@ export const getSearchBlogsCount = async (req, res) => {
 };
 
 export const createOrUpdateBlog = async (req, res) => {
-  const authorId = req.user;
+  const authorId = req.userId;
   let { title, des, banner, tags, content, draft, id } = req.body;
 
   if (!title.length) {
@@ -558,18 +583,20 @@ export const createOrUpdateBlog = async (req, res) => {
 
     if (id) {
       // UPDATE EXISTING BLOG
-      const [updatedCount] = await Blog.update(
-        {
-          title,
-          des,
-          banner,
-          content: JSON.stringify(content),
-          tags: JSON.stringify(tags),
-          draft: draft ? draft : false,
-          publishedAt: draft ? null : new Date(),
-        },
-        { where: { blog_id, author: authorId } },
-      );
+      const updatePayload = {
+        title,
+        des,
+        banner,
+        content: JSON.stringify(content),
+        tags: JSON.stringify(tags),
+        draft: Boolean(draft),
+        publishedAt: draft ? null : undefined,
+        status: draft ? "draft" : "pending", // IMPORTANT
+      };
+
+      const [updatedCount] = await Blog.update(updatePayload, {
+        where: { blog_id, author: authorId },
+      });
 
       if (updatedCount === 0) {
         return res
@@ -590,6 +617,8 @@ export const createOrUpdateBlog = async (req, res) => {
         blog_id,
         draft: Boolean(draft),
         publishedAt: draft ? null : new Date(),
+        // ADD THIS
+        status: draft ? "draft" : "pending",
       });
 
       // Update user's post count
@@ -619,10 +648,9 @@ export const createOrUpdateBlog = async (req, res) => {
 
 export const getBlogById = async (req, res) => {
   const { blog_id, draft, mode } = req.body;
-  const incrementVal = mode !== "edit" ? 1 : 0; // Only increment reads if not in edit mode
+  const incrementVal = mode !== "edit" ? 1 : 0;
 
   try {
-    // 1. Find the blog with author info
     const blog = await Blog.findOne({
       where: { blog_id },
       include: [
@@ -642,6 +670,9 @@ export const getBlogById = async (req, res) => {
         "publishedAt",
         "draft",
         "author",
+        "status",
+        "is_deleted",
+        "review_note",
       ],
     });
 
@@ -649,35 +680,50 @@ export const getBlogById = async (req, res) => {
       return res.status(404).json({ error: "Blog not found" });
     }
 
-    // 2. Reject if trying to access a draft without permission
-    if (blog.draft && !draft) {
-      return res.status(403).json({ error: "You cannot access draft blogs" });
+    // 🚫 soft deleted
+    if (blog.is_deleted) {
+      return res.status(403).json({
+        error: "Blog removed",
+        blog: blog.get({ plain: true }),
+      });
     }
 
-    // 3. Track a read (if not in edit mode)
-    if (mode !== "edit") {
-      const userId = req.user?.user_id;
+    // 🚫 not published
+    if (!blog.draft && blog.status !== "published" && mode !== "edit") {
+      return res.status(403).json({
+        error: "Blog not public",
+        blog: blog.get({ plain: true }),
+      });
+    }
 
-      if (!userId) {
-        console.warn("User not authenticated, skipping read tracking.");
-      } else {
+    // 🚫 draft protection
+    if (blog.draft && !draft) {
+      return res.status(403).json({
+        error: "Draft blog",
+        blog: blog.get({ plain: true }),
+      });
+    }
+
+    // ✅ track read
+    if (mode !== "edit") {
+      const userId = req.userId?.user_id;
+      if (userId) {
         await Read.create({ blog_id, user_id: userId });
       }
     }
 
-    // 4. Get activity counts (likes, comments, reads)
     const [total_likes, total_comments, total_reads] = await Promise.all([
       Like.count({ where: { blog_id } }),
       Comment.count({ where: { blog_id } }),
       Read.count({ where: { blog_id } }),
     ]);
 
-    // 5. Increment author's read count (if not edit mode)
     if (incrementVal && blog.author) {
-      await User.increment("total_reads", { where: { user_id: blog.author } });
+      await User.increment("total_reads", {
+        where: { user_id: blog.author },
+      });
     }
 
-    // 6. Return the blog data
     return res.status(200).json({
       blog: {
         ...blog.get({ plain: true }),
@@ -687,13 +733,13 @@ export const getBlogById = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Error in /get-blog:", err);
+    console.error("Error in getBlog:", err);
     return res.status(500).json({ error: "Failed to fetch blog" });
   }
 };
 
 export const handleLike = async (req, res) => {
-  // Validate request body structure first
+  // ✅ Validate request body
   if (!req.body || typeof req.body !== "object") {
     return res.status(400).json({
       success: false,
@@ -703,14 +749,21 @@ export const handleLike = async (req, res) => {
   }
 
   const { blog_id, isLiked } = req.body;
-  const user_id = req.user;
+  const userId = req.userId?.user_id;
 
-  // Validate input types
+  // ✅ Auth safety
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
+  }
+
+  // ✅ Validate inputs
   if (typeof isLiked !== "boolean") {
     return res.status(400).json({
       success: false,
-      message: "Invalid isLiked value",
-      error: "isLiked must be true or false",
+      message: "isLiked must be true or false",
     });
   }
 
@@ -718,16 +771,16 @@ export const handleLike = async (req, res) => {
     return res.status(400).json({
       success: false,
       message: "Invalid blog ID",
-      error: "blog_id must be a non-empty string",
     });
   }
 
+  const trimmedBlogId = blog_id.trim();
   const transaction = await sequelize.transaction();
 
   try {
-    const trimmedBlogId = blog_id.trim();
-
-    // Get the blog with author info
+    // ==================================================
+    // 🔍 Get blog with lock
+    // ==================================================
     const blog = await Blog.findOne({
       where: { blog_id: trimmedBlogId },
       include: [
@@ -743,12 +796,16 @@ export const handleLike = async (req, res) => {
 
     if (!blog) {
       await transaction.rollback();
-      return res.status(404).json({ error: "Blog not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Blog not found",
+      });
     }
 
-    // Get the user performing the action
-    const user = await User.findOne({
-      where: { user_id },
+    // ==================================================
+    // 🔍 Verify user exists
+    // ==================================================
+    const user = await User.findByPk(userId, {
       attributes: ["user_id", "fullname", "username", "profile_img"],
       transaction,
     });
@@ -761,70 +818,85 @@ export const handleLike = async (req, res) => {
       });
     }
 
-    let result;
-    let total_likes;
+    let finalLikeStatus;
 
+    // ==================================================
+    // ❤️ LIKE
+    // ==================================================
     if (isLiked) {
       try {
-        await Like.create({ blog_id: trimmedBlogId, user_id }, { transaction });
-        result = { status: "created" };
+        await Like.create(
+          {
+            blog_id: trimmedBlogId,
+            user_id: userId,
+          },
+          { transaction },
+        );
 
-        // Create notification if user is not liking their own blog
+        finalLikeStatus = true;
+
+        // 🔔 Create notification (no self-like)
         const blogAuthorId = blog.author || blog?.blogAuthor?.user_id;
-        if (blogAuthorId && blogAuthorId !== user_id) {
-          await Notification.create(
-            {
+
+        if (blogAuthorId && blogAuthorId !== userId) {
+          await Notification.findOrCreate({
+            where: {
+              type: "like",
+              blog: trimmedBlogId,
+              user: userId,
+            },
+            defaults: {
               type: "like",
               blog: trimmedBlogId,
               notification_for: blogAuthorId,
-              user: user_id,
-              createdAt: new Date(),
-              updatedAt: new Date(),
+              user: userId,
             },
-            { transaction },
-          );
+            transaction,
+          });
         }
-      } catch (createErr) {
-        if (createErr.name === "SequelizeUniqueConstraintError") {
-          result = { status: "already_exists" };
+      } catch (err) {
+        if (err.name === "SequelizeUniqueConstraintError") {
+          // already liked
+          finalLikeStatus = true;
         } else {
-          throw createErr;
+          throw err;
         }
       }
-    } else {
-      // UNLIKE ACTION
-      const deletedLikeCount = await Like.destroy({
-        where: { blog_id: trimmedBlogId, user_id },
-        transaction,
-      });
-
-      const deletedNotificationCount = await Notification.destroy({
-        where: { blog: trimmedBlogId, user: user_id, type: "like" },
-        transaction,
-      });
-
-      result = {
-        status: deletedLikeCount > 0 ? "deleted" : "not_found",
-        deletedLikes: deletedLikeCount,
-        deletedNotifications: deletedNotificationCount,
-      };
     }
 
-    // Get updated total likes
-    total_likes = await Like.count({
+    // ==================================================
+    // 💔 UNLIKE
+    // ==================================================
+    else {
+      const deletedLikeCount = await Like.destroy({
+        where: {
+          blog_id: trimmedBlogId,
+          user_id: userId,
+        },
+        transaction,
+      });
+
+      await Notification.destroy({
+        where: {
+          blog: trimmedBlogId,
+          user: userId,
+          type: "like",
+        },
+        transaction,
+      });
+
+      finalLikeStatus = deletedLikeCount === 0;
+    }
+
+    // ==================================================
+    // 🔢 Get updated count
+    // ==================================================
+    const total_likes = await Like.count({
       where: { blog_id: trimmedBlogId },
       transaction,
     });
-    await transaction.commit();
 
-    // Determine final like status
-    const finalLikeStatus = isLiked
-      ? result.status === "created"
-        ? true
-        : false
-      : result.status === "deleted"
-        ? false
-        : true;
+    await transaction.commit();
 
     return res.json({
       success: true,
@@ -872,7 +944,7 @@ export const handleLike = async (req, res) => {
 export const checkLikeStatus = async (req, res) => {
   try {
     const { blog_id } = req.body;
-    const user_id = req.user;
+    const user_id = req.userId;
 
     // Check if the user has liked this blog
     const like = await Like.findOne({
@@ -897,54 +969,3 @@ export const checkLikeStatus = async (req, res) => {
     return res.status(500).json({ error: "Error checking like status" });
   }
 };
-
-// export const deleteBlog = async (req, res) => {
-//   const { blog_id } = req.params;
-//   const userId = req.user;
-//   console.log("JWT user_id:", userId);
-//   const t = await sequelize.transaction();
-
-//   try {
-//     const blog = await Blog.findOne({
-//       where: { blog_id },
-//       transaction: t,
-//     });
-
-//     if (!blog) {
-//       await t.rollback();
-//       return res.status(404).json({ message: "Blog not found" });
-//     }
-
-//     // ownership check (safe + transactional)
-//     if (Number(blog.author) !== Number(userId)) {
-//       console.log("Blog author:", blog.author);
-//       await t.rollback();
-//       return res.status(403).json({ message: "Unauthorized action" });
-//     }
-
-//     await Promise.all([
-//       Comment.destroy({ where: { blog_id }, transaction: t }),
-//       Like.destroy({ where: { blog_id }, transaction: t }),
-//       Read.destroy({ where: { blog_id }, transaction: t }),
-
-//       // FIXED COLUMN NAME
-//       Notification.destroy({
-//         where: { blog: blog_id },
-//         transaction: t,
-//       }),
-//     ]);
-
-//     await Blog.destroy({
-//       where: { blog_id },
-//       transaction: t,
-//     });
-
-//     await t.commit();
-
-//     return res.status(200).json({ success: true });
-//   } catch (err) {
-//     await t.rollback();
-//     console.error("Delete blog error:", err);
-//     return res.status(500).json({ message: "Internal server error" });
-//   }
-// };

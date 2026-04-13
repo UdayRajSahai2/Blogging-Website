@@ -1,22 +1,37 @@
-// server/middlewares/authMiddleware.js
 import jwt from "jsonwebtoken";
-
 export const verifyJWT = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "No access token" });
-  }
-
-  const token = authHeader.split(" ")[1];
-
   try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "No access token" });
+    }
+
+    const token = authHeader.split(" ")[1];
+
     const decoded = jwt.verify(token, process.env.SECRET_ACCESS_KEY);
 
-    // req.user is a NUMBER (user_id)
-    req.user = decoded.user_id;
+    //  Core identity
+    req.userId = decoded.user_id;
+
+    //  Authority
+    req.systemRole = decoded.system_role?.toLowerCase();
+
+    //  Business roles
+    req.userRoles = (decoded.roles || []).map((r) => r.toLowerCase());
+
+    //  Active role (optional)
+    req.primaryRole = decoded.primary_role;
+
+    //  future security
+    req.roleVersion = decoded.role_version;
 
     next();
   } catch (err) {
-    return res.status(403).json({ error: "Access token is invalid" });
+    console.error("JWT ERROR:", err.message);
+
+    return res.status(403).json({
+      message: "Invalid or expired token",
+    });
   }
 };

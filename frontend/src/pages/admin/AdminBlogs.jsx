@@ -1,0 +1,450 @@
+import { useEffect, useState, useContext, useCallback } from "react";
+import axios from "axios";
+import { UserContext } from "../../App";
+import { ADMIN_API } from "../../common/api";
+import toast from "react-hot-toast";
+
+const statusColors = {
+  draft: "bg-gray-200 text-gray-700",
+  published: "bg-green-100 text-green-700",
+  rejected: "bg-red-100 text-red-700",
+};
+
+const AdminBlogs = () => {
+  const { userAuth } = useContext(UserContext);
+  const token = userAuth?.access_token;
+
+  const [blogs, setBlogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState(null);
+
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const [rejectModal, setRejectModal] = useState(false);
+  const [selectedBlogId, setSelectedBlogId] = useState(null);
+  const [reviewNote, setReviewNote] = useState("");
+
+  const [noteModal, setNoteModal] = useState({
+    open: false,
+    text: "",
+  });
+  const [bannerModal, setBannerModal] = useState({
+    open: false,
+    src: "",
+  });
+  // ================= DEBOUNCE =================
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // ================= FETCH BLOGS =================
+  const fetchBlogs = useCallback(
+    async (signal) => {
+      if (!token) return;
+
+      try {
+        setLoading(true);
+
+        const { data } = await axios.get(`${ADMIN_API}/blogs`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            page,
+            limit: 10,
+            search: debouncedSearch || undefined,
+            status: statusFilter !== "all" ? statusFilter : undefined,
+          },
+          signal,
+        });
+
+        setBlogs(data?.data || []);
+        setTotalPages(data?.pagination?.totalPages || 1);
+      } catch (err) {
+        if (axios.isCancel(err)) return;
+        console.error(err);
+        toast.error("Failed to load blogs");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token, page, debouncedSearch, statusFilter],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchBlogs(controller.signal);
+    return () => controller.abort();
+  }, [fetchBlogs]);
+
+  // ================= ACTIONS =================
+
+  const updateStatus = async (blogId, status, note = "") => {
+    try {
+      setProcessingId(blogId);
+
+      await axios.patch(
+        `${ADMIN_API}/blogs/${blogId}/status`,
+        { status, review_note: note },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      toast.success(`Blog ${status}`);
+      fetchBlogs();
+    } catch (err) {
+      console.error(err);
+      toast.error("Action failed");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const softDelete = async (blogId) => {
+    if (!window.confirm("Soft delete this blog?")) return;
+
+    try {
+      setProcessingId(blogId);
+
+      await axios.delete(`${ADMIN_API}/blogs/${blogId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      toast.success("Blog deleted");
+      fetchBlogs();
+    } catch (err) {
+      console.error(err);
+      toast.error("Delete failed");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const restoreBlog = async (blogId) => {
+    try {
+      setProcessingId(blogId);
+
+      await axios.patch(
+        `${ADMIN_API}/blogs/${blogId}/restore`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      toast.success("Blog restored");
+      fetchBlogs();
+    } catch (err) {
+      console.error(err);
+      toast.error("Restore failed");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  // ================= UI =================
+
+  if (loading && !blogs.length) {
+    return <div className="p-6 text-gray-500">Loading blogs...</div>;
+  }
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-6">Blog Moderation</h1>
+
+      {/*  SEARCH + FILTER */}
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
+        <input
+          type="text"
+          placeholder="Search blogs..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full md:w-80 p-2 border rounded-lg"
+        />
+
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="p-2 border rounded-lg"
+        >
+          <option value="all">All Status</option>
+          <option value="draft">Draft</option>
+          <option value="published">Published</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+
+      {/* TABLE */}
+      <div className="w-full overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm pb-2">
+        <table className="w-full text-sm min-w-[900px] ">
+          <thead className="bg-gray-100 text-left text-xs uppercase tracking-wide text-gray-600">
+            <tr>
+              <th className="p-3 w-[320px]">Blog</th>
+              <th className="p-3 w-[200px]">Author</th>
+              <th className="p-3 w-[120px]">Status</th>
+              <th className="p-3 w-[90px]">Deleted</th>
+              <th className="p-3 w-[120px]">Review</th>
+              <th className="p-3 w-[150px]">Created</th>
+              <th className="p-3 w-[150px]">Reviewed</th>
+              <th className="p-3 text-center w-[220px]">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {blogs.map((b) => {
+              const isProcessing = processingId === b.blog_id;
+              const isPublished = b.status === "published";
+              const isRejected = b.status === "rejected";
+
+              return (
+                <tr
+                  key={b.blog_id}
+                  className="border-t hover:bg-gray-50 align-middle"
+                >
+                  {/* BLOG */}
+                  <td className="p-3">
+                    <div className="flex gap-3 items-center">
+                      <img
+                        src={b.banner}
+                        alt="banner"
+                        className="w-16 h-12 object-cover rounded-md flex-shrink-0 cursor-pointer hover:scale-105 transition"
+                        onClick={() =>
+                          setBannerModal({
+                            open: true,
+                            src: b.banner,
+                          })
+                        }
+                      />
+
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm line-clamp-1">
+                          {b.title}
+                        </p>
+                        <p className="text-xs text-gray-500 line-clamp-2">
+                          {b.des || "No description"}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* AUTHOR */}
+                  <td className="p-3">
+                    <div className="text-sm leading-tight">
+                      <p className="font-medium">{b.blogAuthor?.fullname}</p>
+                      <p className="text-xs text-gray-500">
+                        @{b.blogAuthor?.username}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate max-w-[160px]">
+                        {b.blogAuthor?.email}
+                      </p>
+                    </div>
+                  </td>
+
+                  {/* STATUS */}
+                  <td className="p-3">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusColors[b.status]}`}
+                    >
+                      {b.status}
+                    </span>
+                  </td>
+
+                  {/* DELETED */}
+                  <td className="p-3 text-sm text-gray-700 whitespace-nowrap">
+                    {b.is_deleted ? "Yes" : "No"}
+                  </td>
+
+                  {/* REVIEW NOTE */}
+                  <td className="p-3 whitespace-nowrap">
+                    {b.review_note ? (
+                      <button
+                        className="text-xs text-blue-600 underline hover:text-blue-800"
+                        onClick={() =>
+                          setNoteModal({
+                            open: true,
+                            text: b.review_note,
+                          })
+                        }
+                      >
+                        View note
+                      </button>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+
+                  {/* CREATED */}
+                  <td className="p-3 text-xs whitespace-nowrap">
+                    <div className="leading-tight">
+                      {new Date(b.createdAt).toLocaleDateString()}
+                      <br />
+                      <span className="text-gray-400">
+                        {new Date(b.createdAt).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* REVIEWED */}
+                  <td className="p-3 text-xs whitespace-nowrap">
+                    {b.reviewed_at ? (
+                      <div className="leading-tight">
+                        {new Date(b.reviewed_at).toLocaleDateString()}
+                        <br />
+                        <span className="text-gray-400">
+                          {new Date(b.reviewed_at).toLocaleTimeString()}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+
+                  {/* ACTIONS */}
+                  <td className="p-3">
+                    <div className="flex flex-wrap justify-center gap-2 min-w-[200px]">
+                      {!b.is_deleted && (
+                        <>
+                          <button
+                            disabled={isProcessing || isPublished}
+                            className="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1.5 rounded-md disabled:opacity-40"
+                            onClick={() => updateStatus(b.blog_id, "published")}
+                          >
+                            Approve
+                          </button>
+
+                          <button
+                            disabled={isProcessing || isRejected}
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-1.5 rounded-md disabled:opacity-40"
+                            onClick={() => {
+                              setSelectedBlogId(b.blog_id);
+                              setReviewNote("");
+                              setRejectModal(true);
+                            }}
+                          >
+                            Reject
+                          </button>
+
+                          <button
+                            disabled={isProcessing}
+                            className="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded-md"
+                            onClick={() => softDelete(b.blog_id)}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+
+                      {b.is_deleted && (
+                        <button
+                          disabled={isProcessing}
+                          className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1.5 rounded-md"
+                          onClick={() => restoreBlog(b.blog_id)}
+                        >
+                          Restore
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* PAGINATION */}
+      <div className="flex justify-between items-center mt-4">
+        <button
+          disabled={page === 1}
+          onClick={() => setPage((p) => p - 1)}
+          className="px-3 py-1 border rounded disabled:opacity-40"
+        >
+          Prev
+        </button>
+
+        <span className="text-sm text-gray-600">
+          Page {page} of {totalPages}
+        </span>
+
+        <button
+          disabled={page === totalPages}
+          onClick={() => setPage((p) => p + 1)}
+          className="px-3 py-1 border rounded disabled:opacity-40"
+        >
+          Next
+        </button>
+      </div>
+      {rejectModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-[400px]">
+            <h3 className="text-lg font-semibold mb-3">Reject Blog</h3>
+
+            <textarea
+              placeholder="Enter rejection reason..."
+              value={reviewNote}
+              onChange={(e) => setReviewNote(e.target.value)}
+              className="w-full border rounded-lg p-2 h-24 mb-4"
+            />
+
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 border rounded-lg"
+                onClick={() => setRejectModal(false)}
+              >
+                Cancel
+              </button>
+
+              <button
+                disabled={!reviewNote.trim()}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg disabled:opacity-40"
+                onClick={async () => {
+                  await updateStatus(selectedBlogId, "rejected", reviewNote);
+                  setRejectModal(false);
+                }}
+              >
+                Reject Blog
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {noteModal.open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-[90%]">
+            <h3 className="text-lg font-semibold mb-3">Review Note</h3>
+
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              {noteModal.text}
+            </p>
+
+            <button
+              className="mt-5 px-4 py-2 bg-black text-white rounded-lg"
+              onClick={() => setNoteModal({ open: false, text: "" })}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+      {bannerModal.open && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          onClick={() => setBannerModal({ open: false, src: "" })}
+        >
+          <img
+            src={bannerModal.src}
+            alt="Full banner"
+            className="max-h-[90vh] max-w-[95vw] rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdminBlogs;

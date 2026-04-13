@@ -1,50 +1,106 @@
 import { useEffect, useRef, useState } from "react";
-
-export let activeTabLineRef;
-export let activeTabRef;
-
 const InPageNavigation = ({
   routes,
   defaultHidden = [],
   defaultActiveIndex = 0,
   children,
 }) => {
-  activeTabLineRef = useRef();
-  activeTabRef = useRef();
-  let [inPageNavIndex, setInPageNavIndex] = useState(defaultActiveIndex);
-  const changePageState = (btn, i) => {
-    let { offsetWidth, offsetLeft } = btn;
+  const activeTabLineRef = useRef(null);
+  const tabsContainerRef = useRef(null);
+  const tabRefs = useRef([]);
+
+  const [inPageNavIndex, setInPageNavIndex] = useState(defaultActiveIndex);
+
+  // ---------- Move indicator ----------
+  const moveIndicator = (btn) => {
+    if (!btn || !activeTabLineRef.current) return;
+
+    const { offsetWidth, offsetLeft } = btn;
     activeTabLineRef.current.style.width = offsetWidth + "px";
     activeTabLineRef.current.style.left = offsetLeft + "px";
 
+    // auto scroll into view (great mobile UX)
+    btn.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  };
+
+  // ---------- Change tab ----------
+  const changePageState = (btn, i) => {
+    moveIndicator(btn);
     setInPageNavIndex(i);
   };
 
+  // ---------- Keyboard navigation ----------
+  const handleKeyDown = (e, i) => {
+    let newIndex = i;
+
+    if (e.key === "ArrowRight") {
+      newIndex = (i + 1) % routes.length;
+    } else if (e.key === "ArrowLeft") {
+      newIndex = i === 0 ? routes.length - 1 : i - 1;
+    } else if (e.key === "Home") {
+      newIndex = 0;
+    } else if (e.key === "End") {
+      newIndex = routes.length - 1;
+    } else {
+      return;
+    }
+
+    e.preventDefault();
+
+    const nextTab = tabRefs.current[newIndex];
+    if (nextTab) {
+      nextTab.focus();
+      changePageState(nextTab, newIndex);
+    }
+  };
+
+  // ---------- Initial mount ----------
   useEffect(() => {
-    changePageState(activeTabRef.current, defaultActiveIndex);
-  }, []);
+    const initialTab = tabRefs.current[defaultActiveIndex];
+    if (initialTab) moveIndicator(initialTab);
+  }, [defaultActiveIndex]);
+
   return (
     <>
-      <div className="relative mb-8 bg-white border-b border-grey flex flex-nowrap overflow-x-auto">
-        {routes.map((route, i) => {
-          return (
-            <button
-              ref={i === defaultActiveIndex ? activeTabRef : null}
-              key={i}
-              className={
-                "p-4 px-5 capitalize " +
-                (inPageNavIndex === i ? "text-black" : "text-dark-grey ") +
-                (defaultHidden.includes(route) ? "md:hidden" : "")
-              }
-              onClick={(e) => changePageState(e.target, i)}
-            >
-              {route}
-            </button>
-          );
-        })}
-        <hr ref={activeTabLineRef} className="absolute bottom-0 duration-300" />
+      {/* ================= TAB BAR ================= */}
+      <div
+        ref={tabsContainerRef}
+        role="tablist"
+        className="relative mb-0 bg-white border-b border-grey flex flex-nowrap overflow-x-auto scrollbar-hide"
+      >
+        {routes.map((route, i) => (
+          <button
+            key={i}
+            ref={(el) => (tabRefs.current[i] = el)}
+            role="tab"
+            aria-selected={inPageNavIndex === i}
+            tabIndex={inPageNavIndex === i ? 0 : -1}
+            className={
+              "p-1 py-0 px-3 capitalize whitespace-nowrap transition-all duration-200 font-medium " +
+              (inPageNavIndex === i
+                ? "text-black"
+                : "text-gray-500 hover:text-black ") +
+              (defaultHidden.includes(route) ? "md:hidden" : "")
+            }
+            onClick={(e) => changePageState(e.currentTarget, i)}
+            onKeyDown={(e) => handleKeyDown(e, i)}
+          >
+            {route}
+          </button>
+        ))}
+
+        {/* active indicator */}
+        <hr
+          ref={activeTabLineRef}
+          className="absolute bottom-0 h-[2px] bg-black duration-300"
+        />
       </div>
 
+      {/* ================= TAB CONTENT ================= */}
       {Array.isArray(children) ? children[inPageNavIndex] : children}
     </>
   );

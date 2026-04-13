@@ -2,50 +2,136 @@ import { useEffect, useRef } from "react";
 import axios from "axios";
 import { USER_API } from "../common/api";
 
-// Background location tracker: requests permission once and watches updates.
-// Sends throttled updates to /update-location when the user is logged in.
-const useLocationTracker = (accessToken) => {
-  const watchIdRef = useRef(null);
-  const lastSentRef = useRef({ time: 0, lat: null, lon: null });
+const useLocationTracker = (token) => {
+  const lastCoordsRef = useRef(null);
+  const lastSentTimeRef = useRef(0);
+  const refreshTimeoutRef = useRef(null);
 
   useEffect(() => {
-    if (!accessToken || !navigator.geolocation) return;
+    if (!token) return;
 
-    const maybeSend = async (latitude, longitude) => {
-      const now = Date.now();
-      const { time, lat, lon } = lastSentRef.current;
-      const movedEnough =
-        lat == null ||
-        lon == null ||
-        Math.hypot(latitude - lat, longitude - lon) > 0.0005; // ~50m
-      if (!movedEnough || now - time < 30_000) return; // throttle to 30s
+    let watchId;
+
+    const MIN_DISTANCE_KM = 0.05; // ~50 meters
+    const MIN_TIME_MS = 30000; // 30 seconds
+
+    /* ---------------- DISTANCE CALC ---------------- */
+    const getDistance = (lat1, lon1, lat2, lon2) => {
+      const R = 6371;
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((lat1 * Math.PI) / 180) *
+          Math.cos((lat2 * Math.PI) / 180) *
+          Math.sin(dLon / 2) ** 2;
+
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    /* ---------------- SEND LOCATION ---------------- */
+    const sendLocation = async (latitude, longitude) => {
       try {
         await axios.post(
           `${USER_API}/update-location`,
           { latitude, longitude },
-          { headers: { Authorization: `Bearer ${accessToken}` } },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
         );
-        lastSentRef.current = { time: now, lat: latitude, lon: longitude };
-      } catch (e) {
-        // Silently ignore network errors; we'll retry on next movement
+
+        // 🔥 Debounced UI refresh
+        if (refreshTimeoutRef.current) {
+          clearTimeout(refreshTimeoutRef.current);
+        }
+
+        refreshTimeoutRef.current = setTimeout(() => {
+          window.dispatchEvent(new Event("location-updated"));
+        }, 2000);
+      } catch (err) {
+        console.error("❌ Location update failed:", err);
       }
     };
 
-    // Start watching position; this prompts once and persists per browser policy
-    watchIdRef.current = navigator.geolocation.watchPosition(
+    /* ---------------- ⚡ QUICK INITIAL LOCATION ---------------- */
+    navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        maybeSend(latitude, longitude);
+
+        lastCoordsRef.current = { lat: latitude, lng: longitude };
+        lastSentTimeRef.current = Date.now();
+
+        sendLocation(latitude, longitude);
       },
-      () => {},
-      { enableHighAccuracy: true, maximumAge: 15_000, timeout: 10_000 },
+      () => {
+        console.warn("⚠️ Initial quick location failed");
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 5000,
+        maximumAge: 60000,
+      },
     );
 
+    /* ---------------- WATCH POSITION ---------------- */
+    if (navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const now = Date.now();
+
+          // ⛔ Time throttle
+          if (now - lastSentTimeRef.current < MIN_TIME_MS) {
+            return;
+          }
+
+          // ⛔ Distance filter
+          if (lastCoordsRef.current) {
+            const dist = getDistance(
+              lastCoordsRef.current.lat,
+              lastCoordsRef.current.lng,
+              latitude,
+              longitude,
+            );
+
+            if (dist < MIN_DISTANCE_KM) {
+              return;
+            }
+          }
+
+          // ✅ Update refs
+          lastCoordsRef.current = { lat: latitude, lng: longitude };
+          lastSentTimeRef.current = now;
+
+          sendLocation(latitude, longitude);
+        },
+        (err) => {
+          if (err.code === 3) {
+            console.warn("⏳ GPS timeout — retrying automatically");
+            return;
+          }
+
+          console.error("Geolocation error:", err);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 30000, // ✅ allow cached
+          timeout: 20000, // ✅ reduce timeout errors
+        },
+      );
+    }
+
+    /* ---------------- CLEANUP ---------------- */
     return () => {
-      if (watchIdRef.current != null)
-        navigator.geolocation.clearWatch(watchIdRef.current);
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
     };
-  }, [accessToken]);
+  }, [token]);
 };
 
 export default useLocationTracker;

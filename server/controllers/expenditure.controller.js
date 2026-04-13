@@ -1,10 +1,11 @@
 // ---------------- Models / Associations ----------------
 import { Expenditure } from "../models/associations.js";
 
-// Add expenditure (admin only - for now, any authenticated user can add)
+// ================= ADD EXPENDITURE =================
+// (admin only — middleware should enforce system_role)
 export const addExpenditure = async (req, res) => {
   try {
-    const {
+    let {
       initiative,
       amount,
       invoice_number,
@@ -13,27 +14,36 @@ export const addExpenditure = async (req, res) => {
       evidence_copy_url,
     } = req.body;
 
-    if (!initiative || !amount || amount <= 0) {
-      return res
-        .status(400)
-        .json({ error: "Initiative and valid amount are required" });
+    // ---------------- VALIDATION ----------------
+    if (!initiative || typeof initiative !== "string") {
+      return res.status(400).json({ error: "Initiative is required" });
     }
 
-    const currentDate = new Date();
-    const year = currentDate.getFullYear();
+    const amountNum = Number(amount);
 
+    if (!amountNum || isNaN(amountNum) || amountNum <= 0) {
+      return res.status(400).json({ error: "Valid amount is required" });
+    }
+
+    // ---------------- NORMALIZATION ----------------
+    initiative = initiative.trim();
+
+    const now = new Date();
+    const year = now.getFullYear();
+
+    // ---------------- CREATE ----------------
     const expenditure = await Expenditure.create({
       initiative,
-      amount: parseFloat(amount),
-      date: currentDate,
+      amount: amountNum,
+      date: now,
       year,
-      invoice_number: invoice_number || null,
-      by_whom: by_whom || null,
-      expense_details: expense_details || null,
-      evidence_copy_url: evidence_copy_url || null,
+      invoice_number: invoice_number?.trim() || null,
+      by_whom: by_whom?.trim() || null,
+      expense_details: expense_details?.trim() || null,
+      evidence_copy_url: evidence_copy_url?.trim() || null,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Expenditure recorded successfully",
       expenditure: {
         expenditure_id: expenditure.expenditure_id,
@@ -45,29 +55,44 @@ export const addExpenditure = async (req, res) => {
     });
   } catch (error) {
     console.error("Error adding expenditure:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({
+      error: "Failed to record expenditure",
+    });
   }
 };
 
-// Get expenditure history
+// ================= GET EXPENDITURE HISTORY =================
 export const getExpenditureHistory = async (req, res) => {
   try {
-    const { year, limit = 50 } = req.query;
+    let { year, limit = 50 } = req.query;
 
+    // ---------------- SANITIZE LIMIT ----------------
+    limit = Number(limit);
+    if (isNaN(limit) || limit <= 0) limit = 50;
+    if (limit > 200) limit = 200; //  prevent abuse
+
+    // ---------------- WHERE CLAUSE ----------------
     const whereClause = {};
+
     if (year) {
-      whereClause.year = parseInt(year);
+      const parsedYear = Number(year);
+      if (!isNaN(parsedYear)) {
+        whereClause.year = parsedYear;
+      }
     }
 
+    // ---------------- QUERY ----------------
     const expenditures = await Expenditure.findAll({
       where: whereClause,
       order: [["date", "DESC"]],
-      limit: parseInt(limit),
+      limit,
     });
 
-    res.json({ expenditures });
+    return res.json({ expenditures });
   } catch (error) {
     console.error("Error fetching expenditure history:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({
+      error: "Failed to fetch expenditure history",
+    });
   }
 };

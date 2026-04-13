@@ -7,6 +7,8 @@ import {
   toggleLocationPrivacy,
   findNearbyUsers,
   searchUsers,
+  sendMobileUpdateOtp,
+  verifyMobileUpdateOtp,
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 const router = express.Router();
@@ -18,5 +20,9 @@ router.post("/search-users", searchUsers);
 router.post("/update-location", verifyJWT, updateLocation);
 router.post("/toggle-location-privacy", verifyJWT, toggleLocationPrivacy);
 router.post("/find-nearby-users", findNearbyUsers);
+
+//  MOBILE UPDATE (OTP FLOW)
+router.post("/mobile/send-otp", verifyJWT, sendMobileUpdateOtp);
+router.post("/mobile/verify-otp", verifyJWT, verifyMobileUpdateOtp);
 
 export default router;

@@ -33,7 +33,7 @@ This system implements a hierarchical profession categorization based on the Sta
 
 ### Frontend Components
 
-1. **Profession Selector** (`blogging website - frontend/src/components/profession-selector.component.jsx`)
+1. **Profession Selector** (`blogging website - frontend/src/components/ProfessionSelector.jsx`)
    - Cascading dropdowns for domain, field, and specialty selection
    - Real-time loading of dependent options
    - Visual feedback for selected profession path

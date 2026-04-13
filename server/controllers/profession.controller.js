@@ -1,10 +1,7 @@
 import { Profession } from "../models/associations.js";
-import { Op } from "sequelize";
+
 import sequelize from "../config/db.config.js";
-import {
-  importProfessionData,
-  getProfessionStats,
-} from "../utils/import-profession-data.js";
+
 import { getProfessionNamesFromProfileId } from "../utils/profile-id.generator.js";
 
 // --- PROFILE ID MANAGEMENT ENDPOINTS ---
@@ -13,7 +10,7 @@ import { getProfessionNamesFromProfileId } from "../utils/profile-id.generator.j
 export const importProfessions = async (req, res) => {
   try {
     const { importProfessionData } =
-      await import("../utils/import-profession-data.js");
+      await import("../scripts/import-profession-data.js");
     const result = await importProfessionData();
 
     return res.status(200).json({
@@ -135,7 +132,7 @@ export const getProfessionByProfileId = async (req, res) => {
 export const getProfessionStatistics = async (req, res) => {
   try {
     const { getProfessionStats } =
-      await import("../utils/import-profession-data.js");
+      await import("../scripts/import-profession-data.js");
     const stats = await getProfessionStats();
 
     return res.status(200).json({
@@ -162,7 +159,7 @@ export const searchProfessions = async (req, res) => {
       });
     }
 
-    const { Profession } = await import("./Schema/associations.js");
+    const { Profession } = await import("../models/associations.js");
     const { Op } = await import("sequelize");
 
     const whereClause = {
@@ -191,5 +188,39 @@ export const searchProfessions = async (req, res) => {
       error: "Failed to search professions",
       details: process.env.NODE_ENV === "development" ? error.message : null,
     });
+  }
+};
+// GET /profession/:id
+export const getProfessionHierarchy = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const specialty = await Profession.findOne({
+      where: { profession_id: id, level: 3 },
+    });
+
+    if (!specialty) throw new Error("Invalid profession");
+
+    const group = await Profession.findOne({
+      where: { profession_id: specialty.parent_id },
+    });
+
+    const field = await Profession.findOne({
+      where: { profession_id: group.parent_id },
+    });
+
+    const domain = await Profession.findOne({
+      where: { profession_id: field.parent_id },
+    });
+
+    return res.json({
+      data: {
+        domain_id: domain.profession_id,
+        field_id: field.profession_id,
+        specialty_id: specialty.profession_id,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };

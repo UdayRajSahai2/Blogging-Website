@@ -9,24 +9,42 @@ const BalanceSnapshot = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+
     date: {
       type: DataTypes.DATEONLY,
       allowNull: false,
+      validate: {
+        notEmpty: true,
+      },
     },
+
     year: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      validate: { min: 2000, max: 3000 },
+      validate: {
+        min: 2000,
+        max: 3000,
+      },
     },
+
     balance_amount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
       defaultValue: 0,
+      validate: {
+        min: 0,
+      },
     },
   },
   {
     timestamps: true,
+
     indexes: [
+      {
+        unique: true,
+        fields: ["date"],
+        name: "balance_date_unique", // ⭐ prevents duplicate daily snapshot
+      },
       { fields: ["year"], name: "balance_year_idx" },
       { fields: ["date"], name: "balance_date_idx" },
     ],

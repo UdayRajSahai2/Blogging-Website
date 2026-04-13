@@ -1,6 +1,6 @@
 import pageNotFoundImage from "../imgs/404.png";
 import { Link } from "react-router-dom";
-import fullLogo from "../imgs/full-logo.png"
+import fullLogo from "../imgs/full-logo.png";
 
 const PageNotFound = () => {
   return (
@@ -18,8 +18,13 @@ const PageNotFound = () => {
         </Link>
       </p>
       <div className="mt-auto">
-        <img src={fullLogo} className="h-8 object-contain block mx-auto select-none" />
-        <p className="mt-5 text-dark-grey">Read millions of stories around the world</p>
+        <img
+          src={fullLogo}
+          className="h-8 object-contain block mx-auto select-none"
+        />
+        <p className="mt-5 text-dark-grey">
+          Read millions of stories around the world
+        </p>
       </div>
     </section>
   );

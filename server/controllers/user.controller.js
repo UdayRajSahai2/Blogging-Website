@@ -1,43 +1,81 @@
-import { User, Profession } from "../models/associations.js";
+//server\controllers\user.controller.js
+import {
+  User,
+  Profession,
+  UserDetails,
+  UserAddress,
+  Country,
+  State,
+  District,
+} from "../models/associations.js";
 import { Op } from "sequelize";
 import sequelize from "../config/db.config.js";
+import Role from "../models/roles/Role.js";
+import { assignCustomerLocation } from "../services/locationService.js";
+import { getUserAcademics } from "../services/academic.service.js";
+import { getUserExperiences } from "../services/experience.service.js";
+import { getUserInterests } from "../services/userInterests.service.js";
+import { generateOTP, sendSMSOTP } from "../services/otp.service.js";
 
 export const searchUsers = async (req, res) => {
-  let { query } = req.body;
+  const query = (req.body.query || req.query.query || "").trim();
 
-  if (!query || !query.trim()) {
+  if (!query) {
     return res.status(400).json({ error: "Search query is required" });
   }
 
   try {
+    const { role } = req.body; // optional filter
+
     const users = await User.findAll({
-      where: sequelize.where(
-        sequelize.fn("LOWER", sequelize.col("username")),
-        "LIKE",
-        `%${query.toLowerCase()}%`,
-      ),
+      where: {
+        system_role: {
+          [Op.notIn]: ["admin", "super_admin"],
+        },
+        [Op.or]: [
+          { username: { [Op.like]: `%${query}%` } },
+          { fullname: { [Op.like]: `%${query}%` } },
+        ],
+      },
+      include: role
+        ? [
+            {
+              model: Role,
+              where: { role_name: role },
+              attributes: [],
+              through: { attributes: [] },
+            },
+          ]
+        : [],
       limit: 50,
-      attributes: ["fullname", "username", "profile_img"],
+      attributes: ["user_id", "fullname", "username", "profile_img"],
       order: [["username", "ASC"]],
     });
 
     return res.status(200).json({ users });
   } catch (err) {
     console.error("Error searching users:", err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: "Failed to search users" });
   }
 };
 
 export const updateProfileImage = async (req, res) => {
   try {
     const { profile_img } = req.body;
-    const user_id = req.user;
+    const userId = req.userId;
+
+    console.log(
+      "Updating profile image for user:",
+      userId,
+      "URL:",
+      profile_img,
+    );
 
     if (!profile_img) {
       return res.status(400).json({ error: "Profile image URL is required" });
     }
 
-    await User.update({ profile_img }, { where: { user_id } });
+    await User.update({ profile_img }, { where: { user_id: userId } });
 
     return res.status(200).json({
       message: "Profile image updated successfully",
@@ -47,29 +85,159 @@ export const updateProfileImage = async (req, res) => {
     console.error("Error updating profile image:", err);
     return res.status(500).json({
       error: "Failed to update profile image",
-      details: process.env.NODE_ENV === "development" ? err.message : null,
     });
   }
 };
 
 export const getProfile = async (req, res) => {
   try {
-    const { username } = req.body;
+    const { username, user_id } = req.body;
 
-    // Find user and exclude sensitive fields
-    const user = await User.findOne({
-      where: { username },
-      attributes: {
-        exclude: ["password", "google_auth", "updateAt"],
-      },
-      include: [], // You can include associated models here if needed
-    });
+    let user;
+
+    //  SUPPORT BOTH
+    if (user_id) {
+      user = await User.findOne({
+        where: { user_id },
+        attributes: {
+          exclude: ["password", "google_auth", "updatedAt"],
+          include: [
+            "current_latitude",
+            "current_longitude",
+            "display_location",
+            "current_city",
+            "current_state",
+            "current_country",
+          ],
+        },
+        include: [
+          {
+            model: Profession,
+            as: "profession",
+            attributes: ["profession_id", "name", "level"],
+            required: false,
+          },
+          {
+            model: UserDetails,
+            as: "details",
+            required: false,
+          },
+          {
+            model: UserAddress,
+            as: "addresses",
+            include: [
+              {
+                model: Country,
+                as: "countryDetails",
+                attributes: ["country_name", "country_code"],
+              },
+              {
+                model: State,
+                as: "stateDetails",
+                attributes: ["state_name", "state_code"],
+              },
+              {
+                model: District,
+                as: "districtDetails",
+                attributes: ["district_name", "district_code"],
+              },
+            ],
+          },
+          {
+            model: Role,
+            attributes: ["role_name"],
+            through: { attributes: ["is_primary"] },
+          },
+        ],
+      });
+    } else if (username) {
+      user = await User.findOne({
+        where: { username },
+        attributes: {
+          exclude: ["password", "google_auth", "updatedAt"],
+          include: [
+            "current_latitude",
+            "current_longitude",
+            "display_location",
+            "current_city",
+            "current_state",
+            "current_country",
+          ],
+        },
+        include: [
+          {
+            model: Profession,
+            as: "profession",
+            attributes: ["profession_id", "name", "level"],
+            required: false,
+          },
+          {
+            model: UserDetails,
+            as: "details",
+            required: false,
+          },
+          {
+            model: UserAddress,
+            as: "addresses",
+            required: false,
+            include: [
+              {
+                model: Country,
+                as: "countryDetails",
+                attributes: ["country_name", "country_code"],
+                required: false,
+              },
+              {
+                model: State,
+                as: "stateDetails",
+                attributes: ["state_name", "state_code"],
+                required: false,
+              },
+              {
+                model: District,
+                as: "districtDetails",
+                attributes: ["district_name", "district_code"],
+                required: false,
+              },
+            ],
+          },
+          {
+            model: Role,
+            attributes: ["role_name"],
+            through: { attributes: ["is_primary"] },
+          },
+        ],
+      });
+    } else {
+      return res.status(400).json({ error: "username or user_id required" });
+    }
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    return res.status(200).json(user);
+    const experiences = await getUserExperiences(user.user_id);
+    const academics = await getUserAcademics(user.user_id);
+    const interests = await getUserInterests(user.user_id);
+    const safeUser = user.toJSON();
+
+    const rolesData = safeUser.Roles || [];
+
+    safeUser.roles = rolesData.map((r) => r.role_name);
+
+    safeUser.primary_role =
+      rolesData.find((r) => r.UserRole?.is_primary)?.role_name || null;
+
+    delete safeUser.Roles;
+    safeUser.details = safeUser.details || {};
+    safeUser.addresses = safeUser.addresses || [];
+    safeUser.experiences = Array.isArray(experiences)
+      ? experiences.map((exp) => exp.toJSON())
+      : [];
+    safeUser.academics = Array.isArray(academics) ? academics : [];
+    safeUser.interests = Array.isArray(interests) ? interests : [];
+
+    return res.status(200).json(safeUser);
   } catch (err) {
     console.log(err);
     return res.status(500).json({ error: err.message });
@@ -77,91 +245,53 @@ export const getProfile = async (req, res) => {
 };
 
 export const updateProfile = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
   try {
-    const user_id = req.user;
+    const userId = req.userId;
+
     const {
       username,
       bio,
-      facebook,
-      instagram,
-      twitter,
-      youtube,
-      github,
-      website,
-      personal_city,
-      personal_country,
-      personal_state,
-      personal_street,
-      personal_zip_code,
-      profession_id, // Keep for backward compatibility
-      // NEW FIELDS for hierarchy selection
-      domain_id, // Level 0 profession
-      field_id, // Level 1 profession
-      specialty_id, // Level 2 profession
-      professional_city,
-      professional_country,
-      professional_state,
-      professional_street,
-      professional_zip_code,
+
+      profession_id,
+      domain_id,
+      field_id,
+      specialty_id,
     } = req.body;
 
-    // Validate username
+    /* ---------- USERNAME VALIDATION ---------- */
+
     if (!username || username.length < 3) {
+      await transaction.rollback();
       return res
         .status(400)
         .json({ error: "Username must be at least 3 characters" });
     }
 
-    // Check if username is already taken by another user
     const existingUser = await User.findOne({
       where: {
         username,
-        user_id: { [Op.ne]: user_id },
+        user_id: { [Op.ne]: userId },
       },
+      transaction,
     });
 
     if (existingUser) {
+      await transaction.rollback();
       return res.status(400).json({ error: "Username is already taken" });
     }
 
-    // Validate social URLs if provided
-    const validateUrl = (url) => {
-      if (!url) return true;
-      try {
-        new URL(url.startsWith("http") ? url : `https://${url}`);
-        return true;
-      } catch {
-        return false;
-      }
-    };
+    /* ---------- PROFESSION LOGIC ---------- */
 
-    if (facebook && !validateUrl(facebook)) {
-      return res.status(400).json({ error: "Invalid Facebook URL" });
-    }
-    if (instagram && !validateUrl(instagram)) {
-      return res.status(400).json({ error: "Invalid Instagram URL" });
-    }
-    if (twitter && !validateUrl(twitter)) {
-      return res.status(400).json({ error: "Invalid Twitter URL" });
-    }
-    if (youtube && !validateUrl(youtube)) {
-      return res.status(400).json({ error: "Invalid YouTube URL" });
-    }
-    if (github && !validateUrl(github)) {
-      return res.status(400).json({ error: "Invalid GitHub URL" });
-    }
-    if (website && !validateUrl(website)) {
-      return res.status(400).json({ error: "Invalid Website URL" });
-    }
-    // Handle profession hierarchy and profile_id generation
     let finalProfessionId = profession_id;
     let profile_id = null;
 
-    // If domain->field->specialty selection is provided, use that
     if (domain_id && field_id && specialty_id) {
       try {
         const { generateProfileId } =
           await import("../utils/profile-id.generator.js");
+
         const professionResult = await generateProfileId(
           domain_id,
           field_id,
@@ -169,9 +299,9 @@ export const updateProfile = async (req, res) => {
         );
 
         profile_id = professionResult.profile_id;
-        finalProfessionId = specialty_id; // Store the most specific profession
+        finalProfessionId = specialty_id;
       } catch (error) {
-        console.error("Error generating profile_id:", error);
+        await transaction.rollback();
         return res.status(400).json({
           error: "Invalid profession selection",
           details: error.message,
@@ -179,44 +309,54 @@ export const updateProfile = async (req, res) => {
       }
     }
 
-    // Prepare update data
+    /* ---------- UPDATE USER ---------- */
+
     const updateData = {
       username,
       bio,
-      facebook: facebook || null,
-      instagram: instagram || null,
-      twitter: twitter || null,
-      youtube: youtube || null,
-      github: github || null,
-      website: website || null,
-      personal_city: personal_city || null,
-      personal_country: personal_country || null,
-      personal_state: personal_state || null,
-      personal_street: personal_street || null,
-      personal_zip_code: personal_zip_code || null,
-      profession_id: finalProfessionId || null,
-      professional_city: professional_city || null,
-      professional_country: professional_country || null,
-      professional_state: professional_state || null,
-      professional_street: professional_street || null,
-      professional_zip_code: professional_zip_code || null,
     };
 
-    // Only update profile_id if it was generated
+    if (finalProfessionId !== undefined) {
+      updateData.profession_id = finalProfessionId;
+    }
+
     if (profile_id !== null) {
       updateData.profile_id = profile_id;
     }
 
-    // Update user profile
     await User.update(updateData, {
-      where: { user_id },
-      returning: true,
-      plain: true,
+      where: { user_id: userId },
+      transaction,
     });
 
-    // Get updated user data
+    /* ---------- UPSERT User  ADDRESS ---------- */
+
+    const ADDRESS_TYPES = ["personal", "work", "office"];
+
+    for (const type of ADDRESS_TYPES) {
+      await UserAddress.upsert(
+        {
+          user_id: userId,
+          type,
+          street: req.body[`${type}_street`] || null,
+          city: req.body[`${type}_city`] || null,
+
+          state_code: req.body[`${type}_state_code`] || null,
+          country_code: req.body[`${type}_country_code`] || null,
+          district_code: req.body[`${type}_district_code`] || null,
+
+          zip_code: req.body[`${type}_zip_code`] || null,
+        },
+        { transaction },
+      );
+    }
+
+    await transaction.commit();
+
+    /* ---------- FETCH UPDATED USER ---------- */
+
     const updatedUser = await User.findOne({
-      where: { user_id },
+      where: { user_id: userId },
       attributes: { exclude: ["password", "google_auth"] },
     });
 
@@ -225,7 +365,10 @@ export const updateProfile = async (req, res) => {
       user: updatedUser,
     });
   } catch (err) {
+    await transaction.rollback();
+
     console.error("Error updating profile:", err);
+
     return res.status(500).json({
       error: "Failed to update profile",
       details: process.env.NODE_ENV === "development" ? err.message : null,
@@ -236,38 +379,45 @@ export const updateProfile = async (req, res) => {
 // --- LOCATION TRACKING ENDPOINTS ---
 
 // POST /update-location
+
 export const updateLocation = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
-    const user_id = req.user;
+    const userId = req.userId;
 
     if (typeof latitude !== "number" || typeof longitude !== "number") {
       return res.status(400).json({
-        error: "Latitude and longitude are required and must be numbers",
+        error: "Latitude and longitude are required",
       });
     }
-    if (latitude < -90 || latitude > 90) {
-      return res.status(400).json({ error: "Invalid latitude" });
-    }
-    if (longitude < -180 || longitude > 180) {
-      return res.status(400).json({ error: "Invalid longitude" });
-    }
 
-    const user = await User.findByPk(user_id);
+    const user = await User.findByPk(userId);
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    await user.update({
-      current_latitude: latitude,
-      current_longitude: longitude,
-      location_updated_at: new Date(),
-    });
+
+    /* 🔥 HARD THROTTLE (MOST IMPORTANT FIX) */
+    const lastUpdate = user.location_updated_at;
+
+    if (
+      lastUpdate &&
+      new Date() - new Date(lastUpdate) < 60 * 1000 // 1 minute
+    ) {
+      return res.status(200).json({
+        message: "Skipped (recent update)",
+        display_location: user.display_location,
+      });
+    }
+
+    const updatedUser = await assignCustomerLocation(user, latitude, longitude);
+
     return res.status(200).json({
-      message: "Location updated successfully",
-      location: { latitude, longitude },
+      message: "Location updated",
+      display_location: updatedUser.display_location,
     });
   } catch (error) {
-    console.error("Error updating location:", error);
+    console.error("[updateLocation]", error);
     return res.status(500).json({ error: "Failed to update location" });
   }
 };
@@ -275,12 +425,12 @@ export const updateLocation = async (req, res) => {
 // POST /toggle-location-privacy
 export const toggleLocationPrivacy = async (req, res) => {
   try {
-    const user_id = req.user;
+    const userId = req.userId;
     const { is_public } = req.body;
     if (typeof is_public !== "boolean") {
       return res.status(400).json({ error: "is_public must be a boolean" });
     }
-    const user = await User.findByPk(user_id);
+    const user = await User.findByPk(userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -297,6 +447,7 @@ export const toggleLocationPrivacy = async (req, res) => {
 
 // POST /find-nearby-users
 export const findNearbyUsers = async (req, res) => {
+  const { role } = req.body;
   try {
     const {
       latitude,
@@ -306,11 +457,13 @@ export const findNearbyUsers = async (req, res) => {
       limit = 20,
       include_non_public = false,
     } = req.body;
+
     if (typeof latitude !== "number" || typeof longitude !== "number") {
       return res.status(400).json({
         error: "Latitude and longitude are required and must be numbers",
       });
     }
+
     if (
       latitude < -90 ||
       latitude > 90 ||
@@ -319,66 +472,104 @@ export const findNearbyUsers = async (req, res) => {
     ) {
       return res.status(400).json({ error: "Invalid coordinates" });
     }
+
     const Op = sequelize.Sequelize.Op;
+
+    const roleFilter = {
+      system_role: {
+        [Op.notIn]: ["admin", "super_admin"],
+      },
+    };
+
     const haversinePublic = sequelize.literal(`
       (6371 * acos(
-        cos(radians(${latitude})) * 
-        cos(radians(current_latitude)) * 
-        cos(radians(current_longitude) - radians(${longitude})) + 
-        sin(radians(${latitude})) * 
+        cos(radians(${latitude})) *
+        cos(radians(current_latitude)) *
+        cos(radians(current_longitude) - radians(${longitude})) +
+        sin(radians(${latitude})) *
         sin(radians(current_latitude))
       ))
     `);
+
     let users = await User.findAll({
       where: {
+        ...roleFilter,
         is_location_public: true,
         current_latitude: { [Op.ne]: null },
         current_longitude: { [Op.ne]: null },
         ...(profession_id ? { profession_id } : {}),
       },
-      attributes: [
-        "fullname",
-        "username",
-        "profile_img",
-        "bio",
-        "profile_id",
-        "profession_id",
-        [haversinePublic, "distance"],
-      ],
       include: [
         {
           model: Profession,
           as: "profession",
           attributes: ["name"],
         },
+        {
+          model: UserDetails, //  ADD THIS
+          as: "details", // must match your association
+          attributes: [
+            "salutation",
+            "gender",
+            "marital_status",
+            "date_of_birth",
+          ],
+        },
+        ...(role
+          ? [
+              {
+                model: Role,
+                where: { role_name: role },
+                attributes: [],
+                through: { attributes: [] },
+              },
+            ]
+          : []),
+      ],
+      attributes: [
+        "user_id",
+        "fullname",
+        "username",
+        "profile_img",
+        "bio",
+        "profile_id",
+        "profession_id",
+        "display_location",
+        [haversinePublic, "distance"],
       ],
       having: sequelize.literal(`distance <= ${radius_km}`),
       order: [["distance", "ASC"]],
       limit,
     });
+
+    // fallback
     if ((!users || users.length === 0) && include_non_public === true) {
       const haversine = sequelize.literal(`
         (6371 * acos(
-          cos(radians(${latitude})) * 
-          cos(radians(current_latitude)) * 
-          cos(radians(current_longitude) - radians(${longitude})) + 
-          sin(radians(${latitude})) * 
+          cos(radians(${latitude})) *
+          cos(radians(current_latitude)) *
+          cos(radians(current_longitude) - radians(${longitude})) +
+          sin(radians(${latitude})) *
           sin(radians(current_latitude))
         ))
       `);
+
       users = await User.findAll({
         where: {
+          ...roleFilter,
           current_latitude: { [Op.ne]: null },
           current_longitude: { [Op.ne]: null },
           ...(profession_id ? { profession_id } : {}),
         },
         attributes: [
+          "user_id",
           "fullname",
           "username",
           "profile_img",
           "bio",
           "profile_id",
           "profession_id",
+          "display_location",
           [haversine, "distance"],
         ],
         include: [
@@ -387,19 +578,126 @@ export const findNearbyUsers = async (req, res) => {
             as: "profession",
             attributes: ["name"],
           },
+          {
+            model: UserDetails,
+            as: "details", // must match your association
+            attributes: [
+              "salutation",
+              "gender",
+              "marital_status",
+              "date_of_birth",
+            ],
+          },
         ],
         having: sequelize.literal(`distance <= ${radius_km}`),
         order: [["distance", "ASC"]],
         limit,
       });
     }
+
+    //  ADD (IMPORTANT)
+    const usersWithExperiences = await Promise.all(
+      users.map(async (user) => {
+        const experiences = await getUserExperiences(user.user_id);
+
+        return {
+          ...user.toJSON(),
+          experiences: Array.isArray(experiences)
+            ? experiences.map((exp) => exp.toJSON())
+            : [],
+        };
+      }),
+    );
+
+    // REPLACE RETURN
     return res.status(200).json({
-      users,
-      count: users.length,
+      users: usersWithExperiences,
+      count: usersWithExperiences.length,
       search_radius: radius_km,
     });
   } catch (error) {
     console.error("Error finding nearby users:", error);
     return res.status(500).json({ error: "Failed to find nearby users" });
+  }
+};
+
+export const sendMobileUpdateOtp = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { mobile_number } = req.body;
+
+    if (!mobile_number) {
+      return res.status(400).json({ error: "Mobile number required" });
+    }
+
+    if (!/^[6-9]\d{9}$/.test(mobile_number)) {
+      return res.status(400).json({ error: "Invalid mobile number" });
+    }
+
+    const existingUser = await User.findOne({
+      where: { mobile_number },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        error: "Mobile number already in use",
+      });
+    }
+
+    const otp = generateOTP();
+
+    await User.update(
+      {
+        mobile_otp: otp,
+        otp_expires_at: new Date(Date.now() + 5 * 60 * 1000),
+        temp_mobile_number: mobile_number, // only this is new
+      },
+      { where: { user_id: userId } },
+    );
+
+    await sendSMSOTP(mobile_number, otp);
+
+    return res.status(200).json({
+      message: "OTP sent",
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+export const verifyMobileUpdateOtp = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { otp } = req.body;
+
+    const user = await User.findByPk(userId);
+
+    if (!user || !user.mobile_otp) {
+      return res.status(400).json({ error: "No OTP request found" });
+    }
+
+    if (new Date() > user.otp_expires_at) {
+      return res.status(400).json({ error: "OTP expired" });
+    }
+
+    if (String(otp) !== String(user.mobile_otp)) {
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
+
+    await User.update(
+      {
+        mobile_number: user.temp_mobile_number,
+        temp_mobile_number: null,
+        mobile_otp: null,
+        otp_expires_at: null,
+        mobile_verified: true,
+      },
+      { where: { user_id: userId } },
+    );
+
+    return res.status(200).json({
+      message: "Mobile updated successfully",
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 };

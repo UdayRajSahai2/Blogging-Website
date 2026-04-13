@@ -4,7 +4,7 @@ import sequelize from "../config/db.config.js";
 
 export const checkNewNotifications = async (req, res) => {
   try {
-    const userId = req.user;
+    const userId = req.userId;
 
     const notifications = await Notification.findAll({
       where: { notification_for: userId },
@@ -34,7 +34,7 @@ export const deleteNotification = async (req, res) => {
   }
 
   const { notification_id } = req.body;
-  const user_id = req.user;
+  const userId = req.userId;
 
   // Validate input
   if (
@@ -53,14 +53,14 @@ export const deleteNotification = async (req, res) => {
   try {
     console.log("Processing delete notification action:", {
       notification_id,
-      user_id,
+      userId,
     });
 
     // 1. Find the notification
     const notification = await Notification.findOne({
       where: {
         id: notification_id,
-        notification_for: user_id, // Ensure user can only delete their own notifications
+        notification_for: userId, // Ensure user can only delete their own notifications
       },
       attributes: ["id", "type", "notification_for"],
       transaction,
@@ -77,7 +77,7 @@ export const deleteNotification = async (req, res) => {
     }
 
     // 2. Check if user is authorized to delete this notification
-    if (notification.notification_for !== user_id) {
+    if (notification.notification_for !== userId) {
       await transaction.rollback();
       return res.status(403).json({
         success: false,
@@ -95,7 +95,7 @@ export const deleteNotification = async (req, res) => {
 
     console.log("Notification deleted successfully:", {
       notification_id,
-      user_id,
+      userId,
       type: notification.type,
     });
 
@@ -138,7 +138,7 @@ export const deleteNotification = async (req, res) => {
 
 // CORRECTED: Main notifications endpoint
 export const getNotifications = async (req, res) => {
-  const user_id = req.user;
+  const userId = req.userId;
   const { page = 1, filter = "all", deletedDocCount = 0 } = req.body;
   const maxLimit = 10;
 
@@ -150,13 +150,13 @@ export const getNotifications = async (req, res) => {
       [Op.or]: [
         // Case 1: All notifications FOR the user FROM others
         {
-          notification_for: user_id,
-          user: { [Op.ne]: user_id },
+          notification_for: userId,
+          user: { [Op.ne]: userId },
         },
         // Case 2: Own replies (notifications where user replied to someone else's comment)
         {
-          notification_for: user_id,
-          user: user_id,
+          notification_for: userId,
+          user: userId,
           type: "reply",
         },
       ],
@@ -167,15 +167,15 @@ export const getNotifications = async (req, res) => {
       if (filter === "reply") {
         // Show all replies: others' replies to user + user's own replies
         whereClause = {
-          notification_for: user_id,
+          notification_for: userId,
           type: "reply",
         };
       } else {
         // For like/comment filters: only show others' notifications
         whereClause = {
-          notification_for: user_id,
+          notification_for: userId,
           type: filter,
-          user: { [Op.ne]: user_id },
+          user: { [Op.ne]: userId },
         };
       }
     }
@@ -184,7 +184,7 @@ export const getNotifications = async (req, res) => {
       "Notification whereClause:",
       JSON.stringify(whereClause, null, 2),
     );
-    console.log("User ID:", user_id, "Filter:", filter);
+    console.log("User ID:", userId, "Filter:", filter);
 
     const { count: total, rows: notifications } =
       await Notification.findAndCountAll({
@@ -234,7 +234,7 @@ export const getNotifications = async (req, res) => {
         type: n.type,
         user: n.user,
         notification_for: n.notification_for,
-        isOwn: n.user === user_id,
+        isOwn: n.user === userId,
       })),
     );
 
@@ -265,7 +265,7 @@ export const getNotifications = async (req, res) => {
 
         // CORRECTED: Properly identify own replies
         const isOwnReply =
-          plainNotif.user === user_id && plainNotif.type === "reply";
+          plainNotif.user === userId && plainNotif.type === "reply";
 
         return {
           _id: plainNotif.id,
@@ -289,7 +289,7 @@ export const getNotifications = async (req, res) => {
 
     // CORRECTED: Only mark others' notifications as seen (not own replies)
     const unseenOthersNotifications = validNotifications
-      .filter((n) => n.user !== user_id && !n.seen)
+      .filter((n) => n.user !== userId && !n.seen)
       .map((n) => n.id);
 
     if (unseenOthersNotifications.length > 0) {
@@ -335,29 +335,26 @@ export const getNotifications = async (req, res) => {
 };
 
 export const getAllNotificationsCount = async (req, res) => {
-  const user_id = req.user;
+  const userId = req.userId;
   const { filter = "all" } = req.body;
 
   try {
     let whereClause = {
-      notification_for: user_id,
-      [Op.or]: [
-        { user: { [Op.ne]: user_id } },
-        { user: user_id, type: "reply" },
-      ],
+      notification_for: userId,
+      [Op.or]: [{ user: { [Op.ne]: userId } }, { user: userId, type: "reply" }],
     };
 
     if (filter !== "all") {
       if (filter === "reply") {
         whereClause = {
-          notification_for: user_id,
+          notification_for: userId,
           type: "reply",
         };
       } else {
         whereClause = {
-          notification_for: user_id,
+          notification_for: userId,
           type: filter,
-          user: { [Op.ne]: user_id },
+          user: { [Op.ne]: userId },
         };
       }
     }
@@ -375,5 +372,24 @@ export const getAllNotificationsCount = async (req, res) => {
       error: "Failed to count notifications",
       details: process.env.NODE_ENV === "development" ? err.message : null,
     });
+  }
+};
+export const getUnreadNotificationCount = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const count = await Notification.count({
+      where: {
+        notification_for: userId,
+        seen: false,
+      },
+    });
+
+    return res.status(200).json({
+      unreadCount: count,
+    });
+  } catch (err) {
+    console.error("Unread notification error:", err);
+    res.status(500).json({ error: "Failed to get unread notifications" });
   }
 };

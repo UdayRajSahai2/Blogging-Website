@@ -7,6 +7,7 @@ import {
   importProfessions,
   getProfessionStatistics,
   searchProfessions,
+  getProfessionHierarchy,
 } from "../controllers/profession.controller.js";
 
 const router = express.Router();
@@ -18,5 +19,5 @@ router.get("/profile/:profile_id", getProfessionByProfileId);
 router.post("/import", importProfessions);
 router.get("/stats", getProfessionStatistics);
 router.get("/search", searchProfessions);
-
+router.get("/profession/:id", getProfessionHierarchy);
 export default router;

@@ -22,7 +22,7 @@ export default {
         black: "#242424",
         grey: "#F3F3F3",
         "dark-grey": "#6B6B6B",
-        red: "#FF4E4E",
+        // red: "#FF4E4E",
         transparent: "transparent",
         twitter: "#1DA1F2",
         "cyan-700": "#0e7490",
@@ -33,5 +33,5 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [require("@tailwindcss/typography")],
 };

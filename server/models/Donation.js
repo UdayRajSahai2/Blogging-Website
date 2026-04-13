@@ -9,6 +9,7 @@ const Donation = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+
     donor_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -17,6 +18,7 @@ const Donation = sequelize.define(
         key: "donor_id",
       },
     },
+
     user_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -26,47 +28,61 @@ const Donation = sequelize.define(
       },
       comment: "Redundant for fast querying by user",
     },
+
     customer_id: {
       type: DataTypes.STRING(50),
       allowNull: true,
     },
+
     purpose: {
       type: DataTypes.STRING(200),
       allowNull: true,
     },
+
     amount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
       validate: { min: 0 },
     },
+
     date: {
       type: DataTypes.DATEONLY,
       allowNull: false,
     },
+
     year: {
       type: DataTypes.INTEGER,
       allowNull: false,
       validate: { min: 2000, max: 3000 },
     },
+
     payment_id: {
       type: DataTypes.STRING(100),
       allowNull: true,
+      unique: true,
       comment: "Razorpay payment ID",
+      validate: {
+        notEmpty: true,
+      },
     },
+
     payment_signature: {
       type: DataTypes.STRING(200),
       allowNull: true,
       comment: "Razorpay payment signature",
     },
+
     payment_status: {
       type: DataTypes.ENUM("pending", "completed", "failed"),
       defaultValue: "pending",
     },
+
     bank_account: {
       type: DataTypes.STRING(100),
       allowNull: true,
       comment: "Bank account where payment was received",
     },
+
     transfer_status: {
       type: DataTypes.ENUM("pending", "transferred", "failed"),
       defaultValue: "pending",
@@ -78,8 +94,10 @@ const Donation = sequelize.define(
     indexes: [
       { fields: ["donor_id"], name: "donation_donor_idx" },
       { fields: ["user_id"], name: "donation_user_idx" },
+      { fields: ["payment_id"], name: "donation_payment_idx" },
       { fields: ["year"], name: "donation_year_idx" },
       { fields: ["date"], name: "donation_date_idx" },
+      { fields: ["user_id", "year"], name: "donation_user_year_idx" },
     ],
   },
 );

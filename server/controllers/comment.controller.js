@@ -1,21 +1,7 @@
 import { Op } from "sequelize";
 import sequelize from "../config/db.config.js";
 import { nanoid } from "nanoid";
-import {
-  User,
-  Profession,
-  Blog,
-  Comment,
-  Like,
-  Read,
-  Notification,
-  UserIPHistory,
-  Donor,
-  Donation,
-  Expenditure,
-  BalanceSnapshot,
-  setupAssociations,
-} from "../models/associations.js";
+import { User, Blog, Comment, Notification } from "../models/associations.js";
 export const addComment = async (req, res) => {
   // Validate request body structure first
   if (!req.body || typeof req.body !== "object") {
@@ -27,7 +13,7 @@ export const addComment = async (req, res) => {
   }
 
   const { blog_id, comment, replying_to } = req.body;
-  const user_id = req.user;
+  const user_id = req.userId;
 
   // Validate input
   if (!blog_id || typeof blog_id !== "string") {
@@ -639,7 +625,7 @@ export const deleteComment = async (req, res) => {
   }
 
   const { comment_id } = req.body;
-  const user_id = req.user;
+  const user_id = req.userId;
 
   if (!comment_id || typeof comment_id !== "string") {
     return res.status(400).json({

@@ -109,7 +109,7 @@ const ResetPasswordPage = () => {
   /** Form JSX */
   return (
     <AnimationWrapper keyValue="reset-password">
-      <section className="h-auto flex items-center justify-center relative">
+      <section className="layout-section h-auto flex items-center justify-center relative">
         <Toaster />
 
         {loading && (

@@ -10,87 +10,116 @@ import {
   Expenditure,
   BalanceSnapshot,
 } from "../models/associations.js";
-// Add balance snapshot
+
+// ================= ADD BALANCE SNAPSHOT =================
 export const addBalanceSnapshot = async (req, res) => {
   try {
-    const { balance_amount } = req.body;
+    let { balance_amount } = req.body;
 
-    if (balance_amount === undefined || balance_amount < 0) {
+    const amountNum = Number(balance_amount);
+
+    if (balance_amount === undefined || isNaN(amountNum) || amountNum < 0) {
       return res
         .status(400)
         .json({ error: "Valid balance amount is required" });
     }
 
-    const currentDate = new Date();
-    const year = currentDate.getFullYear();
+    const now = new Date();
+    const year = now.getFullYear();
 
-    const balanceSnapshot = await BalanceSnapshot.create({
-      balance_amount: parseFloat(balance_amount),
-      date: currentDate,
-      year,
-    });
+    try {
+      const balanceSnapshot = await BalanceSnapshot.create({
+        balance_amount: amountNum,
+        date: now,
+        year,
+      });
 
-    res.status(201).json({
-      message: "Balance snapshot recorded successfully",
-      balanceSnapshot: {
-        snapshot_id: balanceSnapshot.snapshot_id,
-        balance_amount: balanceSnapshot.balance_amount,
-        date: balanceSnapshot.date,
-        year: balanceSnapshot.year,
-      },
-    });
+      return res.status(201).json({
+        message: "Balance snapshot recorded successfully",
+        balanceSnapshot: {
+          snapshot_id: balanceSnapshot.snapshot_id,
+          balance_amount: balanceSnapshot.balance_amount,
+          date: balanceSnapshot.date,
+          year: balanceSnapshot.year,
+        },
+      });
+    } catch (err) {
+      // handle unique date violation gracefully
+      if (err.name === "SequelizeUniqueConstraintError") {
+        return res.status(409).json({
+          error: "Balance snapshot already exists for today",
+        });
+      }
+      throw err;
+    }
   } catch (error) {
     console.error("Error adding balance snapshot:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({
+      error: "Failed to record balance snapshot",
+    });
   }
 };
 
+// ================= GET BALANCE HISTORY =================
 export const getBalanceHistory = async (req, res) => {
   try {
-    const { year, limit = 50 } = req.query;
+    let { year, limit = 50 } = req.query;
+
+    // ---------- sanitize limit ----------
+    limit = Number(limit);
+    if (isNaN(limit) || limit <= 0) limit = 50;
+    if (limit > 200) limit = 200;
 
     const whereClause = {};
+
     if (year) {
-      whereClause.year = parseInt(year);
+      const parsedYear = Number(year);
+      if (!isNaN(parsedYear)) {
+        whereClause.year = parsedYear;
+      }
     }
 
     const balanceSnapshots = await BalanceSnapshot.findAll({
       where: whereClause,
       order: [["date", "DESC"]],
-      limit: parseInt(limit),
+      limit,
     });
 
-    res.json({ balanceSnapshots });
+    return res.json({ balanceSnapshots });
   } catch (error) {
     console.error("Error fetching balance history:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({
+      error: "Failed to fetch balance history",
+    });
   }
 };
 
+// ================= FINANCIAL SUMMARY =================
 export const getFinancialSummary = async (req, res) => {
   try {
-    const { year } = req.query;
-    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+    let { year } = req.query;
+    const currentYear =
+      !year || isNaN(Number(year)) ? new Date().getFullYear() : Number(year);
 
-    // Get total donations for the year
-    const totalDonations =
-      (await Donation.sum("amount", {
-        where: { year: currentYear },
-      })) || 0;
+    // ---------- totals ----------
+    const totalDonationsRaw = await Donation.sum("amount", {
+      where: { year: currentYear },
+    });
 
-    // Get total expenditures for the year
-    const totalExpenditures =
-      (await Expenditure.sum("amount", {
-        where: { year: currentYear },
-      })) || 0;
+    const totalExpendituresRaw = await Expenditure.sum("amount", {
+      where: { year: currentYear },
+    });
 
-    // Get latest balance
+    const totalDonations = Number(totalDonationsRaw) || 0;
+    const totalExpenditures = Number(totalExpendituresRaw) || 0;
+
+    // ---------- latest balance ----------
     const latestBalance = await BalanceSnapshot.findOne({
       where: { year: currentYear },
       order: [["date", "DESC"]],
     });
 
-    // Get donations by purpose
+    // ---------- grouped donations ----------
     const donationsByPurpose = await Donation.findAll({
       where: { year: currentYear },
       attributes: [
@@ -101,7 +130,7 @@ export const getFinancialSummary = async (req, res) => {
       raw: true,
     });
 
-    // Get expenditures by initiative
+    // ---------- grouped expenditures ----------
     const expendituresByInitiative = await Expenditure.findAll({
       where: { year: currentYear },
       attributes: [
@@ -112,18 +141,18 @@ export const getFinancialSummary = async (req, res) => {
       raw: true,
     });
 
-    res.json({
+    return res.json({
       year: currentYear,
-      totalDonations: parseFloat(totalDonations),
-      totalExpenditures: parseFloat(totalExpenditures),
-      currentBalance: latestBalance
-        ? parseFloat(latestBalance.balance_amount)
-        : 0,
+      totalDonations,
+      totalExpenditures,
+      currentBalance: latestBalance ? Number(latestBalance.balance_amount) : 0,
       donationsByPurpose,
       expendituresByInitiative,
     });
   } catch (error) {
     console.error("Error fetching financial summary:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({
+      error: "Failed to fetch financial summary",
+    });
   }
 };

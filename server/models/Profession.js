@@ -9,18 +9,55 @@ const Profession = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
-    name: { type: DataTypes.STRING, allowNull: false },
-    parent_id: { type: DataTypes.INTEGER, allowNull: true }, // For category, subcategory, sub-subcategory
-    level: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 }, // 0: category, 1: subcategory, 2: sub-subcategory
-    code: { type: DataTypes.STRING(10), allowNull: true }, // Optional: short code for profession
+
+    name: {
+      type: DataTypes.STRING(200),
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+      },
+    },
+
+    parent_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+
+    level: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      validate: {
+        min: 0,
+        max: 3,
+      },
+      comment: "0=domain, 1=field, 2=group, 3=specialty",
+    },
+
+    code: {
+      type: DataTypes.STRING(100), // or 100 for safety
+      allowNull: true,
+    },
   },
   {
     tableName: "Professions",
+
+    timestamps: false,
+
     indexes: [
       {
         unique: true,
         fields: ["name", "parent_id"],
         name: "unique_profession_per_parent",
+      },
+      {
+        fields: ["parent_id"],
+      },
+      {
+        fields: ["level"],
+      },
+      {
+        fields: ["code"],
       },
     ],
   },
