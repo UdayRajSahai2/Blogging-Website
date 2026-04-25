@@ -7,7 +7,7 @@ import {
 
 const AuthRightActions = ({ type }) => {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="grid grid-cols-2 md:flex md:flex-col gap-2 md:gap-3 w-full items-stretch">
       {type === "sign-in" ? (
         <>
           <AuthActionBox
@@ -16,7 +16,7 @@ const AuthRightActions = ({ type }) => {
             title="Active Discussions"
             subtitle="Join conversations"
             gradient="from-orange-500 to-pink-600"
-            height="h-[220px]"
+            height="h-[120px] md:h-[220px]"
           />
 
           <AuthActionBox
@@ -25,7 +25,7 @@ const AuthRightActions = ({ type }) => {
             title="Your Projects"
             subtitle="Continue your work"
             gradient="from-blue-600 to-cyan-700"
-            height="h-[220px]"
+            height="h-[120px] md:h-[220px]"
           />
         </>
       ) : (
@@ -36,7 +36,7 @@ const AuthRightActions = ({ type }) => {
             title="Start a Project"
             subtitle="Turn ideas into action"
             gradient="from-orange-500 to-pink-600"
-            height="h-[220px]"
+            height="h-[120px] md:h-[220px]"
           />
 
           <AuthActionBox
@@ -45,7 +45,7 @@ const AuthRightActions = ({ type }) => {
             title="Collaborate"
             subtitle="Work with like-minded people"
             gradient="from-blue-600 to-cyan-700"
-            height="h-[220px]"
+            height="h-[120px] md:h-[220px]"
           />
         </>
       )}

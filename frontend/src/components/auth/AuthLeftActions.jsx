@@ -7,7 +7,7 @@ import {
 
 const AuthLeftActions = ({ type }) => {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="grid grid-cols-2 md:flex md:flex-col gap-2 md:gap-3 w-full items-stretch">
       {type === "sign-in" ? (
         <>
           <AuthActionBox
@@ -15,8 +15,8 @@ const AuthLeftActions = ({ type }) => {
             icon={<BoltIcon className="w-6 h-6" />}
             title="What's New"
             subtitle="See recent activity"
-            gradient="from-indigo-600 to-purple-700"
-            height="h-[220px]"
+            gradient="from-blue-600 to-cyan-500"
+            height="h-[120px] md:h-[220px]"
           />
 
           <AuthActionBox
@@ -25,7 +25,7 @@ const AuthLeftActions = ({ type }) => {
             title="Your Network"
             subtitle="People you connected with"
             gradient="from-green-600 to-emerald-700"
-            height="h-[220px]"
+            height="h-[120px] md:h-[220px]"
           />
         </>
       ) : (
@@ -35,8 +35,8 @@ const AuthLeftActions = ({ type }) => {
             icon={<UserGroupIcon className="w-6 h-6" />}
             title="Join as"
             subtitle="Student • NGO • Professional"
-            gradient="from-indigo-600 to-purple-700"
-            height="h-[220px]"
+            gradient="from-blue-600 to-cyan-500"
+            height="h-[120px] md:h-[220px]"
           />
 
           <AuthActionBox
@@ -45,7 +45,7 @@ const AuthLeftActions = ({ type }) => {
             title="Create Impact"
             subtitle="Start locally, grow globally"
             gradient="from-green-600 to-emerald-700"
-            height="h-[220px]"
+            height="h-[120px] md:h-[220px]"
           />
         </>
       )}

@@ -59,7 +59,7 @@ const InputBox = ({
           onChange={onChange}
           placeholder={placeholder}
           disabled={disabled}
-          inputMode="numeric"
+          inputMode={rest.inputMode || "text"}
           {...rest}
           className={`
     flex-1 h-full bg-transparent outline-none

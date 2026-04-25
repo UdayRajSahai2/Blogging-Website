@@ -204,12 +204,12 @@ const UserAuthForm = ({ type }) => {
 
     const { first_name, last_name, email, password, mobile_number } = formData;
 
-    // 🔹 email validation (always first)
+    //  email validation (always first)
     if (!email || !emailRegex.test(email)) {
       return toast.error("Valid email required");
     }
 
-    // 🔹 signup validations
+    //  signup validations
     if (type !== "sign-in") {
       if (!first_name) return toast.error("First name required");
       if (!last_name) return toast.error("Last name required");
@@ -526,17 +526,17 @@ const UserAuthForm = ({ type }) => {
           {/* LEFT = 220px 
           FORM = flexible (remaining space) 1fr
           RIGHT = 220px */}
-          <div className="grid grid-cols-1 md:grid-cols-[240px_1fr_240px] gap-6 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-[240px_1fr_240px] gap-y-2 md:gap-6 items-start w-full overflow-hidden">
             {/* LEFT */}
-            <div className="hidden md:block">
-              <AuthLeftActions type={type} />
+            <div className="w-full px-0">
+              <AuthLeftActions />
             </div>
 
             {/* CENTER FORM */}
             <div className="w-full">
               <form
                 ref={formElement}
-                className="w-full bg-white px-4 pt-1 pb-5 sm:px-6 sm:pt-1 sm:pb-0 rounded-lg"
+                className="w-full bg-white px-0 sm:px-6 pt-0 sm:pt-1 pb-0 sm:pb-0 rounded-lg"
                 style={loading ? { pointerEvents: "none", opacity: 0.6 } : {}}
               >
                 <h1 className="text-2xl sm:text-3xl font-gelasio capitalize text-center mb-0">
@@ -776,7 +776,8 @@ const UserAuthForm = ({ type }) => {
                       {[...Array(6)].map((_, i) => (
                         <input
                           key={i}
-                          type="text"
+                          type="tel"
+                          inputMode="numeric"
                           maxLength={1}
                           className={`w-12 h-12 text-center border rounded-lg text-lg outline-none transition
   ${
@@ -928,8 +929,8 @@ const UserAuthForm = ({ type }) => {
             </div>
 
             {/* RIGHT */}
-            <div className="hidden md:block">
-              <AuthRightActions type={type} />
+            <div className="w-full px-0">
+              <AuthRightActions />
             </div>
           </div>
           {/* 🔹 BOTTOM */}

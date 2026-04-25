@@ -21,9 +21,9 @@ const AuthActionBox = ({
     <Link
       to={to}
       onClick={handleClick}
-      className={`w-full ${height} rounded-lg p-3 sm:p-4 bg-gradient-to-r ${gradient} 
-      flex items-center justify-center text-white transition
-      ${disabled ? "opacity-70 cursor-not-allowed" : "shadow hover:shadow-lg"}`}
+      className={`w-full min-w-0 ${height} rounded-lg p-3 sm:p-4 bg-gradient-to-r ${gradient} 
+  flex items-center justify-center text-white transition
+  ${disabled ? "opacity-70 cursor-not-allowed" : "shadow hover:shadow-lg"}`}
     >
       <div className="flex flex-col items-center justify-center text-center gap-2">
         {icon && <div className="text-xl sm:text-2xl">{icon}</div>}
