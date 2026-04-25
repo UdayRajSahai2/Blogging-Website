@@ -1,6 +1,6 @@
 import { useContext, useRef, useState, useEffect } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import axios from "axios";
 import AnimationWrapper from "../common/page-animation";
 import InputBox from "../components/input.component";
@@ -13,30 +13,73 @@ import { AUTH_API } from "../common/api";
 import AuthLeftActions from "../components/auth/AuthLeftActions";
 import AuthRightActions from "../components/auth/AuthRightActions";
 import AuthBottomActions from "../components/auth/AuthBottomActions";
-
+import {
+  UserIcon,
+  PhoneIcon,
+  EnvelopeIcon,
+  KeyIcon,
+} from "@heroicons/react/24/outline";
 const UserAuthForm = ({ type }) => {
   const navigate = useNavigate();
   const { userAuth, setUserAuth } = useContext(UserContext);
 
   const access_token = userAuth?.access_token;
   const formElement = useRef();
-
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [geo, setGeo] = useState({ latitude: null, longitude: null });
   const [customerId, setCustomerId] = useState("");
   const [abbr, setAbbr] = useState("");
+
+  const [isFocused, setIsFocused] = useState(false);
+  const [isEmailFocused, setIsEmailFocused] = useState(false);
+  const [isMobileFocused, setIsMobileFocused] = useState(false);
 
   const serverRoute = type === "sign-in" ? "/signin" : "/signup";
 
   const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
   const passwordRegex =
     /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{12,}$/;
-  const mobileRegex = /^[+]?[0-9]{10,15}$/;
+  const mobileRegex = /^(?:\+91|91)?[6-9]\d{9}$/;
+
+  const emailChecks = {
+    valid: emailRegex.test(email),
+  };
+  const mobileChecks = {
+    valid: mobileRegex.test(mobileNumber),
+  };
+  const passwordChecks = {
+    length: password.length >= 12,
+    upper: /[A-Z]/.test(password),
+    lower: /[a-z]/.test(password),
+    number: /\d/.test(password),
+    special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
+  };
+  const isPasswordValid = Object.values(passwordChecks).every(Boolean);
+  useEffect(() => {
+    // reset form fields
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPassword("");
+    setMobileNumber("");
+    setOtp("");
+    setOtpSent(false);
+    setOtpVerified(false);
+    setDisclaimerAccepted(false);
+
+    // UI state
+    setIsFocused(false);
+  }, [type]);
 
   // Get user geolocation (optional for sign-in, required for signup)
   useEffect(() => {
@@ -74,7 +117,7 @@ const UserAuthForm = ({ type }) => {
       storeInSession("onboarding", type === "sign-up");
       setUserAuth(data);
       if (type === "sign-up") {
-        console.log("FORCE onboarding (signup)");
+        //FORCE onboarding (signup)
         navigate("/welcome");
       } else {
         navigate("/");
@@ -471,8 +514,6 @@ const UserAuthForm = ({ type }) => {
   ) : (
     <AnimationWrapper keyValue={type}>
       <section className="w-full px-0 md:px-0 py-0 relative">
-        <Toaster />
-
         {/* Loader Overlay */}
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
@@ -570,7 +611,9 @@ const UserAuthForm = ({ type }) => {
                         name="first_name"
                         type="text"
                         placeholder="First name"
-                        icon="fi-rr-user"
+                        icon={<UserIcon className="w-4 h-4" />}
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
                         required
                       />
 
@@ -578,38 +621,150 @@ const UserAuthForm = ({ type }) => {
                         name="last_name"
                         type="text"
                         placeholder="Last name"
-                        icon="fi-rr-user"
+                        icon={<UserIcon className="w-4 h-4" />}
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
                         required
                       />
                     </div>
-
                     <InputBox
                       name="mobile_number"
                       type="tel"
-                      placeholder="Mobile number"
-                      icon="fi-rr-mobile-notch"
+                      placeholder="Enter mobile number"
                       value={mobileNumber}
-                      onChange={(e) => setMobileNumber(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "");
+                        setMobileNumber(value);
+                      }}
+                      maxLength={10}
+                      inputMode="numeric"
+                      prefix={
+                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                          <span>🇮🇳</span>
+                          <span className="font-medium">+91</span>
+                        </div>
+                      }
                     />
+                    {(isMobileFocused || mobileNumber.length > 0) && (
+                      <p
+                        className={`text-xs mt-0 ${
+                          mobileNumber.length === 0
+                            ? "text-gray-400"
+                            : mobileChecks.valid
+                              ? "text-green-500"
+                              : "text-red-500"
+                        }`}
+                      >
+                        {(isMobileFocused || mobileNumber.length > 0) &&
+                          mobileNumber.length > 0 &&
+                          !mobileChecks.valid && (
+                            <p className="text-xs  text-red-500">
+                              Enter a valid 10-digit mobile number
+                            </p>
+                          )}
+                      </p>
+                    )}
                   </>
                 )}
-
                 <InputBox
                   name="email"
                   type="email"
                   placeholder="Email"
-                  icon="fi-rr-envelope "
+                  icon={<EnvelopeIcon className="w-4 h-4" />}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={() => setIsEmailFocused(true)}
+                  onBlur={() => setIsEmailFocused(false)}
                   required
                 />
-
+                {type !== "sign-in" && (isEmailFocused || email.length > 0) && (
+                  <p
+                    className={`text-xs flex items-center gap-1 ${
+                      email.length === 0
+                        ? "text-gray-400"
+                        : emailChecks.valid
+                          ? "text-green-500"
+                          : "text-red-500"
+                    }`}
+                  >
+                    {(isEmailFocused || email.length > 0) &&
+                      email.length > 0 &&
+                      !emailChecks.valid && (
+                        <p className="text-xs  text-red-500">
+                          Enter a valid email (e.g. example@gmail.com)
+                        </p>
+                      )}
+                  </p>
+                )}
                 <InputBox
                   name="password"
                   type="password"
                   placeholder="Password"
-                  icon="fi-rr-key"
+                  icon={<KeyIcon className="w-4 h-4" />}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
                   required
                 />
 
+                {type !== "sign-in" &&
+                  password.length > 0 &&
+                  !isPasswordValid && (
+                    <>
+                      <p className="text-xs text-gray-400">
+                        Your password should:
+                      </p>
+
+                      <ul className="text-xs mt-2 space-y-1">
+                        <li
+                          className={
+                            passwordChecks.length
+                              ? "text-green-500"
+                              : "text-gray-500"
+                          }
+                        >
+                          Use at least 12 characters
+                        </li>
+                        <li
+                          className={
+                            passwordChecks.upper
+                              ? "text-green-500"
+                              : "text-gray-500"
+                          }
+                        >
+                          Include an uppercase letter (A–Z)
+                        </li>
+                        <li
+                          className={
+                            passwordChecks.lower
+                              ? "text-green-500"
+                              : "text-gray-500"
+                          }
+                        >
+                          Include a lowercase letter (a–z)
+                        </li>
+                        <li
+                          className={
+                            passwordChecks.number
+                              ? "text-green-500"
+                              : "text-gray-500"
+                          }
+                        >
+                          Add at least one number (0–9)
+                        </li>
+                        <li
+                          className={
+                            passwordChecks.special
+                              ? "text-green-500"
+                              : "text-gray-500"
+                          }
+                        >
+                          Add a special character (e.g. @, #, !)
+                        </li>
+                      </ul>
+                    </>
+                  )}
                 {/* OTP FIELD */}
                 {type !== "sign-in" && otpSent && !otpVerified && (
                   <div className="mt-4">
@@ -623,7 +778,13 @@ const UserAuthForm = ({ type }) => {
                           key={i}
                           type="text"
                           maxLength={1}
-                          className="w-12 h-12 text-center border rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-black"
+                          className={`w-12 h-12 text-center border rounded-lg text-lg outline-none transition
+  ${
+    !otpSent
+      ? "bg-gray-50 text-gray-700 border-gray-300 cursor-not-allowed"
+      : "bg-white text-black border-gray-500 focus:ring-2 focus:ring-black"
+  }
+`}
                           value={otp[i] || ""}
                           onChange={(e) => {
                             const value = e.target.value;
@@ -692,7 +853,9 @@ const UserAuthForm = ({ type }) => {
                   </button>
                 ) : !otpSent ? (
                   <button
-                    className="btn-dark w-full mt-0"
+                    className={`btn-dark w-full mt-0 ${
+                      !disclaimerAccepted ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                     type="button"
                     onClick={handleSendOtp}
                     disabled={loading || !disclaimerAccepted}

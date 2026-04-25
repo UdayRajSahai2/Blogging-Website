@@ -12,7 +12,7 @@ import UserCard from "../components/usercard.component";
 
 import { filterPaginationData } from "../common/filter-pagination-data";
 import { BLOG_API, USER_API } from "../common/api";
-
+import { UserIcon } from "@heroicons/react/24/outline";
 const SearchPage = () => {
   const { query } = useParams();
 
@@ -118,7 +118,7 @@ const SearchPage = () => {
         <div className="lg:hidden mb-6">
           <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
             Accounts Matched
-            <i className="fi fi-rr-user mt-1"></i>
+            <UserIcon className="w-5 h-5" />
           </h4>
 
           {renderUsers()}
@@ -138,7 +138,7 @@ const SearchPage = () => {
       <aside className="hidden lg:block w-[300px] border-l pl-6 pt-2">
         <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
           Accounts Matched
-          <i className="fi fi-rr-user mt-1"></i>
+          <UserIcon className="w-5 h-5" />
         </h4>
 
         {renderUsers()}

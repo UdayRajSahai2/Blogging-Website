@@ -1,6 +1,12 @@
 import InputBox from "../../input.component";
-const InputWrapper = ({ children }) => (
-  <div className="relative w-full mb-2 sm:mb-3">
+import {
+  HomeIcon,
+  BriefcaseIcon,
+  BuildingOfficeIcon,
+  ChevronDownIcon,
+} from "@heroicons/react/24/outline";
+const InputWrapper = ({ children, className = "" }) => (
+  <div className={`relative w-full mb-2 sm:mb-3 ${className}`}>
     <div
       className="
         flex items-center h-10 rounded-xl border border-gray-500
@@ -28,9 +34,9 @@ const AddressSection = ({
   fetchDistricts,
 }) => {
   const iconMap = {
-    personal: "fi-rr-home",
-    work: "fi-rr-briefcase",
-    office: "fi-rr-building",
+    personal: <HomeIcon className="w-4 h-4" />,
+    work: <BriefcaseIcon className="w-4 h-4" />,
+    office: <BuildingOfficeIcon className="w-4 h-4" />,
   };
 
   const labels = {
@@ -116,7 +122,7 @@ const AddressSection = ({
               ))}
             </select>
 
-            <i className="fi fi-rr-angle-small-down absolute right-2 text-gray-400 text-xs pointer-events-none"></i>
+            <ChevronDownIcon className="w-4 h-4 absolute right-2 text-gray-400 pointer-events-none" />
           </InputWrapper>
         </div>
 
@@ -153,7 +159,7 @@ const AddressSection = ({
               ))}
             </select>
 
-            <i className="fi fi-rr-angle-small-down absolute right-2 text-gray-400 text-xs pointer-events-none"></i>
+            <ChevronDownIcon className="w-4 h-4 absolute right-2 text-gray-400 pointer-events-none" />
           </InputWrapper>
         </div>
 
@@ -185,7 +191,7 @@ const AddressSection = ({
               ))}
             </select>
 
-            <i className="fi fi-rr-angle-small-down absolute right-2 text-gray-400 text-xs pointer-events-none"></i>
+            <ChevronDownIcon className="w-4 h-4 absolute right-2 text-gray-400 pointer-events-none" />
           </InputWrapper>
         </div>
 

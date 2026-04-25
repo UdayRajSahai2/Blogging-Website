@@ -1,7 +1,9 @@
 // components/admin/AdminNavbar.jsx
 
 import { Link } from "react-router-dom";
-import { useContext } from "react";
+import { useState, useContext } from "react";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import { UserContext } from "../../App";
 import logo from "../../imgs/logo.png";
 
@@ -9,7 +11,8 @@ const AdminNavbar = () => {
   const { userAuth, setUserAuth } = useContext(UserContext);
 
   const { access_token, fullname, profile_img } = userAuth || {};
-
+  const navigate = useNavigate();
+  const [loggingOut, setLoggingOut] = useState(false);
   const handleLogout = () => {
     setUserAuth({ access_token: null });
     sessionStorage.removeItem("user");
@@ -19,7 +22,7 @@ const AdminNavbar = () => {
     <nav className=" bg-white shadow-md sticky top-0 z-50">
       <div className=" mx-auto px-3 sm:px-6">
         <div className="flex items-center justify-between h-14">
-          {/* 🔹 LEFT → BRAND (MERGED CLEANLY) */}
+          {/*  LEFT → BRAND (MERGED CLEANLY) */}
           <Link to="/admin" className="flex items-center gap-2">
             <img
               src={logo}
@@ -39,7 +42,7 @@ const AdminNavbar = () => {
             </span>
           </Link>
 
-          {/* 🔹 RIGHT → ACTIONS */}
+          {/*  RIGHT → ACTIONS */}
           <div className="flex items-center gap-3">
             {/* GO TO SITE */}
             <Link
@@ -76,7 +79,7 @@ const AdminNavbar = () => {
           </div>
         </div>
 
-        {/* 🔹 MOBILE SEARCH */}
+        {/*  MOBILE SEARCH */}
         <div className="sm:hidden pb-2">
           <input
             type="text"

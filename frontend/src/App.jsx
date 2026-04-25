@@ -1,5 +1,5 @@
 import { Route, Routes, Navigate, useLocation } from "react-router-dom";
-import { createContext, useState, Suspense, lazy, useContext } from "react";
+import { createContext, useState, useContext } from "react";
 import { lookInSession } from "./common/session";
 
 import { Toaster } from "react-hot-toast";
@@ -36,20 +36,20 @@ import WelcomePage from "./pages/WelcomePage";
 //Connections/Friends
 import FriendsPage from "./pages/connection/FriendsPage";
 import RequestsPage from "./pages/connection/RequestsPage";
-// Lazy pages
-const HomePage = lazy(() => import("./pages/home.page"));
-const UserAuthForm = lazy(() => import("./pages/userAuthForm.page"));
-const Editor = lazy(() => import("./pages/editor.pages"));
-const SearchPage = lazy(() => import("./pages/search.page"));
-const ProfilePage = lazy(() => import("./pages/profile/profile.page"));
-const BlogPage = lazy(() => import("./pages/blog.page"));
-const ChangePassword = lazy(() => import("./pages/change-password.page"));
-const EditProfile = lazy(() => import("./pages/profile/edit-profile.page"));
-const Notification = lazy(() => import("./pages/notifications.page"));
-const MyBlogs = lazy(() => import("./pages/manage-blogs.page"));
-const ForgotPasswordPage = lazy(() => import("./pages/forgot-password.page"));
-const ResetPasswordPage = lazy(() => import("./pages/reset-password.page"));
-const PageNotFound = lazy(() => import("./pages/404.page"));
+
+import HomePage from "./pages/home.page";
+import UserAuthForm from "./pages/userAuthForm.page";
+import Editor from "./pages/editor.pages";
+import SearchPage from "./pages/search.page";
+import ProfilePage from "./pages/profile/profile.page";
+import BlogPage from "./pages/blog.page";
+import ChangePassword from "./pages/change-password.page";
+import EditProfile from "./pages/profile/edit-profile.page";
+import Notification from "./pages/notifications.page";
+import MyBlogs from "./pages/manage-blogs.page";
+import ForgotPasswordPage from "./pages/forgot-password.page";
+import ResetPasswordPage from "./pages/reset-password.page";
+import PageNotFound from "./pages/404.page";
 
 export const UserContext = createContext({
   userAuth: { access_token: null },
@@ -80,149 +80,143 @@ const App = () => {
     <UserContext.Provider value={{ userAuth, setUserAuth }}>
       <Toaster position="top-center" reverseOrder={false} />
 
-      <Suspense fallback={<Loader />}>
-        <Routes>
-          {/* ================= ADMIN (FULLY SEPARATE) ================= */}
-          <Route path="/admin" element={<AdminAppLayout />}>
-            <Route element={<AdminRoute />}>
-              <Route element={<AdminLayout />}>
-                <Route index element={<AdminDashboard />} />
-                <Route path="users" element={<AdminUsers />} />
+      <Routes>
+        {/* ================= ADMIN (FULLY SEPARATE) ================= */}
+        <Route path="/admin" element={<AdminAppLayout />}>
+          <Route element={<AdminRoute />}>
+            <Route element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsers />} />
 
-                {/* NEW */}
-                <Route path="roles">
-                  <Route index element={<Navigate to="requests" />} />
-                  <Route path="requests" element={<AdminRoles />} />
-                  <Route path="manage" element={<AdminRolePanel />} />
-                </Route>
-
-                <Route path="blogs" element={<AdminBlogs />} />
-                <Route path="finance" element={<AdminFinance />} />
-                <Route
-                  path="finance/expenditures"
-                  element={<AdminExpenditures />}
-                />
-                <Route path="finance/balance" element={<AdminBalance />} />
+              {/* NEW */}
+              <Route path="roles">
+                <Route index element={<Navigate to="requests" />} />
+                <Route path="requests" element={<AdminRoles />} />
+                <Route path="manage" element={<AdminRolePanel />} />
               </Route>
+
+              <Route path="blogs" element={<AdminBlogs />} />
+              <Route path="finance" element={<AdminFinance />} />
+              <Route
+                path="finance/expenditures"
+                element={<AdminExpenditures />}
+              />
+              <Route path="finance/balance" element={<AdminBalance />} />
             </Route>
           </Route>
+        </Route>
 
-          {/* ================= USER APP ================= */}
+        {/* ================= USER APP ================= */}
+        <Route
+          path="/"
+          element={
+            <AppLayout
+              loadBlogByCategory={loadBlogByCategory}
+              pageState={pageState}
+            />
+          }
+        >
           <Route
-            path="/"
+            path="onboarding"
             element={
-              <AppLayout
-                loadBlogByCategory={loadBlogByCategory}
+              <ProtectedRoute user={userAuth}>
+                <OnboardingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            index
+            element={
+              <HomePage
+                key={pageState}
                 pageState={pageState}
+                setPageState={setPageState}
               />
             }
-          >
-            <Route
-              path="onboarding"
-              element={
-                <ProtectedRoute user={userAuth}>
-                  <OnboardingPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              index
-              element={
-                <HomePage
-                  key={pageState}
-                  pageState={pageState}
-                  setPageState={setPageState}
-                />
-              }
-            />
-            {/* for multiple roles profiles  disabled */}
-            {/* <Route path="dashboard-home" element={<Dashboard />} /> */}
+          />
+          {/* for multiple roles profiles  disabled */}
+          {/* <Route path="dashboard-home" element={<Dashboard />} /> */}
+          <Route
+            path="/editor"
+            element={
+              <ProtectedRoute user={userAuth}>
+                <Editor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/welcome"
+            element={
+              <ProtectedRoute user={userAuth}>
+                {!userAuth?.isOnboardingCompleted ? (
+                  <WelcomePage />
+                ) : (
+                  <Navigate to="/" />
+                )}
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/editor"
-              element={
-                <ProtectedRoute user={userAuth}>
-                  <Editor />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/welcome"
-              element={
-                <ProtectedRoute user={userAuth}>
-                  {!userAuth?.isOnboardingCompleted ? (
-                    <WelcomePage />
-                  ) : (
-                    <Navigate to="/" />
-                  )}
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/editor/:blog_id" element={<Editor />} />
-            <Route path="search/:query" element={<SearchPage />} />
-            <Route path="user/:id" element={<ProfilePage />} />
-            <Route path="blog/:blog_id" element={<BlogPage />} />
+          <Route path="/editor/:blog_id" element={<Editor />} />
+          <Route path="search/:query" element={<SearchPage />} />
+          <Route path="user/:id" element={<ProfilePage />} />
+          <Route path="blog/:blog_id" element={<BlogPage />} />
+          {/* Auth */}
+          <Route path="signin" element={<UserAuthForm type="sign-in" />} />
+          <Route path="signup" element={<UserAuthForm type="sign-up" />} />
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
+          <Route path="chat">
+            <Route index element={<ChatPage />} />
 
-            {/* Auth */}
-            <Route path="signin" element={<UserAuthForm type="sign-in" />} />
-            <Route path="signup" element={<UserAuthForm type="sign-up" />} />
-            <Route path="forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="reset-password" element={<ResetPasswordPage />} />
-            <Route path="chat">
-              <Route index element={<ChatPage />} />
-
-              {/*  OPEN BY CONVERSATION */}
-              <Route
-                path="conversation/:conversationId"
-                element={<ChatPage />}
-              />
-            </Route>
-            {/* Dashboard */}
-            <Route
-              path="dashboard"
-              element={
-                <ProtectedRoute user={userAuth}>
-                  <SideNav />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="donor" element={<DonorDashboard />} />
-              <Route index element={<div>Select a section</div>} />
-              <Route path="user/:id" element={<ProfilePage />} />
-              <Route path="notifications" element={<Notification />} />
-              <Route path="blogs" element={<MyBlogs />} />
-              <Route path="academics">
-                <Route index element={<AcademicPage />} />
-                <Route path="add" element={<AcademicForm />} />
-                <Route path="edit/:academic_id" element={<AcademicForm />} />
-              </Route>
-              <Route
-                path="professional-profile"
-                element={<ProfessionalProfile />}
-              />
-              <Route path="connections">
-                <Route index element={<FriendsPage />} />
-                <Route path="requests" element={<RequestsPage />} />
-              </Route>
-              <Route path="*" element={<div>Page not found</div>} />
-            </Route>
-            {/* Settings */}
-            <Route
-              path="settings"
-              element={
-                <ProtectedRoute user={userAuth}>
-                  <SideNav />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="edit-profile" element={<EditProfile />} />
-              <Route path="change-password" element={<ChangePassword />} />
-            </Route>
-            {/* 404 */}
-            <Route path="*" element={<PageNotFound />} />
+            {/*  OPEN BY CONVERSATION */}
+            <Route path="conversation/:conversationId" element={<ChatPage />} />
           </Route>
-        </Routes>
-      </Suspense>
+          {/* Dashboard */}
+          <Route
+            path="dashboard"
+            element={
+              <ProtectedRoute user={userAuth}>
+                <SideNav />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="donor" element={<DonorDashboard />} />
+            <Route index element={<div>Select a section</div>} />
+            <Route path="user/:id" element={<ProfilePage />} />
+            <Route path="notifications" element={<Notification />} />
+            <Route path="blogs" element={<MyBlogs />} />
+            <Route path="academics">
+              <Route index element={<AcademicPage />} />
+              <Route path="add" element={<AcademicForm />} />
+              <Route path="edit/:academic_id" element={<AcademicForm />} />
+            </Route>
+            <Route
+              path="professional-profile"
+              element={<ProfessionalProfile />}
+            />
+            <Route path="connections">
+              <Route index element={<FriendsPage />} />
+              <Route path="requests" element={<RequestsPage />} />
+            </Route>
+            <Route path="*" element={<div>Page not found</div>} />
+          </Route>
+          {/* Settings */}
+          <Route
+            path="settings"
+            element={
+              <ProtectedRoute user={userAuth}>
+                <SideNav />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="edit-profile" element={<EditProfile />} />
+            <Route path="change-password" element={<ChangePassword />} />
+          </Route>
+          {/* 404 */}
+          <Route path="*" element={<PageNotFound />} />
+        </Route>
+      </Routes>
     </UserContext.Provider>
   );
 };

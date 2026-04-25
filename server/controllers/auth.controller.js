@@ -27,9 +27,7 @@ export const signin = async (req, res) => {
   const { email, password, latitude, longitude } = req.body;
 
   if (!email || !password) {
-    return res
-      .status(400)
-      .json({ error: "❌ Email and password are required" });
+    return res.status(400).json({ error: " Email and password are required" });
   }
 
   try {
@@ -50,7 +48,7 @@ export const signin = async (req, res) => {
     // USER NOT FOUND
     // ------------------------------------------------
     if (!user) {
-      return res.status(403).json({ error: "❌ Email not found" });
+      return res.status(403).json({ error: " Email not found" });
     }
 
     // ------------------------------------------------
@@ -58,7 +56,7 @@ export const signin = async (req, res) => {
     // ------------------------------------------------
     if (user.google_auth) {
       return res.status(403).json({
-        error: "❌ Account was created using Google. Please login with Google.",
+        error: " Account was created using Google. Please login with Google.",
       });
     }
 
@@ -68,7 +66,7 @@ export const signin = async (req, res) => {
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
-      return res.status(403).json({ error: "❌ Incorrect password" });
+      return res.status(403).json({ error: " Incorrect password" });
     }
 
     // ------------------------------------------------
@@ -106,7 +104,7 @@ export const signin = async (req, res) => {
     // FINAL RESPONSE
     // ------------------------------------------------
 
-    console.log("🎉 Login successful:", user.user_id);
+    console.log(" Login successful:", user.user_id);
     console.log("Customer ID:", user.customer_id);
 
     return res.json(generateAuthResponse(user));
@@ -114,7 +112,7 @@ export const signin = async (req, res) => {
     console.error("Signin error:", err);
 
     return res.status(500).json({
-      error: "❌ Server error during signin",
+      error: " Server error during signin",
     });
   }
 };
@@ -135,36 +133,36 @@ export const signup = async (req, res) => {
   // ------------------------------------------------
 
   if (!first_name || first_name.length < 1) {
-    return res.status(403).json({ error: "❌ First name is required" });
+    return res.status(403).json({ error: " First name is required" });
   }
 
   if (!last_name || last_name.length < 1) {
-    return res.status(403).json({ error: "❌ Last name is required" });
+    return res.status(403).json({ error: " Last name is required" });
   }
 
   if (!email || !emailRegex.test(email)) {
-    return res.status(403).json({ error: "❌ Email is invalid" });
+    return res.status(403).json({ error: "Email is invalid" });
   }
 
   if (!password || !passwordRegex.test(password)) {
     return res.status(403).json({
       error:
-        "❌ Password must be at least 12 characters with uppercase, lowercase, number and special character",
+        " Password must be at least 12 characters with uppercase, lowercase, number and special character",
     });
   }
 
   if (mobile_number && !mobileRegex.test(mobile_number)) {
-    return res.status(403).json({ error: "❌ Mobile number is invalid" });
+    return res.status(403).json({ error: " Mobile number is invalid" });
   }
 
   if (latitude == null || longitude == null) {
     return res.status(400).json({
-      error: "❌ Location (latitude and longitude) is required for signup",
+      error: " Location (latitude and longitude) is required for signup",
     });
   }
 
   try {
-    console.log("📝 Signup request:", email);
+    console.log("Signup request:", email);
 
     // ------------------------------------------------
     // CHECK IF USER ALREADY EXISTS
@@ -176,13 +174,11 @@ export const signup = async (req, res) => {
 
     if (existingUser) {
       if (existingUser.email === email) {
-        return res.status(400).json({ error: "❌ Email already exists" });
+        return res.status(400).json({ error: " Email already exists" });
       }
 
       if (existingUser.mobile_number === mobile_number) {
-        return res
-          .status(400)
-          .json({ error: "❌ Mobile number already exists" });
+        return res.status(400).json({ error: " Mobile number already exists" });
       }
     }
 
@@ -223,11 +219,11 @@ export const signup = async (req, res) => {
       otpExpires,
       otpVerified: false,
 
-      // 🔥 ADD THIS
+      // ADD THIS
       roles: [], // no default roles
     };
 
-    console.log("📦 Pending signup stored:", email);
+    console.log(" Pending signup stored:", email);
 
     // ------------------------------------------------
     // SEND OTP
@@ -239,7 +235,7 @@ export const signup = async (req, res) => {
       await sendSMSOTP(mobile_number, otp);
     }
 
-    console.log("📨 OTP sent:", otp);
+    console.log(" OTP sent:", otp);
 
     return res.status(200).json({
       message: "OTP sent to your email/mobile",
@@ -248,7 +244,7 @@ export const signup = async (req, res) => {
     console.error("Signup error:", error);
 
     return res.status(500).json({
-      error: "❌ Server error during signup",
+      error: " Server error during signup",
     });
   }
 };
@@ -257,7 +253,7 @@ export const googleAuth = async (req, res) => {
   const { access_token, latitude, longitude } = req.body;
 
   console.log("====================================");
-  console.log("🚀 GOOGLE AUTH REQUEST");
+  console.log(" GOOGLE AUTH REQUEST");
   console.log("====================================");
 
   if (!access_token) {
@@ -272,7 +268,7 @@ export const googleAuth = async (req, res) => {
     const decodedUser = await getAuth().verifyIdToken(access_token);
 
     if (!decodedUser) {
-      console.log("❌ Token verification failed");
+      console.log(" Token verification failed");
       return res.status(401).json({ error: "Failed to verify token" });
     }
 
@@ -310,7 +306,7 @@ export const googleAuth = async (req, res) => {
       if (!user.google_auth) {
         return res.status(403).json({
           error:
-            "❌ This email was registered with password login. Please sign in normally.",
+            " This email was registered with password login. Please sign in normally.",
         });
       }
 
@@ -402,13 +398,11 @@ export const completeSignup = async (req, res) => {
 
     if (existingUser) {
       if (existingUser.email === pending.email) {
-        return res.status(400).json({ error: "❌ Email already exists" });
+        return res.status(400).json({ error: " Email already exists" });
       }
 
       if (existingUser.mobile_number === pending.mobile_number) {
-        return res
-          .status(400)
-          .json({ error: "❌ Mobile number already exists" });
+        return res.status(400).json({ error: " Mobile number already exists" });
       }
     }
 
@@ -476,7 +470,7 @@ export const completeSignup = async (req, res) => {
     console.error("Complete signup error:", error);
 
     return res.status(500).json({
-      error: "❌ Server error during account creation",
+      error: " Server error during account creation",
     });
   }
 };
@@ -503,34 +497,34 @@ export const changePassword = async (req, res) => {
 
   if (!currentPassword || !newPassword) {
     return res.status(400).json({
-      error: "❌ Both current password and new password are required",
+      error: " Both current password and new password are required",
     });
   }
 
   if (!passwordRegex.test(newPassword)) {
     return res.status(403).json({
       error:
-        "❌ New password must be at least 12 characters long and include at least one numeric digit, one lowercase letter, one uppercase letter, and one special character.",
+        " New password must be at least 12 characters long and include at least one numeric digit, one lowercase letter, one uppercase letter, and one special character.",
     });
   }
 
   if (currentPassword === newPassword) {
     return res.status(400).json({
-      error: "❌ New password must be different from current password",
+      error: " New password must be different from current password",
     });
   }
 
   try {
-    const user = await User.findByPk(req.userId);
+    const user = await User.findByPk(req.user.id);
 
     if (!user) {
-      return res.status(404).json({ error: "❌ User not found" });
+      return res.status(404).json({ error: " User not found" });
     }
 
     if (user.google_auth) {
       return res.status(403).json({
         error:
-          "❌ Cannot change password for Google authenticated account. Use Google to manage your password.",
+          " Cannot change password for Google authenticated account. Use Google to manage your password.",
       });
     }
 
@@ -541,7 +535,7 @@ export const changePassword = async (req, res) => {
 
     if (!isCurrentPasswordValid) {
       return res.status(403).json({
-        error: "❌ Current password is incorrect",
+        error: " Current password is incorrect",
       });
     }
 
@@ -550,16 +544,16 @@ export const changePassword = async (req, res) => {
 
     await User.update(
       { password: hashedNewPassword },
-      { where: { user_id: req.userId } },
+      { where: { user_id: req.user.id } },
     );
 
     return res.status(200).json({
-      message: "✅ Password changed successfully",
+      message: "Password changed successfully",
     });
   } catch (error) {
     console.error("Change password error:", error);
     return res.status(500).json({
-      error: "❌ Server error occurred while changing password",
+      error: " Server error occurred while changing password",
     });
   }
 };
@@ -692,7 +686,7 @@ export const resetPassword = async (req, res) => {
       message: "Password reset successful",
     });
   } catch (err) {
-    console.error("RESET PASSWORD ERROR 👉", err);
+    console.error("RESET PASSWORD ERROR ", err);
     res.status(500).json({ error: "Password reset failed" });
   }
 };
@@ -701,11 +695,11 @@ export const completeOnboarding = async (req, res) => {
   try {
     await User.update(
       { is_onboarding_completed: true },
-      { where: { user_id: req.userId } },
+      { where: { user_id: req.user.id } },
     );
 
     //  fetch updated user
-    const user = await User.findByPk(req.userId);
+    const user = await User.findByPk(req.user.id);
 
     return res.json({
       success: true,

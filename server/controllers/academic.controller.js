@@ -16,7 +16,11 @@ export const addAcademic = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const data = await createAcademicService(req.body, req.userId, transaction);
+    const data = await createAcademicService(
+      req.body,
+      req.user.id,
+      transaction,
+    );
 
     await transaction.commit();
 
@@ -42,7 +46,7 @@ export const updateAcademic = async (req, res) => {
 
     const data = await updateAcademicService(
       academic_id,
-      req.userId,
+      req.user.id,
       req.body,
       transaction,
     );
@@ -69,7 +73,7 @@ export const deleteAcademic = async (req, res) => {
   try {
     const academic_id = parseInt(req.params.academic_id, 10);
 
-    await deleteAcademicService(academic_id, req.userId, transaction);
+    await deleteAcademicService(academic_id, req.user.id, transaction);
 
     await transaction.commit();
 
@@ -86,7 +90,7 @@ export const deleteAcademic = async (req, res) => {
 ========================= */
 export const getMyAcademics = async (req, res) => {
   try {
-    const data = await getUserAcademics(req.userId);
+    const data = await getUserAcademics(req.user.id);
     return res.json({ data });
   } catch (err) {
     console.error(err);
@@ -101,7 +105,7 @@ export const getAcademicById = async (req, res) => {
   try {
     const academic_id = parseInt(req.params.academic_id, 10);
 
-    const data = await getAcademicByIdService(academic_id, req.userId);
+    const data = await getAcademicByIdService(academic_id, req.user.id);
 
     return res.json({ data });
   } catch (err) {

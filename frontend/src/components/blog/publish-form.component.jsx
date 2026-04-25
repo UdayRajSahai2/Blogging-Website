@@ -1,4 +1,4 @@
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import AnimationWrapper from "../../common/page-animation";
 import { useContext } from "react";
 import { EditorContext } from "../../pages/editor.pages";
@@ -7,9 +7,9 @@ import axios from "axios";
 import { UserContext } from "../../App";
 import { useNavigate, useParams } from "react-router-dom";
 import { BLOG_API } from "../../common/api";
-
+import { XMarkIcon } from "@heroicons/react/24/outline";
 const PublishForm = () => {
-  let characterLimit = 300;
+  let characterLimit = 200;
   let tagLimit = 10;
   let { blog_id } = useParams();
   let {
@@ -105,26 +105,46 @@ const PublishForm = () => {
         return toast.error(response.data.error);
       });
   };
+  const getPreviewText = () => {
+    if (!content || !content.blocks) return "";
+
+    const textBlock = content.blocks.find(
+      (block) => block.type === "paragraph" && block.data?.text?.trim(),
+    );
+
+    return textBlock
+      ? textBlock.data.text.replace(/<[^>]+>/g, "") // remove HTML
+      : "";
+  };
+
+  const previewText = getPreviewText();
   return (
     <AnimationWrapper>
       <section className=" w-auto min-h-screen grid items-center lg:grid-cols-2 py-16 lg:gap-4">
-        <Toaster />
         <button
           className="w-12 h-12 absolute right-[5vw] z-10 top-[5%] lg:top-[10%]"
           onClick={handleCloseEvent}
         >
-          <i className="fi fi-br-cross"></i>
+          <XMarkIcon className="w-5 h-5 text-gray-600" />
         </button>
         <div className="max-w-[550px] center">
           <p className="text-dark-grey mb-1">Preview</p>
-          <div className="w-full aspect-video rounded-lg overflow-hidden bg-grey mt-4">
-            <img src={banner} />
+          <div className="w-full aspect-video rounded-lg overflow-hidden bg-gray-100 mt-4 flex items-center justify-center">
+            <img
+              src={banner}
+              alt="Blog banner"
+              className="w-full aspect-[16/9] object-fill transition-transform duration-700 group-hover:scale-105"
+            />
           </div>
           <h1 className="text-4xl font-medium mt-2 leading-tight line-clamp-2">
             {title}
           </h1>
           <p className="font-gelasio line-clamp-2 text-xl leading-7 mt-4">
             {des}
+          </p>
+          <p className="font-gelasio text-base text-gray-600 mt-3 line-clamp-3">
+            {previewText ||
+              "Start writing an awesome story... You can edit later."}
           </p>
         </div>
         <div className="border-grey lg:border-1 lg:pl-8">

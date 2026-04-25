@@ -51,7 +51,7 @@ const pickFields = (source, allowedFields) => {
 */
 export const getProfessionalProfile = async (req, res) => {
   try {
-    const user_id = req.params.user_id || req.userId;
+    const user_id = req.params.user_id || req.user.id;
 
     const experiences = await getUserExperiences(user_id);
 
@@ -79,7 +79,7 @@ export const getProfessionalProfile = async (req, res) => {
 
 export const addExperience = async (req, res) => {
   try {
-    const user_id = req.userId;
+    const user_id = req.user.id;
 
     const data = pickFields(req.body, allowedExperienceFields);
 
@@ -121,7 +121,7 @@ export const updateExperience = async (req, res) => {
     const { id } = req.params;
 
     const experience = await ProfessionalExperience.findOne({
-      where: { id, user_id: req.userId },
+      where: { id, user_id: req.user.id },
     });
 
     if (!experience) {
@@ -172,7 +172,7 @@ export const deleteExperience = async (req, res) => {
     const { id } = req.params;
 
     const experience = await ProfessionalExperience.findOne({
-      where: { id, user_id: req.userId },
+      where: { id, user_id: req.user.id },
     });
 
     if (!experience) {

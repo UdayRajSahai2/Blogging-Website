@@ -26,7 +26,7 @@ export const sendMessage = async (req, res) => {
     }
 
     const data = await sendMessageService({
-      senderId: req.userId,
+      senderId: req.user.id,
       conversationId,
       content,
       messageType,
@@ -63,7 +63,7 @@ export const createConversation = async (req, res) => {
     }
 
     const convo = await createConversationService({
-      creatorId: req.userId,
+      creatorId: req.user.id,
       userIds,
       isGroup,
       groupName,
@@ -84,7 +84,7 @@ export const createConversation = async (req, res) => {
 // ================= GET USER CONVERSATIONS =================
 export const getConversations = async (req, res) => {
   try {
-    const data = await getUserConversations(req.userId);
+    const data = await getUserConversations(req.user.id);
 
     return res.status(200).json({
       success: true,
@@ -110,7 +110,7 @@ export const getConversationMessages = async (req, res) => {
 
     const data = await getMessages({
       conversationId,
-      userId: req.userId,
+      userId: req.user.id,
       limit: parseInt(limit),
       cursor, // createdAt or message_id
     });
@@ -138,7 +138,7 @@ export const addMember = async (req, res) => {
       });
     }
 
-    const data = await addMemberService(conversationId, req.userId, userId);
+    const data = await addMemberService(conversationId, req.user.id, userId);
 
     return res.status(200).json({
       success: true,
@@ -163,7 +163,7 @@ export const removeMember = async (req, res) => {
       });
     }
 
-    await removeMemberService(conversationId, req.userId, userId);
+    await removeMemberService(conversationId, req.user.id, userId);
 
     return res.status(200).json({
       success: true,
@@ -187,7 +187,7 @@ export const leaveGroup = async (req, res) => {
       });
     }
 
-    await leaveGroupService(conversationId, req.userId);
+    await leaveGroupService(conversationId, req.user.id);
 
     return res.status(200).json({
       success: true,
@@ -211,7 +211,7 @@ export const updateRole = async (req, res) => {
       });
     }
 
-    await updateRoleService(conversationId, req.userId, userId, role);
+    await updateRoleService(conversationId, req.user.id, userId, role);
 
     return res.status(200).json({
       success: true,
@@ -227,7 +227,7 @@ export const deleteConversation = async (req, res) => {
   try {
     const { conversationId } = req.params;
 
-    await deleteConversationService(conversationId, req.userId);
+    await deleteConversationService(conversationId, req.user.id);
 
     return res.status(200).json({
       success: true,

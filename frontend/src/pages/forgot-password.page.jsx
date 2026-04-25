@@ -2,11 +2,11 @@ import { useRef, useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AnimationWrapper from "../common/page-animation";
 import InputBox from "../components/input.component";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import axios from "axios";
 import Loader from "../components/loader.component";
 import { AUTH_API } from "../common/api";
-
+import { EnvelopeIcon } from "@heroicons/react/24/outline";
 const ForgotPasswordPage = () => {
   const formRef = useRef();
   const navigate = useNavigate();
@@ -99,8 +99,6 @@ const ForgotPasswordPage = () => {
   return (
     <AnimationWrapper keyValue="forgot-password">
       <section className="min-h-screen w-full flex justify-center px-4 pt-16 pb-8 relative">
-        <Toaster />
-
         {/* Loader */}
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
@@ -129,7 +127,7 @@ const ForgotPasswordPage = () => {
             name="email"
             type="email"
             placeholder="Enter your email"
-            icon="fi-rr-envelope"
+            icon={<EnvelopeIcon className="w-4 h-4" />}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required

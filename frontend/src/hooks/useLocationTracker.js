@@ -43,7 +43,7 @@ const useLocationTracker = (token) => {
           },
         );
 
-        // 🔥 Debounced UI refresh
+        //  Debounced UI refresh
         if (refreshTimeoutRef.current) {
           clearTimeout(refreshTimeoutRef.current);
         }
@@ -52,11 +52,11 @@ const useLocationTracker = (token) => {
           window.dispatchEvent(new Event("location-updated"));
         }, 2000);
       } catch (err) {
-        console.error("❌ Location update failed:", err);
+        console.error(" Location update failed:", err);
       }
     };
 
-    /* ---------------- ⚡ QUICK INITIAL LOCATION ---------------- */
+    /* ----------------  QUICK INITIAL LOCATION ---------------- */
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
@@ -67,7 +67,7 @@ const useLocationTracker = (token) => {
         sendLocation(latitude, longitude);
       },
       () => {
-        console.warn("⚠️ Initial quick location failed");
+        console.warn(" Initial quick location failed");
       },
       {
         enableHighAccuracy: false,
@@ -83,12 +83,12 @@ const useLocationTracker = (token) => {
           const { latitude, longitude } = pos.coords;
           const now = Date.now();
 
-          // ⛔ Time throttle
+          // Time throttle
           if (now - lastSentTimeRef.current < MIN_TIME_MS) {
             return;
           }
 
-          // ⛔ Distance filter
+          //  Distance filter
           if (lastCoordsRef.current) {
             const dist = getDistance(
               lastCoordsRef.current.lat,
@@ -102,7 +102,7 @@ const useLocationTracker = (token) => {
             }
           }
 
-          // ✅ Update refs
+          // Update refs
           lastCoordsRef.current = { lat: latitude, lng: longitude };
           lastSentTimeRef.current = now;
 
@@ -118,8 +118,8 @@ const useLocationTracker = (token) => {
         },
         {
           enableHighAccuracy: true,
-          maximumAge: 30000, // ✅ allow cached
-          timeout: 20000, // ✅ reduce timeout errors
+          maximumAge: 30000, // allow cached
+          timeout: 20000, // reduce timeout errors
         },
       );
     }

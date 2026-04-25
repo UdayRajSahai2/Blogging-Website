@@ -317,9 +317,9 @@ const ProfileHeader = ({ profile }) => {
             {truncateWords(bio, 25)}
           </p>
         )}
-
+        {/* disabled in production */}
         {/* 🔹 ACTION BUTTON */}
-        {userAuth?.access_token && !isCurrentUser && (
+        {/* {userAuth?.access_token && !isCurrentUser && (
           <div className="flex justify-start sm:ml-auto">
             {connectionStatus === "connected" ? (
               <button
@@ -336,7 +336,7 @@ const ProfileHeader = ({ profile }) => {
               />
             )}
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

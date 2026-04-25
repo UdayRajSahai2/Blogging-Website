@@ -2,11 +2,11 @@ import { useRef, useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AnimationWrapper from "../common/page-animation";
 import InputBox from "../components/input.component";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import axios from "axios";
 import Loader from "../components/loader.component";
 import { AUTH_API } from "../common/api";
-
+import { KeyIcon } from "@heroicons/react/24/outline";
 const ResetPasswordPage = () => {
   const formRef = useRef();
   const [loading, setLoading] = useState(false);
@@ -110,8 +110,6 @@ const ResetPasswordPage = () => {
   return (
     <AnimationWrapper keyValue="reset-password">
       <section className="layout-section h-auto flex items-center justify-center relative">
-        <Toaster />
-
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 z-20">
             <Loader />
@@ -127,12 +125,11 @@ const ResetPasswordPage = () => {
           <h1 className="text-4xl font-gelasio text-center mb-20">
             Reset Password
           </h1>
-
           <InputBox
             name="password"
             type="password"
             placeholder="New Password"
-            icon="fi-rr-key"
+            icon={<KeyIcon className="w-4 h-4" />}
             required
           />
 
@@ -140,7 +137,7 @@ const ResetPasswordPage = () => {
             name="confirm_password"
             type="password"
             placeholder="Confirm Password"
-            icon="fi-rr-key"
+            icon={<KeyIcon className="w-4 h-4" />}
             required
           />
 

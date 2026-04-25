@@ -14,7 +14,8 @@ const BlogPostCard = ({ content, author, openProfile }) => {
     blog_id: id,
   } = content || {};
 
-  const { fullname, profile_img, username } = author || {};
+  const { fullname, profile_img, username, details } = author || {};
+  const salutation = details?.salutation || "";
 
   //  Safe + optimized tag parsing
   const tags = useMemo(() => {
@@ -44,7 +45,7 @@ const BlogPostCard = ({ content, author, openProfile }) => {
           src={banner}
           alt={title}
           loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+          className="w-full aspect-[16/9] object-fill transition-transform duration-700 group-hover:scale-105"
         />
       </div>
 
@@ -67,6 +68,7 @@ const BlogPostCard = ({ content, author, openProfile }) => {
             }}
             className="font-medium text-gray-800 truncate hover:underline"
           >
+            {salutation ? `${salutation}. ` : ""}
             {fullname || "Unknown"}
           </button>
 

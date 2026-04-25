@@ -3,22 +3,29 @@
 export const authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
     try {
-      const systemRole = req.systemRole;
-      const userRoles = Array.isArray(req.userRoles) ? req.userRoles : [];
+      //  Ensure user exists
+      if (!req.user) {
+        return res.status(401).json({
+          message: "Unauthorized",
+        });
+      }
+
+      const systemRole = req.user.systemRole;
+      const userRoles = Array.isArray(req.user.roles) ? req.user.roles : [];
 
       const normalizedAllowed = allowedRoles.map((r) => r.toLowerCase());
 
-      // 🔐 SUPER ADMIN (full bypass)
+      //  SUPER ADMIN (full bypass)
       if (systemRole === "super_admin") {
         return next();
       }
 
-      // 🔐 SYSTEM ROLE CHECK (admin routes)
-      if (normalizedAllowed.includes(systemRole)) {
+      // SYSTEM ROLE CHECK
+      if (systemRole && normalizedAllowed.includes(systemRole)) {
         return next();
       }
 
-      // 👤 BUSINESS ROLE CHECK
+      //  BUSINESS ROLE CHECK
       const hasAccess = userRoles.some((role) =>
         normalizedAllowed.includes(role),
       );

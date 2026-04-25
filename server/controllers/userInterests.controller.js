@@ -1,7 +1,7 @@
 import * as service from "../services/userInterests.service.js";
 
 // =========================
-// 🛠️ HELPER
+//  HELPER
 // =========================
 const sendSuccess = (res, data) => {
   res.json({ success: true, data });
@@ -28,7 +28,7 @@ const sendError = (res, err) => {
 const validateId = (id) => id && !isNaN(id);
 
 // =========================
-// ✅ CREATE
+//  CREATE
 // =========================
 export const createInterest = async (req, res) => {
   try {
@@ -56,7 +56,7 @@ export const createInterest = async (req, res) => {
 };
 
 // =========================
-// 🌳 GET TREE
+//  GET TREE
 // =========================
 export const getInterestTree = async (req, res) => {
   try {
@@ -68,7 +68,7 @@ export const getInterestTree = async (req, res) => {
 };
 
 // =========================
-// 📋 GET ALL
+//  GET ALL
 // =========================
 export const getAllInterests = async (req, res) => {
   try {
@@ -86,7 +86,7 @@ export const getAllInterests = async (req, res) => {
 };
 
 // =========================
-// ➕ ADD USER INTERESTS
+//  ADD USER INTERESTS
 // =========================
 export const addUserInterests = async (req, res) => {
   try {
@@ -108,7 +108,7 @@ export const addUserInterests = async (req, res) => {
 
     const uniqueIds = [...new Set(interest_ids)];
 
-    const data = await service.addUserInterests(req.userId, uniqueIds);
+    const data = await service.addUserInterests(req.user.id, uniqueIds);
     sendSuccess(res, data);
   } catch (err) {
     sendError(res, err);
@@ -116,11 +116,11 @@ export const addUserInterests = async (req, res) => {
 };
 
 // =========================
-// 📥 GET USER INTERESTS
+//  GET USER INTERESTS
 // =========================
 export const getUserInterests = async (req, res) => {
   try {
-    const data = await service.getUserInterests(req.userId);
+    const data = await service.getUserInterests(req.user.id);
     sendSuccess(res, data);
   } catch (err) {
     sendError(res, err);
@@ -128,7 +128,7 @@ export const getUserInterests = async (req, res) => {
 };
 
 // =========================
-// 🔁 REPLACE
+//  REPLACE
 // =========================
 export const replaceUserInterests = async (req, res) => {
   try {
@@ -150,7 +150,7 @@ export const replaceUserInterests = async (req, res) => {
 
     const uniqueIds = [...new Set(interest_ids)];
 
-    const data = await service.replaceUserInterests(req.userId, uniqueIds);
+    const data = await service.replaceUserInterests(req.user.id, uniqueIds);
 
     sendSuccess(res, data);
   } catch (err) {
@@ -159,7 +159,7 @@ export const replaceUserInterests = async (req, res) => {
 };
 
 // =========================
-// ❌ DELETE INTEREST (ADMIN)
+//  DELETE INTEREST (ADMIN)
 // =========================
 export const deleteInterest = async (req, res) => {
   try {
@@ -180,7 +180,7 @@ export const deleteInterest = async (req, res) => {
 };
 
 // =========================
-// ❌ REMOVE USER INTEREST
+//  REMOVE USER INTEREST
 // =========================
 export const removeUserInterest = async (req, res) => {
   try {
@@ -193,7 +193,7 @@ export const removeUserInterest = async (req, res) => {
       });
     }
 
-    const data = await service.removeUserInterest(req.userId, interest_id);
+    const data = await service.removeUserInterest(req.user.id, interest_id);
 
     sendSuccess(res, data);
   } catch (err) {
@@ -202,7 +202,7 @@ export const removeUserInterest = async (req, res) => {
 };
 
 // =========================
-// 🧭 GET INTEREST PATH
+//  GET INTEREST PATH
 // =========================
 export const getInterestPath = async (req, res) => {
   try {

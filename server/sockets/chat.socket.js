@@ -18,7 +18,9 @@ export const initChatSocket = (io) => {
       if (!token) return next(new Error("Unauthorized"));
 
       const decoded = jwt.verify(token, process.env.SECRET_ACCESS_KEY);
-      socket.userId = decoded.user_id;
+      socket.user = {
+        id: decoded.user_id,
+      };
 
       next();
     } catch (err) {
@@ -30,7 +32,7 @@ export const initChatSocket = (io) => {
   // 🔌 CONNECTION
   // =============================
   io.on("connection", (socket) => {
-    const userId = socket.userId;
+    const userId = socket.user.id;
     console.log("⚡ Connected:", userId);
 
     // ✅ store multiple sockets per user

@@ -15,7 +15,7 @@ const InterestsSection = ({
   const [level3, setLevel3] = useState(null);
 
   // =========================
-  // 🌳 LOAD TREE
+  // LOAD TREE
   // =========================
   useEffect(() => {
     const load = async () => {
@@ -66,14 +66,17 @@ const InterestsSection = ({
   };
 
   // =========================
-  // ❌ REMOVE
+  //  REMOVE
   // =========================
   const handleRemove = (id) => {
     setInterests((prev) => prev.filter((i) => i.interest_id !== id));
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-4">
+    <div
+      data-error={error ? "true" : undefined}
+      className="bg-white border border-gray-200 rounded-xl p-4 space-y-4"
+    >
       {/* HEADER */}
       <div className="flex items-center gap-2">
         <SparklesIcon className="w-5 h-5 text-indigo-500" />

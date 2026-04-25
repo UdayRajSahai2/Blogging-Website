@@ -31,7 +31,7 @@ export async function sendEmailOTP(email, otp) {
       to: email,
       subject: "Your OTP Code",
       html: `
-        <h2>Password Reset OTP</h2>
+        <h2>OTP</h2>
         <p>Your OTP is:</p>
         <h1>${otp}</h1>
         <p>This OTP expires in 10 minutes.</p>

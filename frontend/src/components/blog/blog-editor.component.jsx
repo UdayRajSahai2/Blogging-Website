@@ -4,7 +4,7 @@ import AnimationWrapper from "../../common/page-animation";
 import defaultBanner from "../../imgs/blog-banner.png";
 import { uploadImage } from "../../common/aws";
 import { useEffect, useRef, useContext } from "react";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import { EditorContext } from "../../pages/editor.pages";
 import EditorJS from "@editorjs/editorjs";
 import { tools } from "../blog/tools.component";
@@ -32,7 +32,7 @@ const BlogEditor = () => {
         holder: "textEditor",
         data: blog.content || { blocks: [] },
         tools: tools,
-        placeholder: "Let's write an awesome story...",
+        placeholder: "Start writing an awesome story... You can edit later.",
         onReady: () => setTextEditor({ instance: editor, isReady: true }),
       });
       setTextEditor({ instance: editor, isReady: false });
@@ -67,6 +67,9 @@ const BlogEditor = () => {
     input.style.height = "auto";
     input.style.height = input.scrollHeight + "px";
     setBlog({ ...blog, title: input.value });
+    if (e.target.value.length > 10) {
+      toast.success("Nice title 👍", { id: "title-feedback" });
+    }
   };
 
   const handleTitleKeyDown = (e) => {
@@ -85,8 +88,16 @@ const BlogEditor = () => {
 
     if (textEditor.isReady) {
       textEditor.instance.save().then((data) => {
-        if (!data?.blocks?.length)
+        const hasRealContent = data.blocks.some(
+          (block) =>
+            block.data?.text?.trim() ||
+            block.data?.items?.length ||
+            block.type === "image",
+        );
+
+        if (!hasRealContent) {
           return toast.error("Write something in your blog to publish it");
+        }
 
         setBlog({ ...blog, content: data });
         setEditorState("publish");
@@ -102,7 +113,7 @@ const BlogEditor = () => {
       return toast.error("Write blog title before saving draft");
     }
 
-    const loadingToast = toast.loading("Saving draft...");
+    const loadingToast = toast.loading("Saving your draft…");
     e.target.classList.add("disable");
 
     if (textEditor.isReady) {
@@ -128,7 +139,7 @@ const BlogEditor = () => {
             .then(() => {
               e.target.classList.remove("disable");
               toast.dismiss(loadingToast);
-              toast.success("Saved 👍");
+              toast.success("Saved. You can come back anytime 👍");
               setTimeout(() => navigate("/"), 500);
             })
             .catch((err) => {
@@ -155,7 +166,6 @@ const BlogEditor = () => {
 
   return (
     <>
-      <Toaster />
       {/* Top Navbar */}
       <nav className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-white sticky top-0 z-40 flex-wrap gap-4">
         {/* Logo */}
@@ -177,13 +187,13 @@ const BlogEditor = () => {
             className="bg-purple text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-purple/90 transition"
             onClick={handlePublishEvent}
           >
-            Publish
+            Publish Blog
           </button>
           <button
             className="bg-gray-200 text-gray-700 px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-300 transition"
             onClick={handleSaveDraft}
           >
-            Save Draft
+            Save for later
           </button>
         </div>
       </nav>
@@ -192,14 +202,28 @@ const BlogEditor = () => {
         <section className=" py-6 px-4 sm:px-8 md:px-12">
           <div className="mx-auto max-w-[900px] w-full">
             {/* Banner Upload */}
-            <div className="relative aspect-video border-4 border-gray-200 bg-white rounded-md overflow-hidden group">
-              <label htmlFor="uploadBanner" className="cursor-pointer">
+            <div className="relative aspect-video border-4 border-dashed border-gray-300 bg-gray-50 rounded-md overflow-hidden group cursor-pointer">
+              <label
+                htmlFor="uploadBanner"
+                className="w-full h-full block relative"
+              >
+                {/* Image */}
                 <img
                   src={blog.banner || defaultBanner}
-                  alt="Blog Banner"
-                  className="w-full h-full object-cover group-hover:opacity-80 transition"
+                  alt="Cover image for your blog post"
+                  className="w-full h-full object-contain group-hover:opacity-70 transition"
                   onError={handleError}
                 />
+
+                {/* Overlay (ALWAYS visible if no banner) */}
+                {!blog.banner && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 translate-y-10">
+                    <div className="text-3xl mb-2">＋</div>
+                    <p className="text-sm">Add a cover image to your post</p>
+                  </div>
+                )}
+
+                {/* Input */}
                 <input
                   id="uploadBanner"
                   type="file"
@@ -221,7 +245,6 @@ const BlogEditor = () => {
 
             {/* Divider */}
             <hr className="w-full border-gray-300 opacity-30 mb-5" />
-
             {/* EditorJS Mount Point */}
             <div id="textEditor" className="font-gelasio"></div>
           </div>

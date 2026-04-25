@@ -1,6 +1,6 @@
 import { useContext, useState } from "react";
 import { UserContext } from "../../App";
-import { toast, Toaster } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import axios from "axios";
 import { BlogContext } from "../../pages/blog.page";
 import { COMMENT_API } from "../../common/api";
@@ -112,7 +112,6 @@ const CommentField = ({ action, replyingTo, onCommentAdded }) => {
 
   return (
     <>
-      <Toaster />
       <div className="space-y-4">
         {/* User info for replies */}
         {replyingTo && userAuth.profile_img && (

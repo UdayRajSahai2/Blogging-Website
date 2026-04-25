@@ -7,8 +7,17 @@ import UserNavigationPanel from "./user-navigation.component";
 import axios from "axios";
 import { NOTIFICATION_API } from "../../common/api";
 import NotificationPanel from "../notification/notification-panel.component";
-
-const Navbar = ({ onInterestClick, activeInterest }) => {
+import NavbarMenu from "./NavbarMenu";
+import menuData from "./menuData";
+import {
+  MagnifyingGlassIcon,
+  PencilSquareIcon,
+  ChatBubbleLeftIcon,
+  BellIcon,
+  HeartIcon,
+  ShoppingCartIcon,
+} from "@heroicons/react/24/outline";
+const Navbar = ({ onInterestClick, activeInterest, profile }) => {
   const [searchBoxVisibility, setSearchBoxVisibility] = useState(false);
   const [userNavPanel, setUserNavPanel] = useState(false);
   const notificationRef = useRef(null);
@@ -93,35 +102,6 @@ const Navbar = ({ onInterestClick, activeInterest }) => {
     setTimeout(() => setUserNavPanel(false), 200);
   };
 
-  // Combined interests + categories
-  const tags = [
-    "Programming",
-    "Hollywood",
-    "Anime",
-    "Film making",
-    "Social Media",
-    "Cooking",
-    "Tech",
-    "Finances",
-    "Travel",
-    "Food",
-    "Connect to people",
-    "Science & Technology",
-    "Health & Nutrition",
-    "Sports",
-    "Political",
-    "Social",
-    "News",
-    "Celebrity talk",
-  ];
-
-  const handleTagClick = (tag) => {
-    const formattedTag = tag.toLowerCase();
-    if (onInterestClick) {
-      onInterestClick(formattedTag);
-    }
-  };
-
   return (
     <>
       {/* Top Banner */}
@@ -129,187 +109,346 @@ const Navbar = ({ onInterestClick, activeInterest }) => {
         REACH Foundation - Build Your Community & Share Your Voice{" "}
       </div> */}
       <nav className="bg-white shadow-md sticky top-0 z-50">
-        <div className="max-w-full mx-auto px-1 sm:px-6">
-          {/* MAIN NAVBAR */}
-          <div className="flex items-center justify-between h-14">
-            {/* LEFT → LOGO */}
-            <Link
-              to="/"
-              className="flex items-center gap-3 leading-none hover:opacity-90 transition"
-            >
+        <div className="w-full max-w-full px-0 md:px-2">
+          {/* ================= DESKTOP (UNCHANGED) ================= */}
+          <div className="hidden md:flex mt-1 items-start justify-between h-20">
+            {/* ================= LEFT → LOGO ================= */}
+            <Link to="/" className="flex items-start gap-2 shrink-0 -ml-4">
               <img
                 src={logo}
-                className="w-12 h-12 object-contain"
+                className="w-10 h-10 md:w-[92px] md:h-[92px] object-contain -mt-2"
                 alt="REACH Foundation"
               />
-              <span className="text-sm sm:text-lg font-bold text-purple tracking-tight whitespace-nowrap">
+
+              <span className="hidden md:block text-lg font-bold text-purple mt-4">
                 REACH{" "}
-                <span className="font-medium text-gray-600 hidden sm:inline">
-                  Foundation
-                </span>
+                <span className="text-gray-600 font-medium">Foundation</span>
               </span>
             </Link>
-
-            {/* CENTER → SEARCH (DESKTOP) */}
-            <div className="hidden sm:flex flex-1 max-w-md mx-6">
-              <div className="relative w-full">
+            {/* RIGHT SIDE (independent alignment) */}
+            <div className="flex items-center justify-end gap-4 flex-1">
+              {/* ================= SEARCH ================= */}
+              <div className="relative min-w-[160px] flex-1 max-w-[220px] md:max-w-md">
                 <input
                   type="text"
-                  placeholder="Search profiles, blogs..."
-                  className="w-full h-9 pl-10 pr-4 rounded-full border bg-gray-50 focus:ring-2 focus:ring-purple-500"
+                  placeholder="Search..."
+                  className="w-full h-8 md:h-10 pl-8 md:pl-10 pr-2 md:pr-4 text-xs md:text-sm rounded-full border bg-gray-50 focus:ring-2 focus:ring-purple-500"
                   onKeyDown={handleSearch}
                 />
-                <i className="fi fi-rr-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <MagnifyingGlassIcon className="w-4 h-4 md:w-5 md:h-5 text-gray-400 absolute left-2 md:left-3 top-1/2 -translate-y-1/2" />
               </div>
-            </div>
 
-            {/* CENTER → WELCOME (DESKTOP) */}
-            {access_token && fullname && (
-              <div className="hidden md:block text-sm text-cyan-700 font-medium whitespace-nowrap">
-                Hi, {fullname}
-                {userAuth.customer_id && (
-                  <span className="ml-1 text-cyan-600 text-xs">
-                    (CIF: {userAuth.customer_id})
-                  </span>
+              {/* ================= WELCOME ================= */}
+              {access_token && fullname && (
+                <div className="text-xs md:text-sm text-cyan-700 truncate max-w-[120px] md:max-w-none shrink-0">
+                  Welcome, {fullname}
+                  {userAuth.customer_id && (
+                    <span className="ml-1 text-cyan-600 text-xs hidden md:inline">
+                      (CIF: {userAuth.customer_id})
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* ================= SOCIAL ICONS ================= */}
+              <div className="flex items-center gap-[2px] shrink-0">
+                {/* ICONS */}
+                {[
+                  "youtube",
+                  "instagram",
+                  "facebook",
+                  "twitter",
+                  "github",
+                  "website",
+                  "whatsapp",
+                ].map((key) => {
+                  const link = profile?.details?.[key];
+
+                  const iconClass =
+                    key !== "website"
+                      ? `fi fi-brands-${key}`
+                      : "fi fi-rr-globe";
+
+                  return (
+                    <a
+                      key={key}
+                      href={link || undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => {
+                        if (!link) e.preventDefault();
+                      }}
+                      className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100 transition text-[11px]"
+                    >
+                      <i className={iconClass} />
+                    </a>
+                  );
+                })}
+
+                {/* CART (OUTSIDE MAP) */}
+                <button className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100 transition">
+                  <ShoppingCartIcon className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* ================= RIGHT ACTIONS ================= */}
+              <div className="flex items-center gap-1 md:gap-2 shrink-0">
+                {!access_token ? (
+                  <>
+                    <Link
+                      to="/signin"
+                      className="text-purple font-semibold text-xs md:text-sm px-1 md:px-2"
+                    >
+                      Login
+                    </Link>
+
+                    <Link
+                      to="/signup"
+                      className="bg-purple text-white px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-semibold"
+                    >
+                      Sign Up
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    {/* disabled in production */}
+                    {/* CHAT */}
+                    {/* <button
+              onClick={() => navigate("/chat")}
+              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition"
+            >
+            <ChatBubbleLeftIcon className="w-5 h-5 text-gray-700" />
+            </button> */}
+
+                    {/* POST */}
+                    <Link
+                      to="/editor"
+                      className="bg-purple text-white px-2 md:px-3 py-1 rounded-full text-xs md:text-sm flex items-center gap-1"
+                    >
+                      <PencilSquareIcon className="w-4 h-4 md:w-5 md:h-5" />
+                      <span className="hidden md:inline">Post blog</span>
+                    </Link>
+
+                    {/* NOTIFICATIONS */}
+                    <div className="relative" ref={notificationRef}>
+                      <button
+                        onClick={handleNotificationClick}
+                        className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center hover:bg-gray-100 rounded-full relative"
+                      >
+                        <BellIcon className="w-4 h-4 md:w-5 md:h-5 text-gray-700" />
+
+                        {notificationCount > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] md:text-[10px] px-1 rounded-full">
+                            {notificationCount > 99 ? "99+" : notificationCount}
+                          </span>
+                        )}
+                      </button>
+
+                      {showNotifications && (
+                        <NotificationPanel notifications={notifications} />
+                      )}
+                    </div>
+
+                    {/* PROFILE */}
+                    <div
+                      className="relative"
+                      onClick={handleUserNavPanel}
+                      onBlur={handleBlur}
+                    >
+                      <button className="w-8 h-8 md:w-8 md:h-8 rounded-full overflow-hidden ring-2 ring-purple-400 ring-offset-2 ring-offset-white">
+                        <img
+                          src={profile_img}
+                          className="w-full h-full object-cover"
+                          alt="Profile"
+                        />
+                      </button>
+
+                      {userNavPanel && <UserNavigationPanel />}
+                    </div>
+                  </>
                 )}
               </div>
-            )}
+            </div>
+          </div>
+          {/* ================= MOBILE ================= */}
+          <div className="md:hidden">
+            {/*  ROW 1 */}
+            <div className="flex items-center justify-between min-w-0 px-2">
+              {/* LOGO */}
+              <Link to="/" className="flex items-center gap-2">
+                <img src={logo} className="w-14 h-14 object-contain" />
+                <span className="text-base font-bold text-purple whitespace-nowrap">
+                  REACH{" "}
+                  <span className="font-medium text-gray-600">Foundation</span>
+                </span>
+              </Link>
 
-            {/* RIGHT → ACTIONS */}
-            <div className="flex items-center gap-2">
-              {/* MOBILE SEARCH */}
-              <button
-                className="sm:hidden w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition"
-                onClick={() => setSearchBoxVisibility(!searchBoxVisibility)}
-              >
-                <i className="fi fi-rr-search text-xl text-gray-700"></i>
-              </button>
-
-              {!access_token ? (
-                <>
-                  <Link
-                    to="/signin"
-                    className="text-purple font-semibold text-sm px-2"
-                  >
-                    Login
-                  </Link>
-
-                  <Link
-                    to="/signup"
-                    className="bg-purple text-white px-3 py-1.5 rounded-full text-sm font-semibold"
-                  >
-                    Sign Up
-                  </Link>
-                </>
-              ) : (
-                <>
-                  {/* POST */}
-                  <Link
-                    to="/editor"
-                    className="hidden sm:flex bg-purple text-white px-3 py-1.5 rounded-full text-sm items-center gap-1"
-                  >
-                    <i className="fi fi-rr-edit"></i>
-                    Post
-                  </Link>
-
-                  {/* CHAT */}
-                  <button
-                    onClick={() => navigate("/chat")}
-                    className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition"
-                  >
-                    <i className="fi fi-rr-comment text-xl text-gray-700"></i>
-                  </button>
-
-                  {/* NOTIFICATIONS */}
-                  <div className="relative" ref={notificationRef}>
-                    <button
-                      onClick={handleNotificationClick}
-                      className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition relative"
+              {/* ACTIONS */}
+              <div className="flex md:hidden items-center">
+                {!access_token ? (
+                  <>
+                    <Link
+                      to="/signin"
+                      className="text-purple font-semibold text-xs px-2"
                     >
-                      <i className="fi fi-rr-bell text-xl text-gray-700"></i>
+                      Login
+                    </Link>
 
-                      {notificationCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1 rounded-full">
-                          {notificationCount > 99 ? "99+" : notificationCount}
-                        </span>
+                    <Link
+                      to="/signup"
+                      className="bg-purple text-white px-2 py-1 rounded-full text-xs"
+                    >
+                      Sign Up
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    {/* POST */}
+                    <Link
+                      to="/editor"
+                      className="flex items-center gap-1 bg-purple text-white px-2 py-[2px] rounded-full text-[10px] whitespace-nowrap shrink-0"
+                    >
+                      <PencilSquareIcon className="w-3 h-3" />
+                      <span className="hidden xs:inline">Post</span>
+                    </Link>
+
+                    {/* SEARCH ICON */}
+                    <div className="relative">
+                      {/* SEARCH ICON */}
+                      <button
+                        onClick={() => setSearchBoxVisibility((prev) => !prev)}
+                        className="w-7 h-7 flex items-center justify-center"
+                      >
+                        <MagnifyingGlassIcon className="w-4 h-4 text-gray-700" />
+                      </button>
+
+                      {/* SEARCH DROPDOWN */}
+                      {searchBoxVisibility && (
+                        <div className="absolute right-0 top-full mt-2 w-[220px] z-50">
+                          <div className="relative">
+                            <form
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                const query = e.target.search.value.trim();
+
+                                if (query.length < 3) return;
+
+                                navigate(
+                                  `/search/${encodeURIComponent(query)}`,
+                                );
+                                setSearchBoxVisibility(false);
+                              }}
+                            >
+                              <input
+                                name="search"
+                                type="search"
+                                enterKeyHint="search"
+                                placeholder="Search blogs,profiles..."
+                                className="w-full h-8 pl-8 pr-2 text-xs rounded-full border bg-white shadow-md"
+                                autoFocus
+                              />
+                            </form>
+                          </div>
+                        </div>
                       )}
+                    </div>
+                    {/* CART */}
+                    <button className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100 transition">
+                      <ShoppingCartIcon className="w-4 h-4" />
                     </button>
 
-                    {showNotifications && (
-                      <NotificationPanel notifications={notifications} />
-                    )}
-                  </div>
+                    {/* NOTIFICATION */}
+                    <div className="relative" ref={notificationRef}>
+                      <button
+                        onClick={handleNotificationClick}
+                        className="w-8 h-8 flex items-center justify-center relative"
+                      >
+                        <BellIcon className="w-4 h-4" />
 
-                  {/* PROFILE */}
-                  <div
-                    className="relative"
-                    onClick={handleUserNavPanel}
-                    onBlur={handleBlur}
-                  >
-                    <button className="w-10 h-10 rounded-full overflow-hidden border hover:shadow-sm transition">
+                        {notificationCount > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] px-1 rounded-full">
+                            {notificationCount > 99 ? "99+" : notificationCount}
+                          </span>
+                        )}
+                      </button>
+
+                      {showNotifications && (
+                        <NotificationPanel notifications={notifications} />
+                      )}
+                    </div>
+
+                    {/* PROFILE */}
+                    <div
+                      onClick={handleUserNavPanel}
+                      onBlur={handleBlur}
+                      className="relative"
+                    >
                       <img
                         src={profile_img}
-                        className="w-full h-full object-cover"
-                        alt="Profile"
+                        className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden ring-2 ring-purple-400 ring-offset-2 ring-offset-white"
                       />
-                    </button>
-
-                    {userNavPanel && <UserNavigationPanel />}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* MOBILE SEARCH */}
-          {searchBoxVisibility && (
-            <div className="sm:hidden pb-2">
-              <input
-                type="text"
-                placeholder="Search..."
-                className="w-full h-9 px-3 border rounded-full"
-                onKeyDown={handleSearch}
-              />
-            </div>
-          )}
-
-          {/* MOBILE WELCOME */}
-          {access_token && fullname && (
-            <div className="md:hidden text-center text-xs text-cyan-700 pb-2">
-              Welcome, {fullname.split(" ")[0]}
-              {userAuth.customer_id && (
-                <span className="ml-1 text-cyan-600">
-                  (CIF: {userAuth.customer_id})
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* INTERESTS */}
-          <div className="border-t py-1">
-            <div className="flex gap-2 items-center">
-              <span className="font-bold text-red-500 flex items-center gap-1">
-                Interests <i className="fi fi-rr-heart"></i>
-              </span>
-
-              <div className="flex flex-wrap gap-2 max-h-[65px] overflow-y-auto">
-                {tags.map((tag, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleTagClick(tag)}
-                    className={`px-1 py-1 text-sm font-semibold text-white rounded-2xl ${
-                      activeInterest === tag.toLowerCase()
-                        ? "bg-black"
-                        : "bg-purple hover:bg-purple"
-                    }`}
-                  >
-                    {tag}
-                  </button>
-                ))}
+                      {userNavPanel && <UserNavigationPanel />}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
+
+            {/*  ROW 2 → WELCOME + CIF + SOCIAL ICONS */}
+            {access_token && fullname && (
+              <div className="flex items-center justify-between px-1 pb-1 gap-2">
+                {/* LEFT */}
+                <div className="text-[11px] text-cyan-700 truncate flex-1 min-w-0">
+                  Welcome, {fullname}
+                  {userAuth.customer_id && (
+                    <span className="ml-1 text-cyan-600 whitespace-nowrap">
+                      | CIF: {userAuth.customer_id}
+                    </span>
+                  )}
+                </div>
+
+                {/* RIGHT → Social Icons (small) */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {[
+                    "youtube",
+                    "instagram",
+                    "facebook",
+                    "twitter",
+                    "github",
+                    "website",
+                    "whatsapp",
+                  ].map((key) => {
+                    const link = profile?.details?.[key];
+
+                    const iconClass =
+                      key !== "website"
+                        ? `fi fi-brands-${key}`
+                        : "fi fi-rr-globe";
+
+                    return (
+                      <a
+                        key={key}
+                        href={link || undefined}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => {
+                          if (!link) e.preventDefault();
+                        }}
+                        className="w-1 h-1 flex items-center justify-center rounded-full bg-gray-100 text-[9px] flex-shrink-0"
+                      >
+                        <i className={iconClass} />
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* MENU */}
+          <NavbarMenu menuData={menuData} />
         </div>
+        <div></div>
       </nav>
     </>
   );

@@ -1,13 +1,9 @@
 // src/common/api.js
 
-const RAW_BASE_URL = import.meta.env.VITE_SERVER_DOMAIN;
+const RAW_BASE_URL = import.meta.env.VITE_SERVER_DOMAIN || "";
 
-if (!RAW_BASE_URL) {
-  throw new Error("❌ VITE_SERVER_DOMAIN is missing in environment variables");
-}
-
-// remove trailing slash safely
-const BASE_URL = RAW_BASE_URL.replace(/\/$/, "");
+// fallback to same domain in production
+const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/$/, "") : "";
 
 export const AUTH_API = `${BASE_URL}/api/auth`;
 export const BLOG_API = `${BASE_URL}/api/blog`;

@@ -13,7 +13,7 @@ export const addComment = async (req, res) => {
   }
 
   const { blog_id, comment, replying_to } = req.body;
-  const user_id = req.userId;
+  const user_id = req.user.id;
 
   // Validate input
   if (!blog_id || typeof blog_id !== "string") {
@@ -625,7 +625,7 @@ export const deleteComment = async (req, res) => {
   }
 
   const { comment_id } = req.body;
-  const user_id = req.userId;
+  const user_id = req.user.id;
 
   if (!comment_id || typeof comment_id !== "string") {
     return res.status(400).json({

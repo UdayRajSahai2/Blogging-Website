@@ -1,102 +1,121 @@
 import React from "react";
-import { LinkIcon } from "@heroicons/react/24/outline";
+import { LinkIcon, GlobeAltIcon, PhoneIcon } from "@heroicons/react/24/outline";
+import {
+  FaYoutube,
+  FaInstagram,
+  FaFacebook,
+  FaXTwitter,
+  FaGithub,
+} from "react-icons/fa6";
 
 const SocialLinksSection = ({ profile, setProfile }) => {
   const socialKeys = [
-    { key: "youtube", icon: "fi-brands-youtube" },
-    { key: "instagram", icon: "fi-brands-instagram" },
-    { key: "facebook", icon: "fi-brands-facebook" },
-    { key: "twitter", icon: "fi-brands-twitter" },
-    { key: "github", icon: "fi-brands-github" },
-    { key: "whatsapp", icon: "fi-brands-whatsapp" },
-    { key: "website", icon: "fi-rr-globe" },
+    { key: "youtube", label: "YouTube", Icon: FaYoutube },
+    { key: "instagram", label: "Instagram", Icon: FaInstagram },
+    { key: "facebook", label: "Facebook", Icon: FaFacebook },
+    { key: "twitter", label: "Twitter", Icon: FaXTwitter },
+    { key: "github", label: "GitHub", Icon: FaGithub },
+    { key: "whatsapp", label: "WhatsApp", Icon: PhoneIcon },
+    { key: "website", label: "Website", Icon: GlobeAltIcon },
   ];
 
+  const placeholders = {
+    youtube: "youtube.com/@channel",
+    instagram: "instagram.com/username",
+    facebook: "facebook.com/username",
+    twitter: "x.com/username",
+    github: "github.com/username",
+    whatsapp: "9876543210",
+    website: "yourwebsite.com",
+  };
+
+  const baseUrls = {
+    youtube: "https://youtube.com/",
+    instagram: "https://instagram.com/",
+    facebook: "https://facebook.com/",
+    twitter: "https://x.com/",
+    github: "https://github.com/",
+  };
+
   const handleChange = (key, value) => {
-    let newValue = value;
+    let val = value;
 
-    // ✅ WhatsApp: allow only digits (max 10)
     if (key === "whatsapp") {
-      newValue = value.replace(/\D/g, "").slice(0, 10);
-    }
-
-    // ✅ Convert empty string → undefined (IMPORTANT)
-    if (newValue === "") {
-      newValue = undefined;
+      val = value.replace(/\D/g, "").slice(-10);
     }
 
     setProfile((prev) => ({
       ...prev,
       details: {
-        ...prev.details,
-        [key]: newValue,
+        ...(prev.details || {}),
+        [key]: val,
       },
     }));
   };
 
   const handleBlur = (key, value) => {
-    //  Auto-add https:// for URLs
-    const urlFields = [
-      "youtube",
-      "instagram",
-      "facebook",
-      "twitter",
-      "github",
-      "website",
-    ];
+    if (!value) return;
 
-    if (value && urlFields.includes(key)) {
-      let formatted = value;
+    let val = value.trim();
 
-      if (!formatted.startsWith("http")) {
-        formatted = `https://${formatted}`;
+    if (key === "whatsapp") {
+      if (/^\d{10}$/.test(val)) {
+        val = `https://wa.me/91${val}`;
       }
-
-      setProfile((prev) => ({
-        ...prev,
-        details: {
-          ...prev.details,
-          [key]: formatted,
-        },
-      }));
+    } else if (key === "website") {
+      if (!val.startsWith("http")) {
+        val = `https://${val}`;
+      }
+    } else {
+      if (!val.startsWith("http")) {
+        val = baseUrls[key] + val.replace(/^@/, "");
+      }
     }
+
+    setProfile((prev) => ({
+      ...prev,
+      details: {
+        ...(prev.details || {}),
+        [key]: val,
+      },
+    }));
   };
 
   return (
-    <div className="bg-gray-50 rounded-lg p-2">
-      <div className="flex items-center gap-2 mb-2">
-        <LinkIcon className="w-4 h-4 text-indigo-500" />
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+    <div className="bg-gray-50 rounded-xl p-4">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-4">
+        <LinkIcon className="w-5 h-5 text-indigo-500" />
+        <p className="text-sm font-semibold text-gray-600 uppercase">
           Social Links
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {socialKeys.map(({ key, icon }) => (
-          <div
-            key={key}
-            className="group flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 h-9 shadow-sm hover:shadow transition-all duration-200 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-100"
-          >
-            {/* ICON */}
-            <i
-              className={`${icon} text-gray-400 text-sm group-focus-within:text-indigo-500 transition`}
-            />
+      {/* Inputs */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {socialKeys.map(({ key, label, Icon }) => (
+          <div key={key}>
+            <div className="flex items-center gap-2 bg-white border rounded-full px-3 h-10 focus-within:ring-2 focus-within:ring-indigo-400">
+              <Icon className="w-4 h-4 text-gray-400" />
 
-            {/* INPUT */}
-            <input
-              type={key === "whatsapp" ? "tel" : "text"}
-              value={profile.details?.[key] || ""}
-              placeholder={
-                key === "whatsapp"
-                  ? "9876543210"
-                  : key === "website"
-                    ? "yourwebsite.com"
-                    : "@username"
-              }
-              onChange={(e) => handleChange(key, e.target.value)}
-              onBlur={(e) => handleBlur(key, e.target.value)}
-              className="w-24 sm:w-28 bg-transparent outline-none text-[13px] placeholder:text-gray-400"
-            />
+              <input
+                type={key === "whatsapp" ? "tel" : "text"}
+                value={profile?.details?.[key] || ""}
+                placeholder={placeholders[key]}
+                onChange={(e) => handleChange(key, e.target.value)}
+                onBlur={(e) => handleBlur(key, e.target.value)}
+                className="w-full bg-transparent outline-none text-sm"
+              />
+            </div>
+
+            {/* subtle helper text */}
+            <p className="text-[10px] text-gray-400 mt-1 ml-2">
+              {key === "whatsapp"
+                ? "Enter 10-digit whatsapp  number"
+                : key === "website"
+                  ? "Enter your website (e.g. mysite.com)"
+                  : "Username or profile link"}
+            </p>
           </div>
         ))}
       </div>

@@ -68,7 +68,7 @@ const HomeTopSection = ({ pageState }) => {
   const handleError = (err) => {
     console.error("Geolocation error:", err);
 
-    // 🔥 Timeout → retry with low accuracy
+    //  Timeout → retry with low accuracy
     if (err.code === 3) {
       navigator.geolocation.getCurrentPosition(
         handleSuccess,
@@ -82,7 +82,7 @@ const HomeTopSection = ({ pageState }) => {
       return;
     }
 
-    // 🔥 Permission denied or unavailable
+    //  Permission denied or unavailable
     useFallbackLocation();
   };
 

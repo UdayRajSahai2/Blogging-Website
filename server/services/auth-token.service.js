@@ -26,10 +26,10 @@ import jwt from "jsonwebtoken";
 // };
 
 export const generateAuthResponse = (user) => {
-  // 👤 Normalize roles
+  // Normalize roles
   const roles = user.Roles?.map((r) => r.role_name.toLowerCase()) || [];
 
-  // 🎯 Primary role
+  //  Primary role
   const primaryRoleObj = user.Roles?.find((r) => r.UserRole?.is_primary);
 
   const primary_role =
@@ -38,14 +38,14 @@ export const generateAuthResponse = (user) => {
   const payload = {
     user_id: user.user_id,
 
-    // 👤 Identity
+    //  Identity
     roles,
     primary_role,
 
-    // 🔐 Authority
+    //  Authority
     system_role: user.system_role?.toLowerCase(),
 
-    // 🔥 versioning (future-proof)
+    //  versioning (future-proof)
     role_version: user.role_version || 1,
   };
 

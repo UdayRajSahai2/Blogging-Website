@@ -4,7 +4,7 @@ import axios from "axios";
 import { profileDataStructure } from "./profile.page";
 import AnimationWrapper from "../../common/page-animation";
 import { getUserTypeFromOccupation } from "../../common/userType.utils";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 import { storeInSession } from "../../common/session";
 import {
@@ -30,7 +30,10 @@ const EditProfile = ({ onNext, isOnboarding }) => {
     userAuth: { access_token },
     setUserAuth,
   } = useContext(UserContext);
-
+  const salutationRef = useRef(null);
+  const bioRef = useRef(null);
+  const interestRef = useRef(null);
+  const addressRef = useRef(null);
   const [profile, setProfile] = useState(profileDataStructure);
   const [loading, setLoading] = useState(true);
   const [charactersLeft, setCharactersLeft] = useState(bioLimit);
@@ -130,13 +133,6 @@ const EditProfile = ({ onNext, isOnboarding }) => {
       setInterests([]);
     }
   };
-  useEffect(() => {
-    if (!access_token) return;
-
-    Promise.all([fetchProfile(), fetchInterests()]).finally(() =>
-      setLoading(false),
-    );
-  }, [access_token, userAuth.username]);
 
   const fetchSuggestions = async () => {
     const res = await axios.get(`${INTEREST_API}/tree`, {
@@ -212,22 +208,20 @@ const EditProfile = ({ onNext, isOnboarding }) => {
       () => setLoading(false),
     );
   }, [access_token, userAuth.username]);
+
   const handleImagePreview = (e) => {
     const img = e.target.files[0];
     if (img) setUpdatedProfileImg(img);
   };
 
-  const handleImageUpload = async (e) => {
-    e.preventDefault();
+  const handleImageUpload = async () => {
     if (!updatedProfileImg) return;
 
     const loadingToast = toast.loading("Uploading...");
-    if (uploadButtonRef.current)
-      uploadButtonRef.current.setAttribute("disabled", true);
 
     try {
       const {
-        data: { uploadURL },
+        data: { uploadURL, fileURL },
       } = await axios.get(`${UPLOAD_API}/get-upload-url`, {
         params: { fileType: updatedProfileImg.type },
         headers: { Authorization: `Bearer ${access_token}` },
@@ -237,8 +231,7 @@ const EditProfile = ({ onNext, isOnboarding }) => {
         headers: { "Content-Type": updatedProfileImg.type },
       });
 
-      const url = new URL(uploadURL);
-      const imageUrl = `${url.protocol}//${url.host}${url.pathname}`;
+      const imageUrl = fileURL; // critical
 
       await axios.post(
         `${USER_API}/update-profile-img`,
@@ -259,9 +252,6 @@ const EditProfile = ({ onNext, isOnboarding }) => {
       toast.dismiss(loadingToast);
       toast.error("Failed to upload image");
       console.error(err);
-    } finally {
-      if (uploadButtonRef.current)
-        uploadButtonRef.current.removeAttribute("disabled");
     }
   };
 
@@ -269,15 +259,16 @@ const EditProfile = ({ onNext, isOnboarding }) => {
     e.preventDefault();
 
     const newErrors = {};
-
-    if (!profile.details?.occupation_status) {
-      newErrors.occupation_status = "Occupation is required";
+    if (!profile.details?.salutation?.trim()) {
+      newErrors.salutation = "Title is required";
     }
 
     if (!profile.bio?.trim()) {
       newErrors.bio = "Bio is required";
     }
-
+    if (!profile.details?.occupation_status) {
+      newErrors.occupation_status = "Occupation is required";
+    }
     if (interests.length === 0) {
       newErrors.interests = "Select at least one interest";
     }
@@ -299,10 +290,26 @@ const EditProfile = ({ onNext, isOnboarding }) => {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
 
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
+      toast.error(
+        Object.values(newErrors)[0] || "Please complete required fields",
+      );
+
+      setTimeout(() => {
+        const firstError = document.querySelector("[data-error='true']");
+
+        if (firstError) {
+          firstError.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+
+          const input = firstError.querySelector("input, select, textarea");
+
+          input?.focus();
+        } else {
+          console.warn("No error element found");
+        }
+      }, 150);
 
       return;
     }
@@ -385,7 +392,7 @@ const EditProfile = ({ onNext, isOnboarding }) => {
         },
       );
 
-      // ✅ get fresh profile
+      //  get fresh profile
       const { data: updatedUser } = await axios.post(
         `${USER_API}/get-profile`,
         {
@@ -393,7 +400,7 @@ const EditProfile = ({ onNext, isOnboarding }) => {
         },
       );
 
-      // ✅ update auth (ONLY ONCE)
+      // update auth (ONLY ONCE)
       const updatedAuth = {
         ...userAuth,
         ...updatedUser,
@@ -419,9 +426,6 @@ const EditProfile = ({ onNext, isOnboarding }) => {
         },
       );
       toast.dismiss(loadingToast);
-
-      console.log("UPDATED USER:", updatedUser);
-      console.log("EMP STATUS:", updatedUser?.details?.occupation_status);
 
       setProfile((prev) => ({
         ...prev,
@@ -451,14 +455,6 @@ const EditProfile = ({ onNext, isOnboarding }) => {
     }
   };
 
-  useEffect(() => {
-    if (formSubmitted) {
-      window.scrollTo({
-        top: 300,
-        behavior: "smooth",
-      });
-    }
-  }, [formSubmitted]);
   const updateAddress = (type, field, value) => {
     setProfile((prev) => {
       const addresses = [...(prev.addresses || [])];
@@ -486,27 +482,52 @@ const EditProfile = ({ onNext, isOnboarding }) => {
   }, [profile]);
 
   const toggleLocationPrivacy = async () => {
+    if (!access_token) {
+      toast.error("Session expired. Please login again.");
+      return;
+    }
+
     try {
-      const { data } = await axios.post(
+      const res = await axios.post(
         `${USER_API}/toggle-location-privacy`,
-        { is_public: !isPublic },
+        {
+          //  MATCH BACKEND
+          is_public: Boolean(!isPublic),
+        },
         {
           headers: {
             Authorization: `Bearer ${access_token}`,
           },
         },
       );
-      // RESET onboarding success state
+
+      const data = res?.data;
+
+      if (!data) {
+        toast.error("Unexpected response from server");
+        return;
+      }
+
+      const updatedValue = data?.is_location_public;
+
       setFormSubmitted(false);
-      setIsPublic(data.is_location_public);
+      setIsPublic(updatedValue);
 
       toast.success(
-        data.is_location_public
-          ? "Location is now Public"
-          : "Location is now Private",
+        updatedValue ? "Location is now Public" : "Location is now Private",
       );
     } catch (err) {
-      toast.error("Failed to update privacy");
+      const message =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        "Failed to update privacy";
+
+      if (err?.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        return;
+      }
+
+      toast.error(message);
     }
   };
 
@@ -516,7 +537,6 @@ const EditProfile = ({ onNext, isOnboarding }) => {
         onSubmit={handleSubmit}
         className="w-full px-2 sm:px-2 lg:px-0 py-0"
       >
-        <Toaster />
         {isOnboarding && formSubmitted && (
           <div className="mb-2 p-3 rounded-lg bg-green-50 border border-green-300 shadow-md flex items-center justify-between gap-3 animate-fade-in">
             <p className="text-sm text-green-800 font-semibold">
@@ -554,6 +574,7 @@ const EditProfile = ({ onNext, isOnboarding }) => {
               profile={profile}
               setProfile={setProfile}
               access_token={access_token}
+              errors={errors}
             />
             <BioSection
               bio={bio}

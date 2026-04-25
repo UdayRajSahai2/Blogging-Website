@@ -1,4 +1,9 @@
 import AuthActionBox from "./AuthActionBox";
+import {
+  BoltIcon,
+  UserGroupIcon,
+  GlobeAltIcon,
+} from "@heroicons/react/24/outline";
 
 const AuthLeftActions = ({ type }) => {
   return (
@@ -7,7 +12,7 @@ const AuthLeftActions = ({ type }) => {
         <>
           <AuthActionBox
             to=""
-            icon="fi-rr-time-fast"
+            icon={<BoltIcon className="w-6 h-6" />}
             title="What's New"
             subtitle="See recent activity"
             gradient="from-indigo-600 to-purple-700"
@@ -16,7 +21,7 @@ const AuthLeftActions = ({ type }) => {
 
           <AuthActionBox
             to=""
-            icon="fi-rr-users"
+            icon={<UserGroupIcon className="w-6 h-6" />}
             title="Your Network"
             subtitle="People you connected with"
             gradient="from-green-600 to-emerald-700"
@@ -27,7 +32,7 @@ const AuthLeftActions = ({ type }) => {
         <>
           <AuthActionBox
             to=""
-            icon="fi-rr-users"
+            icon={<UserGroupIcon className="w-6 h-6" />}
             title="Join as"
             subtitle="Student • NGO • Professional"
             gradient="from-indigo-600 to-purple-700"
@@ -36,7 +41,7 @@ const AuthLeftActions = ({ type }) => {
 
           <AuthActionBox
             to=""
-            icon="fi-rr-globe"
+            icon={<GlobeAltIcon className="w-6 h-6" />}
             title="Create Impact"
             subtitle="Start locally, grow globally"
             gradient="from-green-600 to-emerald-700"

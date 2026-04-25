@@ -28,22 +28,16 @@ const UserAddress = sequelize.define(
     street: DataTypes.STRING,
     city: DataTypes.STRING,
 
-    // ⚠️ KEEP (for now, backward compatibility)
+    //  KEEP (for now, backward compatibility)
     state: DataTypes.STRING,
     country: DataTypes.STRING,
 
     zip_code: DataTypes.STRING,
 
-    // geo
-    latitude: DataTypes.DECIMAL(10, 8),
-    longitude: DataTypes.DECIMAL(11, 8),
-
     // relation codes (REAL SOURCE OF TRUTH)
     country_code: DataTypes.STRING(3),
     state_code: DataTypes.STRING(2),
     district_code: DataTypes.STRING(4),
-    block_code: DataTypes.STRING(6),
-    village_code: DataTypes.STRING(6),
 
     is_primary: {
       type: DataTypes.BOOLEAN,

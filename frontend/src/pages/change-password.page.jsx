@@ -1,11 +1,11 @@
 import { useContext, useRef, useState } from "react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import AnimationWrapper from "../common/page-animation";
 import InputBox from "../components/input.component";
 import { UserContext } from "../App";
 import axios from "axios";
 import { AUTH_API } from "../common/api";
-
+import { LockOpenIcon } from "@heroicons/react/24/outline";
 const ChangePassword = () => {
   const {
     userAuth: { access_token },
@@ -71,7 +71,6 @@ const ChangePassword = () => {
 
   return (
     <AnimationWrapper>
-      <Toaster />
       <form ref={changePasswordForm} className="w-full max-w-md mx-auto p-6">
         <h1 className="text-2xl font-bold mb-6">Change Password</h1>
 
@@ -79,14 +78,14 @@ const ChangePassword = () => {
           name="currentPassword"
           type="password"
           placeholder="Current Password"
-          icon="fi-rr-unlock"
+          icon={<LockOpenIcon className="w-4 h-4" />}
         />
 
         <InputBox
           name="newPassword"
           type="password"
           placeholder="New Password"
-          icon="fi-rr-unlock"
+          icon={<LockOpenIcon className="w-4 h-4" />}
         />
 
         <button

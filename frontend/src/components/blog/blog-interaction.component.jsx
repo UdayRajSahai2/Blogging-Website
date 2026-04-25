@@ -2,10 +2,15 @@ import { useContext, useEffect } from "react";
 import { BlogContext } from "../../pages/blog.page";
 import { Link } from "react-router-dom";
 import { UserContext } from "../../App";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import axios from "axios";
 import { BLOG_API } from "../../common/api";
-
+import {
+  PencilIcon,
+  EyeIcon,
+  ChatBubbleLeftRightIcon,
+} from "@heroicons/react/24/outline";
+import { FaXTwitter } from "react-icons/fa6";
 const BlogInteraction = () => {
   const {
     blog,
@@ -116,7 +121,6 @@ const BlogInteraction = () => {
   /* ---------------- UI ---------------- */
   return (
     <>
-      <Toaster />
       <hr className="border-grey my-2" />
 
       <div className="flex justify-between items-center">
@@ -149,14 +153,14 @@ const BlogInteraction = () => {
                 ${commentsWrapper ? "bg-blue/20 text-blue" : "bg-grey/80"}
                 hover:bg-blue/20`}
             >
-              <i className="fi fi-rs-comment-dots text-xl"></i>
+              <ChatBubbleLeftRightIcon className="w-5 h-5 text-gray-600" />
             </button>
             <p className="text-xl text-dark-grey">{total_comments}</p>
           </div>
 
           {/* Reads (USES activity) */}
           <div className="flex gap-2 items-center">
-            <i className="fi fi-rr-eye text-xl text-dark-grey"></i>
+            <EyeIcon className="w-5 h-5 text-gray-500" />
             <p className="text-xl text-dark-grey">{total_reads}</p>
           </div>
         </div>
@@ -169,7 +173,7 @@ const BlogInteraction = () => {
               className="flex items-center gap-2 px-3 py-1.5 text-sm 
       border border-gray-200 rounded-lg hover:bg-gray-100 transition"
             >
-              <i className="fi fi-rr-edit text-sm"></i>
+              <PencilIcon className="w-5 h-5 text-gray-600" />
               Edit
             </Link>
           )}
@@ -180,7 +184,7 @@ const BlogInteraction = () => {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <i className="fi fi-brands-twitter"></i>
+            <FaXTwitter className="text-xl" />
           </a>
         </div>
       </div>

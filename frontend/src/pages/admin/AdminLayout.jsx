@@ -37,7 +37,7 @@ const AdminLayout = () => {
   }, []);
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 🔹 MOBILE HEADER (no duplicate title) */}
+      {/*  MOBILE HEADER (no duplicate title) */}
       <div className="md:hidden flex items-center justify-between p-3 border-b bg-white">
         <button
           onClick={() => setOpen(true)}
@@ -45,10 +45,9 @@ const AdminLayout = () => {
         >
           ☰
         </button>
-        <span className="text-sm">Menu</span>
       </div>
 
-      {/* 🔹 OVERLAY */}
+      {/* OVERLAY */}
       {open && (
         <div
           className="fixed inset-0 bg-black/40 z-40 md:hidden"
@@ -57,15 +56,17 @@ const AdminLayout = () => {
       )}
 
       <div className="flex">
-        {/* 🔹 SIDEBAR */}
+        {/*  SIDEBAR */}
         <aside
           className={`
-    fixed md:static top-16 left-0 z-40 w-64 border-r p-4
-    h-[calc(100vh-4rem)] md:h-auto
-    transform transition-transform duration-300
-    ${open ? "translate-x-0" : "-translate-x-full"}
-    md:translate-x-0
-  `}
+  fixed md:static top-16 left-0 z-40 w-64
+  bg-white border-r border-gray-200 shadow-sm
+  p-3 md:p-4
+  h-[calc(100vh-4rem)] md:h-auto
+  transform transition-transform duration-300
+  ${open ? "translate-x-0" : "-translate-x-full"}
+  md:translate-x-0
+`}
         >
           {/*  SMALL LABEL INSTEAD OF BIG TITLE */}
           <p className="text-xs text-gray-400 mb-4 px-2">ADMIN</p>

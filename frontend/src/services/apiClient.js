@@ -3,12 +3,10 @@
 import axios from "axios";
 import { lookInSession, removeFromSession } from "../common/session";
 
-/* BASE URL */
-const BASE_URL = import.meta.env.VITE_SERVER_DOMAIN;
+const RAW_BASE_URL = import.meta.env.VITE_SERVER_DOMAIN || "";
 
-if (!BASE_URL) {
-  throw new Error("VITE_SERVER_DOMAIN is not defined in environment variables");
-}
+// fallback to same domain in production
+const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/$/, "") : "";
 
 /* AXIOS INSTANCE */
 const apiClient = axios.create({
@@ -41,21 +39,12 @@ apiClient.interceptors.response.use(
 
     if (status === 401) {
       console.warn("Session expired. Please login again.");
-
-      /* optional auto logout */
       removeFromSession("user");
-
-      /* redirect to login */
       window.location.href = "/signin";
     }
 
-    if (status === 403) {
-      console.warn("Access denied.");
-    }
-
-    if (status === 500) {
-      console.error("Server error.");
-    }
+    if (status === 403) console.warn("Access denied.");
+    if (status === 500) console.error("Server error.");
 
     return Promise.reject(error);
   },

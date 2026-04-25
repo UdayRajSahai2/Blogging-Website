@@ -62,7 +62,7 @@ export const searchUsers = async (req, res) => {
 export const updateProfileImage = async (req, res) => {
   try {
     const { profile_img } = req.body;
-    const userId = req.userId;
+    const userId = req.user.id;
 
     console.log(
       "Updating profile image for user:",
@@ -248,7 +248,7 @@ export const updateProfile = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const userId = req.userId;
+    const userId = req.user.id;
 
     const {
       username,
@@ -383,7 +383,7 @@ export const updateProfile = async (req, res) => {
 export const updateLocation = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
-    const userId = req.userId;
+    const userId = req.user.id;
 
     if (typeof latitude !== "number" || typeof longitude !== "number") {
       return res.status(400).json({
@@ -425,7 +425,7 @@ export const updateLocation = async (req, res) => {
 // POST /toggle-location-privacy
 export const toggleLocationPrivacy = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user.id;
     const { is_public } = req.body;
     if (typeof is_public !== "boolean") {
       return res.status(400).json({ error: "is_public must be a boolean" });
@@ -596,34 +596,52 @@ export const findNearbyUsers = async (req, res) => {
     }
 
     //  ADD (IMPORTANT)
+    const safeArray = (data) => (Array.isArray(data) ? data : []);
+
     const usersWithExperiences = await Promise.all(
-      users.map(async (user) => {
-        const experiences = await getUserExperiences(user.user_id);
+      safeArray(users).map(async (user) => {
+        const plainUser = user?.toJSON ? user.toJSON() : user || {};
+
+        const experiencesRaw = await getUserExperiences(plainUser.user_id);
 
         return {
-          ...user.toJSON(),
-          experiences: Array.isArray(experiences)
-            ? experiences.map((exp) => exp.toJSON())
-            : [],
+          ...plainUser,
+
+          // ensure always object
+          details: plainUser.details || {},
+
+          // ensure always array
+          experiences: safeArray(experiencesRaw).map((exp) =>
+            exp?.toJSON ? exp.toJSON() : exp,
+          ),
+
+          //  prevent toFixed crash
+          distance:
+            plainUser.distance != null ? Number(plainUser.distance) : null,
         };
       }),
     );
 
     // REPLACE RETURN
     return res.status(200).json({
-      users: usersWithExperiences,
-      count: usersWithExperiences.length,
+      success: true,
+      users: usersWithExperiences || [],
+      count: usersWithExperiences?.length || 0,
       search_radius: radius_km,
     });
   } catch (error) {
     console.error("Error finding nearby users:", error);
-    return res.status(500).json({ error: "Failed to find nearby users" });
+    return res.status(500).json({
+      success: false,
+      users: [],
+      error: "Failed to find nearby users",
+    });
   }
 };
 
 export const sendMobileUpdateOtp = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user.id;
     const { mobile_number } = req.body;
 
     if (!mobile_number) {
@@ -666,7 +684,7 @@ export const sendMobileUpdateOtp = async (req, res) => {
 };
 export const verifyMobileUpdateOtp = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user.id;
     const { otp } = req.body;
 
     const user = await User.findByPk(userId);

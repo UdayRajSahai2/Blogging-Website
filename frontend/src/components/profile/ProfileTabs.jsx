@@ -5,7 +5,11 @@ import NoDataMessage from "../nodata.component.jsx";
 import LoadMoreDataBtn from "../load-more.component.jsx";
 import Loader from "../loader.component.jsx";
 import AnimationWrapper from "../../common/page-animation.jsx";
-
+import {
+  UserIcon,
+  DocumentTextIcon,
+  HeartIcon,
+} from "@heroicons/react/24/outline";
 /* ---------------- PROFILE TABS ---------------- */
 
 const ProfileTabs = ({
@@ -36,7 +40,7 @@ const ProfileTabs = ({
                 : "text-gray-500 hover:text-gray-800"
             }`}
           >
-            <i className="fi fi-rr-user text-sm"></i>
+            <UserIcon className="w-4 h-4 text-gray-500 group-hover:text-indigo-600" />
             About
             {tab === "about" && (
               <span className="absolute left-0 bottom-0 w-full h-[2px] bg-indigo-600"></span>
@@ -52,7 +56,7 @@ const ProfileTabs = ({
                 : "text-gray-500 hover:text-gray-800"
             }`}
           >
-            <i className="fi fi-rr-document text-sm"></i>
+            <DocumentTextIcon className="w-4 h-4 text-gray-500 group-hover:text-indigo-600" />
             Blogs
             {tab === "blogs" && (
               <span className="absolute left-0 bottom-0 w-full h-[2px] bg-indigo-600"></span>
@@ -69,7 +73,7 @@ const ProfileTabs = ({
                   : "text-gray-500 hover:text-gray-800"
               }`}
             >
-              <i className="fi fi-rr-hand-holding-heart text-sm"></i>
+              <HeartIcon className="w-4 h-4 text-gray-500 group-hover:text-indigo-600" />
               Donor
               {tab === "donor" && (
                 <span className="absolute left-0 bottom-0 w-full h-[2px] bg-indigo-600"></span>

@@ -3,6 +3,7 @@
 import Blog from "../../models/blog/Blog.js";
 import Comment from "../../models/blog/Comment.js";
 import Donation from "../../models/Donation.js";
+import Donor from "../../models/Donor.js";
 import User from "../../models/user/User.js";
 import Role from "../../models/roles/Role.js";
 import UserRole from "../../models/roles/UserRole.js";
@@ -171,7 +172,7 @@ export const deleteUser = async (req, res) => {
     }
 
     // prevent self delete
-    if (Number(id) === req.userId) {
+    if (Number(id) === req.user.id) {
       return res.status(400).json({
         success: false,
         message: "You cannot delete your own account",
@@ -191,7 +192,7 @@ export const deleteUser = async (req, res) => {
     await user.save();
 
     console.log("ADMIN ACTION:", {
-      adminId: req.userId,
+      adminId: req.user.id,
       action: "delete_user",
       targetUserId: id,
       timestamp: new Date(),
@@ -203,6 +204,95 @@ export const deleteUser = async (req, res) => {
     });
   } catch (err) {
     console.error("ADMIN delete user error:", err);
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
+export const deleteUserPermanent = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({ success: false, message: "Invalid ID" });
+    }
+
+    if (Number(id) === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete yourself",
+      });
+    }
+
+    const user = await User.findByPk(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    //  Safety: only allow permanent delete after soft delete
+    if (!user.is_deleted) {
+      return res.status(400).json({
+        success: false,
+        message: "User must be soft deleted first",
+      });
+    }
+
+    /* ============================================================
+       IMPORTANT: FINANCIAL DATA SAFETY HANDLING
+
+       Users may be linked to donation records via Donor.
+
+       We CANNOT delete donation records because:
+       - Financial history must be preserved (audit/compliance)
+       - Foreign key constraint (Donor → Donation is RESTRICT)
+       - Direct deletion will FAIL and break the system
+
+       Solution:
+       - Remove donor_id reference from donations
+       - Delete donor profile
+       - Then safely delete user
+
+       This ensures:
+       ✔ No data loss (donations remain)
+       ✔ No DB constraint errors
+       ✔ Clean user removal
+    ============================================================ */
+
+    const donor = await Donor.findOne({ where: { user_id: id } });
+
+    if (donor) {
+      // Detach financial records (preserve donation history)
+      await Donation.update(
+        { donor_id: null },
+        { where: { donor_id: donor.id } },
+      );
+
+      //  Remove donor profile
+      await donor.destroy();
+    }
+
+    //  Finally delete user (CASCADE handles rest)
+    await user.destroy();
+
+    console.log("ADMIN ACTION:", {
+      adminId: req.user.id,
+      action: "permanent_delete_user",
+      targetUserId: id,
+      timestamp: new Date(),
+    });
+
+    return res.json({
+      success: true,
+      message: "User permanently deleted",
+    });
+  } catch (err) {
+    console.error("Permanent delete error:", err);
     return res.status(500).json({
       success: false,
       error: err.message,
@@ -233,7 +323,7 @@ export const updateUserRole = async (req, res) => {
     }
 
     // prevent self role change
-    if (Number(id) === req.userId) {
+    if (Number(id) === req.user.id) {
       return res.status(400).json({
         success: false,
         message: "You cannot change your own role",
@@ -267,7 +357,7 @@ export const updateUserRole = async (req, res) => {
     await user.save();
 
     console.log("ADMIN ACTION:", {
-      adminId: req.userId,
+      adminId: req.user.id,
       action: "update_user_role",
       targetUserId: id,
       newRole: system_role,
@@ -319,7 +409,7 @@ export const getAllBlogs = async (req, res) => {
         {
           model: User,
           as: "blogAuthor",
-          attributes: ["user_id", "fullname", "email"],
+          attributes: ["user_id", "fullname", "email", "username"],
         },
       ],
       order: [["createdAt", "DESC"]],
@@ -349,6 +439,7 @@ export const getAllBlogs = async (req, res) => {
 /* =========================
    DELETE BLOG (SOFT)
 ========================= */
+// SOFT DELETE
 export const deleteBlogAdmin = async (req, res) => {
   try {
     const { id } = req.params;
@@ -377,7 +468,46 @@ export const deleteBlogAdmin = async (req, res) => {
       message: "Blog soft deleted",
     });
   } catch (err) {
-    console.error("ADMIN delete blog error:", err);
+    console.error("Soft delete error:", err);
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
+// HARD DELETE (PERMANENT)
+export const deleteBlogPermanent = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const blog = await Blog.findByPk(id);
+
+    if (!blog) {
+      return res.status(404).json({
+        success: false,
+        message: "Blog not found",
+      });
+    }
+
+    // Safety check (BEST PRACTICE)
+    if (!blog.is_deleted) {
+      return res.status(400).json({
+        success: false,
+        message: "Soft delete first before permanent delete",
+      });
+    }
+
+    await Blog.destroy({
+      where: { blog_id: id }, // IMPORTANT: your PK
+    });
+
+    return res.json({
+      success: true,
+      message: "Blog permanently deleted",
+    });
+  } catch (err) {
+    console.error("Hard delete error:", err);
     return res.status(500).json({
       success: false,
       error: err.message,
@@ -435,7 +565,7 @@ export const updateBlogStatus = async (req, res) => {
     }
 
     blog.reviewed_at = new Date();
-    blog.reviewed_by = req.userId || null;
+    blog.reviewed_by = req.user.id || null;
 
     await blog.save();
 
@@ -454,7 +584,7 @@ export const updateBlogStatus = async (req, res) => {
 };
 
 /* =========================
-   RESTORE BLOG
+   RESTORE BLOG (ADMIN)
 ========================= */
 export const restoreBlogAdmin = async (req, res) => {
   try {
@@ -466,6 +596,14 @@ export const restoreBlogAdmin = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Blog not found",
+      });
+    }
+
+    //  Prevent restoring active blogs
+    if (!blog.is_deleted) {
+      return res.status(400).json({
+        success: false,
+        message: "Blog is already active",
       });
     }
 

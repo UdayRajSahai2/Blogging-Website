@@ -160,7 +160,7 @@ const MyBlogs = () => {
                       src={blog.banner}
                       alt="blog banner"
                       loading="lazy"
-                      className="w-full h-full object-cover"
+                      className="w-full aspect-[16/9] object-fill transition-transform duration-700 group-hover:scale-105"
                     />
                   </div>
                   {/* CONTENT */}

@@ -1,60 +1,70 @@
 import AuthActionBox from "./AuthActionBox";
+import {
+  FireIcon,
+  BellIcon,
+  UserPlusIcon,
+  StarIcon,
+  UserGroupIcon,
+  GlobeAltIcon,
+  LightBulbIcon,
+  HeartIcon,
+} from "@heroicons/react/24/outline";
 
 const AuthBottomActions = ({ type }) => {
   return (
-    <div className="grid grid-cols-4 gap-3 mt-1">
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-1 mt-1">
       {type === "sign-in" ? (
         <>
           <AuthActionBox
-            icon="fi-rr-fire"
+            icon={<FireIcon className="w-5 h-5" />}
             title="Trending"
             subtitle="Hot topics"
-            height="h-[120px]"
+            height="h-[90px] sm:h-[110px] md:h-[120px]"
           />
           <AuthActionBox
-            icon="fi-rr-bell"
+            icon={<BellIcon className="w-5 h-5" />}
             title="Updates"
             subtitle="New activity"
-            height="h-[120px]"
+            height="h-[90px] sm:h-[110px] md:h-[120px]"
           />
           <AuthActionBox
-            icon="fi-rr-user-add"
+            icon={<UserPlusIcon className="w-5 h-5" />}
             title="Connections"
             subtitle="New requests"
-            height="h-[120px]"
+            height="h-[90px] sm:h-[110px] md:h-[120px]"
           />
           <AuthActionBox
-            icon="fi-rr-star"
+            icon={<StarIcon className="w-5 h-5" />}
             title="Highlights"
             subtitle="Top contributions"
-            height="h-[120px]"
+            height="h-[90px] sm:h-[110px] md:h-[120px]"
           />
         </>
       ) : (
         <>
           <AuthActionBox
-            icon="fi-rr-users"
+            icon={<UserGroupIcon className="w-5 h-5" />}
             title="10K+"
             subtitle="Active users"
-            height="h-[120px]"
+            height="h-[90px] sm:h-[110px] md:h-[120px]"
           />
           <AuthActionBox
-            icon="fi-rr-globe"
+            icon={<GlobeAltIcon className="w-5 h-5" />}
             title="50+"
             subtitle="Cities connected"
-            height="h-[120px]"
+            height="h-[90px] sm:h-[110px] md:h-[120px]"
           />
           <AuthActionBox
-            icon="fi-rr-lightbulb"
+            icon={<LightBulbIcon className="w-5 h-5" />}
             title="500+"
             subtitle="Projects created"
-            height="h-[120px]"
+            height="h-[90px] sm:h-[110px] md:h-[120px]"
           />
           <AuthActionBox
-            icon="fi-rr-heart"
+            icon={<HeartIcon className="w-5 h-5" />}
             title="Real Impact"
             subtitle="Stories that matter"
-            height="h-[120px]"
+            height="h-[90px] sm:h-[110px] md:h-[120px]"
           />
         </>
       )}

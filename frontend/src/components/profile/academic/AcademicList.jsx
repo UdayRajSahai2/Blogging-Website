@@ -2,9 +2,81 @@ import { useState } from "react";
 
 const AcademicCard = ({ item, isOwner }) => {
   const [expanded, setExpanded] = useState(false);
+  const showInstitute =
+    item.institute_name &&
+    item.institute_name.toLowerCase() !== item.title?.toLowerCase();
+  // Capitalize first letter of each word
+  const toTitleCase = (text = "") =>
+    text
+      .toLowerCase()
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
 
+  // Handle abbreviations like b.sc → B.Sc
+  const formatAbbreviation = (text = "") => {
+    if (!text) return "";
+
+    return text
+      .split(" ")
+      .map((word) => {
+        // If contains dot → treat as abbreviation
+        if (word.includes(".")) {
+          return word
+            .split(".")
+            .map((part) => part.toUpperCase())
+            .join(".");
+        }
+        return word.toUpperCase(); // short words → uppercase
+      })
+      .join(" ");
+  };
+
+  // Smart formatter (auto detect)
+  const formatText = (text = "") => {
+    if (!text) return "";
+
+    const trimmed = text.trim();
+
+    //  If already dotted like b.e.e → B.E.E
+    if (trimmed.includes(".")) {
+      return trimmed
+        .split(".")
+        .filter(Boolean)
+        .map((part) => part.toUpperCase())
+        .join(".");
+    }
+
+    const clean = trimmed.toLowerCase();
+
+    //  Degree mapping (only valid degree formats)
+    const degreeMap = {
+      bsc: "B.Sc",
+      btech: "B.Tech",
+      be: "B.E",
+      mtech: "M.Tech",
+      msc: "M.Sc",
+      ba: "B.A",
+      ma: "M.A",
+    };
+
+    if (degreeMap[clean]) return degreeMap[clean];
+
+    const words = clean.split(" ");
+
+    //  Abbreviations (NO dots)
+    if (words.length === 1 && clean.length <= 5) {
+      return clean.toUpperCase();
+    }
+
+    //  Normal text
+    return words
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
   const location = [item.city, item.state, item.country]
     .filter(Boolean)
+    .map(toTitleCase)
     .join(", ");
 
   const duration = item.start_year
@@ -30,27 +102,30 @@ const AcademicCard = ({ item, isOwner }) => {
       ? text.slice(0, limit) + "..."
       : text;
   };
-
+  const showUniversity =
+    item.university_name &&
+    item.university_name.toLowerCase() !== item.institute_name?.toLowerCase();
   return (
     <div className="rounded-lg px-3 py-2 bg-white border-l-4 border-indigo-500">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-600">
         {/* TITLE */}
         <span className="font-semibold text-gray-800">
-          {item.title}
-          {item.level && (
-            <span className="text-gray-500 font-normal ml-1">
-              ({item.level})
-            </span>
-          )}
+          {formatText(item.title)}
         </span>
 
-        {item.institute_name && (
+        {showInstitute && (
           <>
             <span className="text-gray-400">•</span>
-            <span>{item.institute_name}</span>
+            <span>{formatText(item.institute_name)}</span>
           </>
         )}
 
+        {showUniversity && (
+          <>
+            <span className="text-gray-400">•</span>
+            <span>{formatText(item.university_name)}</span>
+          </>
+        )}
         {location && (
           <>
             <span className="text-gray-400">•</span>
@@ -92,7 +167,7 @@ const AcademicCard = ({ item, isOwner }) => {
   );
 };
 
-// 2️⃣ AcademicList (UPDATED)
+// 2️ AcademicList (UPDATED)
 const AcademicList = ({ academics = [], isOwner }) => {
   if (!academics.length) {
     return (

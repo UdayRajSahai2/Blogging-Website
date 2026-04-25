@@ -10,10 +10,10 @@ const ProfileImageSection = ({
   toggleLocationPrivacy,
 }) => {
   const [preview, setPreview] = useState(null);
-
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
     if (!updatedProfileImg) {
-      setPreview(null); // ✅ FIX: reset when removed
+      setPreview(null); // FIX: reset when removed
       return;
     }
 
@@ -32,7 +32,11 @@ const ProfileImageSection = ({
           className="relative group w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden bg-gray-100 cursor-pointer border"
         >
           <img
-            src={preview || profile_img}
+            src={preview || profile_img || "/default-avatar.png"}
+            onError={(e) => {
+              if (e.target.src.includes("default-avatar.png")) return;
+              e.target.src = "/default-avatar.png";
+            }}
             className="w-full h-full object-cover"
           />
 
@@ -90,7 +94,12 @@ const ProfileImageSection = ({
 
           {/* TOGGLE */}
           <button
-            onClick={toggleLocationPrivacy}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleLocationPrivacy();
+            }}
             className={`relative inline-flex h-5 w-10 items-center rounded-full transition ${
               isPublic ? "bg-green-500" : "bg-gray-300"
             }`}
@@ -107,17 +116,30 @@ const ProfileImageSection = ({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
-            onClick={handleImageUpload}
-            className="text-xs px-4 py-1.5 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition"
+            onClick={async () => {
+              try {
+                setLoading(true);
+                await handleImageUpload();
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+            className={`text-xs px-4 py-1.5 rounded-full text-white transition ${
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
           >
-            Save Photo
+            {loading ? "Uploading..." : "Save Photo"}
           </button>
 
           {updatedProfileImg && (
             <button
               type="button"
+              disabled={loading}
               onClick={() => setUpdatedProfileImg(null)}
-              className="text-xs px-3 py-1.5 rounded border hover:bg-gray-50"
+              className="text-xs px-3 py-1.5 rounded border hover:bg-gray-50 disabled:opacity-50"
             >
               Remove
             </button>

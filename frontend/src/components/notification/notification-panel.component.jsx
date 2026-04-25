@@ -1,15 +1,22 @@
 import { Link } from "react-router-dom";
 
+import {
+  HeartIcon,
+  ChatBubbleLeftIcon,
+  ArrowUturnLeftIcon,
+  BellIcon,
+} from "@heroicons/react/24/solid";
+
 const getIcon = (type) => {
   switch (type) {
     case "like":
-      return <i className="fi fi-rr-heart text-red-500"></i>;
+      return <HeartIcon className="w-5 h-5 text-red-500" />;
     case "comment":
-      return <i className="fi fi-rr-comment text-blue-500"></i>;
+      return <ChatBubbleLeftIcon className="w-5 h-5 text-blue-500" />;
     case "reply":
-      return <i className="fi fi-rr-reply text-green-500"></i>;
+      return <ArrowUturnLeftIcon className="w-5 h-5 text-green-500" />;
     default:
-      return <i className="fi fi-rr-bell text-gray-400"></i>;
+      return <BellIcon className="w-5 h-5 text-gray-400" />;
   }
 };
 

@@ -28,10 +28,10 @@ console.log("📁 [SYSTEM] Root Directory:", __dirname);
 // ================= INIT ASSOCIATIONS =================
 console.log("🔗 [INIT] Setting up model associations...");
 setupAssociations();
-console.log("✅ [INIT] Associations initialized successfully");
+console.log(" [INIT] Associations initialized successfully");
 
-console.log("🔍 [DEBUG] User associations:", Object.keys(User.associations));
-console.log("🔍 [DEBUG] Blog associations:", Object.keys(Blog.associations));
+console.log("[DEBUG] User associations:", Object.keys(User.associations));
+console.log(" [DEBUG] Blog associations:", Object.keys(Blog.associations));
 
 // ================= DB CONNECTION =================
 const connectDB = async () => {
@@ -39,55 +39,21 @@ const connectDB = async () => {
     console.log("🛢️ [DB] Connecting to MySQL...");
 
     await sequelize.authenticate();
-    console.log("✅ [DB] Connection established");
+    console.log(" [DB] Connection established");
 
-    console.log("🔄 [DB] Syncing database models...");
+    console.log("[DB] Syncing database models...");
     await sequelize.sync({
       alter: false,
       force: false,
     });
 
-    console.log("✅ [DB] All tables are ready");
+    console.log(" [DB] All tables are ready");
   } catch (error) {
-    console.error("❌ [DB] Connection failed:", {
+    console.error("[DB] Connection failed:", {
       message: error.message,
       stack: error.stack,
     });
     process.exit(1);
-  }
-};
-
-// ================= PROFESSION INIT =================
-const initializeProfessionData = async () => {
-  try {
-    console.log("📊 [PROFESSION] Checking profession data...");
-
-    const { getProfessionStats } =
-      await import("./scripts/import-profession-data.js");
-
-    const stats = await getProfessionStats();
-
-    if (stats.total === 0) {
-      console.log("⚠️ [PROFESSION] No data found. Starting import...");
-
-      const { importProfessionData } =
-        await import("./scripts/import-profession-data.js");
-
-      await importProfessionData();
-
-      console.log("✅ [PROFESSION] Data imported successfully");
-    } else {
-      console.log("✅ [PROFESSION] Data already exists:");
-      console.log(`   • Domains: ${stats.domains}`);
-      console.log(`   • Fields: ${stats.fields}`);
-      console.log(`   • Specialties: ${stats.specialties}`);
-      console.log(`   • Total: ${stats.total}`);
-    }
-  } catch (error) {
-    console.error("❌ [PROFESSION] Initialization failed:", {
-      message: error.message,
-      stack: error.stack,
-    });
   }
 };
 
@@ -97,7 +63,7 @@ const PORT = process.env.PORT || 3000;
 
 async function startServer() {
   try {
-    console.log("🚀 [SERVER] Starting application...");
+    console.log(" [SERVER] Starting application...");
 
     // ================= DB =================
     await connectDB();
@@ -106,7 +72,7 @@ async function startServer() {
     const httpServer = createServer(app);
 
     // ================= SOCKET.IO =================
-    console.log("🔌 [SOCKET] Initializing Socket.IO...");
+    console.log("[SOCKET] Initializing Socket.IO...");
 
     const io = new Server(httpServer, {
       cors: {
@@ -118,24 +84,20 @@ async function startServer() {
     // Attach socket logic
     initChatSocket(io);
 
-    console.log("✅ [SOCKET] Socket.IO initialized");
+    console.log(" [SOCKET] Socket.IO initialized");
 
     // ================= START SERVER =================
     httpServer.listen(PORT, async () => {
       console.log("🌐 [SERVER] Server is live");
-      console.log(`👉 [SERVER] URL: http://localhost:${PORT}`);
+      console.log(` [SERVER] URL: http://localhost:${PORT}`);
       console.log(
-        `⚙️ [SERVER] Environment: ${process.env.NODE_ENV || "development"}`,
+        ` [SERVER] Environment: ${process.env.NODE_ENV || "development"}`,
       );
 
-      console.log("🔄 [POST-INIT] Running post-start tasks...");
-
-      await initializeProfessionData();
-
-      console.log("🎉 [SERVER] Startup completed successfully");
+      console.log("[SERVER] Startup completed successfully");
     });
   } catch (err) {
-    console.error("❌ [SERVER] Startup failed:", {
+    console.error(" [SERVER] Startup failed:", {
       message: err.message,
       stack: err.stack,
     });
@@ -151,7 +113,7 @@ startServer();
 // // Bulk delete comments (optional - for admin purposes)
 // server.delete("/delete-comments-bulk", verifyJWT, async (req, res) => {
 //   const { comment_ids, blog_id } = req.body;
-//   const userId = req.user.user_id;
+//   const userId = req.user.id;
 
 //   // Validate input
 //   if (!comment_ids || !Array.isArray(comment_ids) || comment_ids.length === 0) {

@@ -5,7 +5,7 @@ import { User } from "../models/associations.js";
 export const assignCustomerLocation = async (user, latitude, longitude) => {
   try {
     if (!latitude || !longitude) {
-      console.log("⚠️ No location provided");
+      console.log(" No location provided");
       return user;
     }
 
@@ -13,7 +13,7 @@ export const assignCustomerLocation = async (user, latitude, longitude) => {
 
     // skip if outside India (LGD only supports India)
     if (latitude < 6 || latitude > 38 || longitude < 68 || longitude > 98) {
-      console.log("⚠️ Location outside India — skipping LGD lookup");
+      console.log(" Location outside India — skipping LGD lookup");
       return user;
     }
 
@@ -25,10 +25,12 @@ export const assignCustomerLocation = async (user, latitude, longitude) => {
         .replace(/\{lon\}/g, longitude);
     }
 
-    console.log("🌍 Calling Nominatim:", nominatimUrl);
+    console.log("Calling Nominatim:", nominatimUrl);
 
     const geoRes = await axios.get(nominatimUrl, {
-      headers: { "User-Agent": "mern-blog-app/1.0" },
+      headers: {
+        "User-Agent": "reachfoundationngo-app/1.0",
+      },
       timeout: 5000, // prevent hanging
     });
 
@@ -118,7 +120,7 @@ export const assignCustomerLocation = async (user, latitude, longitude) => {
 
     return await User.findByPk(user.user_id);
   } catch (err) {
-    console.error("⚠️ Location service error:", err.message);
+    console.error(" Location service error:", err.message);
     return user; // login should not fail
   }
 };

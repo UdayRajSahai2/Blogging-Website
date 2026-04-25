@@ -1,5 +1,7 @@
 import sequelize from "../config/db.config.js";
 import Interest from "../models/user/Interest.js";
+import fs from "fs";
+import xlsx from "xlsx";
 
 //  IMPORTANT (avoid mess)
 // DO NOT:
@@ -469,12 +471,45 @@ const seedInterests = async () => {
 
     await seedTree(interests);
 
-    console.log("✅ Hierarchical interests seeded successfully");
+    console.log(" Hierarchical interests seeded successfully");
     process.exit();
   } catch (err) {
-    console.error("❌ Error seeding interests:", err);
+    console.error(" Error seeding interests:", err);
     process.exit(1);
   }
 };
 
+// paste your interests array here
+// const interests = [...]
+
+const flatten = (data) => {
+  const rows = [];
+
+  data.forEach((level1) => {
+    level1.children?.forEach((level2) => {
+      level2.children?.forEach((level3) => {
+        rows.push({
+          Category: level1.name,
+          Subcategory: level2.name,
+          Interest: level3.name,
+        });
+      });
+    });
+  });
+
+  return rows;
+};
+
+const rows = flatten(interests);
+
+// create excel
+const worksheet = xlsx.utils.json_to_sheet(rows);
+const workbook = xlsx.utils.book_new();
+
+xlsx.utils.book_append_sheet(workbook, worksheet, "Interests");
+
+// save file
+xlsx.writeFile(workbook, "interests.xlsx");
+
+console.log("✅ Excel generated: interests.xlsx");
 seedInterests();

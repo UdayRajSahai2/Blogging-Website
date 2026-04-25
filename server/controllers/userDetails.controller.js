@@ -1,5 +1,4 @@
 //server\controllers\userDetails.controller.js
-// server/controllers/userDetails.controller.js
 
 import User from "../models/user/User.js";
 import UserDetails from "../models/user/UserDetails.js";
@@ -116,7 +115,7 @@ const validateUserDetails = (body) => {
 /* ---------------- CREATE OR UPDATE USER DETAILS ---------------- */
 export const upsertUserDetails = async (req, res) => {
   try {
-    const user_id = req.userId;
+    const user_id = req.user.id;
 
     /*  Check user existence */
     const userExists = await User.findByPk(user_id);
@@ -138,7 +137,6 @@ export const upsertUserDetails = async (req, res) => {
       }
     });
 
-    // ✅ ADD HERE
     const { date_of_birth } = req.body;
 
     if (date_of_birth) {
@@ -146,7 +144,7 @@ export const upsertUserDetails = async (req, res) => {
       data.age = age;
     }
 
-    // ✅ already existing
+    //  already existing
     const { occupation_status } = req.body;
 
     if (occupation_status !== undefined) {
@@ -169,7 +167,7 @@ export const upsertUserDetails = async (req, res) => {
 };
 export const updateEmploymentStatus = async (req, res) => {
   try {
-    const user_id = req.userId;
+    const user_id = req.user.id;
     const { isWorking } = req.body;
 
     const occupation_status = isWorking ? "working" : "not_working";
@@ -192,7 +190,7 @@ export const updateEmploymentStatus = async (req, res) => {
 /* ---------------- GET USER DETAILS ---------------- */
 export const getUserDetails = async (req, res) => {
   try {
-    const user_id = req.userId || req.params.user_id;
+    const user_id = req.user.id || req.params.user_id;
 
     const user = await User.findByPk(user_id, {
       include: [
@@ -247,15 +245,15 @@ export const getUserDetails = async (req, res) => {
 /* ---------------- DELETE USER DETAILS ---------------- */
 export const deleteUserDetails = async (req, res) => {
   try {
-    const user_id = req.userId;
+    const user_id = req.user.id;
 
-    /* ✅ Check user existence */
+    /* Check user existence */
     const userExists = await User.findByPk(user_id);
     if (!userExists) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    /* ✅ Delete related data */
+    /*  Delete related data */
     await UserDetails.destroy({ where: { user_id } });
     await UserAddress.destroy({ where: { user_id } });
 

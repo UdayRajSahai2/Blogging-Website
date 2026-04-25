@@ -160,7 +160,7 @@ const MiniCarousel = ({ blogs, isFirstBlog = false }) => {
           onError={(e) => {
             e.currentTarget.src = "/fallback-blog.jpg";
           }}
-          className="w-full aspect-[16/9] object-cover transition-transform duration-700 group-hover:scale-105"
+          className="w-full aspect-[16/9] object-fill transition-transform duration-700 group-hover:scale-105"
         />
 
         <div
@@ -185,14 +185,15 @@ line-clamp-2"
           <button
             aria-label="Previous blog"
             onClick={prev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 
-  flex items-center justify-center
-  w-7 h-7
-  bg-black/40 hover:bg-black/60
-  text-white
-  rounded-full
-  backdrop-blur-sm
-  transition"
+            className="absolute left-2 top-1/2 -translate-y-1/2
+      flex items-center justify-center
+      w-8 h-8
+      bg-white/70 hover:bg-white
+      text-gray-800
+      rounded-full
+      shadow-sm
+      opacity-0 group-hover:opacity-100
+      transition"
           >
             <ChevronLeftIcon className="w-4 h-4" />
           </button>
@@ -200,14 +201,15 @@ line-clamp-2"
           <button
             aria-label="Next blog"
             onClick={next}
-            className="absolute right-2 top-1/2 -translate-y-1/2 
-  flex items-center justify-center
-  w-7 h-7
-  bg-black/40 hover:bg-black/60
-  text-white
-  rounded-full
-  backdrop-blur-sm
-  transition"
+            className="absolute right-2 top-1/2 -translate-y-1/2
+      flex items-center justify-center
+      w-8 h-8
+      bg-white/70 hover:bg-white
+      text-gray-800
+      rounded-full
+      shadow-sm
+      opacity-0 group-hover:opacity-100
+      transition"
           >
             <ChevronRightIcon className="w-4 h-4" />
           </button>

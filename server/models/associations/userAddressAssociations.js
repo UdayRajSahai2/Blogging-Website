@@ -4,8 +4,6 @@ import UserAddress from "../user/UserAddress.js";
 import Country from "../locations/Country.js";
 import State from "../locations/State.js";
 import District from "../locations/District.js";
-import Block from "../locations/Block.js";
-import Village from "../locations/Village.js";
 
 const setupUserAddressAssociations = () => {
   /* ================= USER ↔ ADDRESS ================= */
@@ -44,19 +42,7 @@ const setupUserAddressAssociations = () => {
     as: "districtDetails",
   });
 
-  UserAddress.belongsTo(Block, {
-    foreignKey: "block_code",
-    targetKey: "block_code",
-    as: "blockDetails",
-  });
-
-  UserAddress.belongsTo(Village, {
-    foreignKey: "village_code",
-    targetKey: "village_code",
-    as: "villageDetails",
-  });
-
-  console.log("✅ UserAddress associations initialized");
+  console.log(" UserAddress associations initialized");
 };
 
 export default setupUserAddressAssociations;

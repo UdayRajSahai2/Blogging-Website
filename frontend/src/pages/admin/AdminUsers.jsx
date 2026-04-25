@@ -16,7 +16,7 @@ const AdminUsers = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [processingId, setProcessingId] = useState(null);
-
+  const [confirmId, setConfirmId] = useState(null);
   //  search state
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -68,10 +68,13 @@ const AdminUsers = () => {
         setLoading(false);
       }
     },
-    [token, page, debouncedSearch],
+    [token, page, debouncedSearch, filter],
   );
 
   // ================= EFFECT =================
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
   useEffect(() => {
     if (!token) return;
 
@@ -114,7 +117,7 @@ const AdminUsers = () => {
       return;
     }
 
-    if (!window.confirm("Delete this user permanently?")) return;
+    if (!window.confirm("Soft delete this user?")) return;
 
     try {
       setProcessingId(userId);
@@ -123,11 +126,33 @@ const AdminUsers = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      toast.success("User deleted");
+      toast.success("User moved to trash");
       fetchUsers();
     } catch (err) {
       console.error("Delete user error", err);
       toast.error("Failed to delete user");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+  const deleteUserPermanent = async (userId) => {
+    if (
+      !window.confirm(" Permanently delete this user? This cannot be undone.")
+    )
+      return;
+
+    try {
+      setProcessingId(userId);
+
+      await axios.delete(`${ADMIN_API}/users/${userId}/permanent`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      toast.success("User permanently deleted");
+      fetchUsers();
+    } catch (err) {
+      console.error("Permanent delete error", err);
+      toast.error("Failed to permanently delete user");
     } finally {
       setProcessingId(null);
     }
@@ -276,23 +301,79 @@ const AdminUsers = () => {
                             </button>
                           ))}
 
-                        {/* DELETE / RESTORE */}
                         {u.is_deleted ? (
-                          <button
-                            disabled={isProcessing}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
-                            onClick={() => restoreUser(u.user_id)}
-                          >
-                            {isProcessing ? "..." : "Restore"}
-                          </button>
+                          <>
+                            {/* RESTORE */}
+                            <button
+                              disabled={isProcessing}
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
+                              onClick={() => restoreUser(u.user_id)}
+                            >
+                              {isProcessing ? "..." : "Restore"}
+                            </button>
+
+                            {/* PERMANENT DELETE */}
+                            {confirmId === u.user_id ? (
+                              <>
+                                <button
+                                  className="bg-gray-300 px-2 py-1 rounded"
+                                  onClick={() => setConfirmId(null)}
+                                >
+                                  Cancel
+                                </button>
+
+                                <button
+                                  className="bg-black text-white px-2 py-1 rounded"
+                                  onClick={() => {
+                                    deleteUserPermanent(u.user_id);
+                                    setConfirmId(null);
+                                  }}
+                                >
+                                  Confirm Delete
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                disabled={isProcessing}
+                                className="bg-black hover:bg-gray-900 text-white px-3 py-1 rounded"
+                                onClick={() => setConfirmId(u.user_id)}
+                              >
+                                Delete Permanently
+                              </button>
+                            )}
+                          </>
                         ) : (
-                          <button
-                            disabled={isProcessing}
-                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-                            onClick={() => deleteUser(u.user_id)}
-                          >
-                            {isProcessing ? "..." : "Delete"}
-                          </button>
+                          <>
+                            {/* SOFT DELETE */}
+                            {confirmId === u.user_id ? (
+                              <>
+                                <button
+                                  className="bg-gray-300 px-2 py-1 rounded"
+                                  onClick={() => setConfirmId(null)}
+                                >
+                                  Cancel
+                                </button>
+
+                                <button
+                                  className="bg-red-600 text-white px-2 py-1 rounded"
+                                  onClick={() => {
+                                    deleteUser(u.user_id);
+                                    setConfirmId(null);
+                                  }}
+                                >
+                                  Confirm
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                disabled={isProcessing}
+                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                                onClick={() => setConfirmId(u.user_id)}
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </>
                         )}
                       </>
                     ) : (

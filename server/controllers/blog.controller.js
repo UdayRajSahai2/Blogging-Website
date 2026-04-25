@@ -9,11 +9,12 @@ import {
   Like,
   Read,
   Notification,
+  UserDetails,
 } from "../models/associations.js";
 
 export const getUserBlogs = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user.id;
     console.log("Fetching blogs for user ID:", userId);
     const blogs = await Blog.findAll({
       where: { author: userId },
@@ -61,6 +62,13 @@ export const getLatestBlogs = async (req, res) => {
           model: User,
           as: "blogAuthor",
           attributes: ["profile_img", "username", "fullname"],
+          include: [
+            {
+              model: UserDetails,
+              as: "details",
+              attributes: ["salutation"],
+            },
+          ],
         },
       ],
       order: [["publishedAt", "DESC"]],
@@ -206,6 +214,13 @@ export const getTrendingBlogs = async (req, res) => {
           model: User,
           as: "blogAuthor",
           attributes: ["profile_img", "username", "fullname", "user_id"],
+          include: [
+            {
+              model: UserDetails,
+              as: "details",
+              attributes: ["salutation"],
+            },
+          ],
         },
       ],
       attributes: ["blog_id", "title", "publishedAt", "author"],
@@ -394,6 +409,13 @@ export const getSearchBlogs = async (req, res) => {
           model: User,
           as: "blogAuthor",
           attributes: ["profile_img", "username", "fullname"],
+          include: [
+            {
+              model: UserDetails,
+              as: "details",
+              attributes: ["salutation"],
+            },
+          ],
         },
       ],
       attributes: ["blog_id", "title", "des", "banner", "tags", "publishedAt"],
@@ -541,7 +563,7 @@ export const getSearchBlogsCount = async (req, res) => {
 };
 
 export const createOrUpdateBlog = async (req, res) => {
-  const authorId = req.userId;
+  const authorId = req.user.id;
   let { title, des, banner, tags, content, draft, id } = req.body;
 
   if (!title.length) {
@@ -680,7 +702,7 @@ export const getBlogById = async (req, res) => {
       return res.status(404).json({ error: "Blog not found" });
     }
 
-    // 🚫 soft deleted
+    //  soft deleted
     if (blog.is_deleted) {
       return res.status(403).json({
         error: "Blog removed",
@@ -688,7 +710,7 @@ export const getBlogById = async (req, res) => {
       });
     }
 
-    // 🚫 not published
+    //  not published
     if (!blog.draft && blog.status !== "published" && mode !== "edit") {
       return res.status(403).json({
         error: "Blog not public",
@@ -696,7 +718,7 @@ export const getBlogById = async (req, res) => {
       });
     }
 
-    // 🚫 draft protection
+    //  draft protection
     if (blog.draft && !draft) {
       return res.status(403).json({
         error: "Draft blog",
@@ -704,9 +726,9 @@ export const getBlogById = async (req, res) => {
       });
     }
 
-    // ✅ track read
+    //  track read
     if (mode !== "edit") {
-      const userId = req.userId?.user_id;
+      const userId = req.user?.id;
       if (userId) {
         await Read.create({ blog_id, user_id: userId });
       }
@@ -749,7 +771,7 @@ export const handleLike = async (req, res) => {
   }
 
   const { blog_id, isLiked } = req.body;
-  const userId = req.userId?.user_id;
+  const userId = req.user.id;
 
   // ✅ Auth safety
   if (!userId) {
@@ -944,7 +966,7 @@ export const handleLike = async (req, res) => {
 export const checkLikeStatus = async (req, res) => {
   try {
     const { blog_id } = req.body;
-    const user_id = req.userId;
+    const user_id = req.user.id;
 
     // Check if the user has liked this blog
     const like = await Like.findOne({

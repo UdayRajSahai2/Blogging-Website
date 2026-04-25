@@ -13,7 +13,7 @@ export const sendRequest = async (req, res) => {
   try {
     const { userId } = req.body;
 
-    const data = await sendConnectionRequest(req.userId, userId);
+    const data = await sendConnectionRequest(req.user.id, userId);
 
     res.json(data);
   } catch (err) {
@@ -26,7 +26,7 @@ export const acceptRequest = async (req, res) => {
   try {
     const { connectionId } = req.body;
 
-    const data = await acceptConnectionRequest(req.userId, connectionId);
+    const data = await acceptConnectionRequest(req.user.id, connectionId);
 
     res.json(data);
   } catch (err) {
@@ -39,7 +39,7 @@ export const rejectRequest = async (req, res) => {
   try {
     const { connectionId } = req.body;
 
-    await rejectConnectionRequest(req.userId, connectionId);
+    await rejectConnectionRequest(req.user.id, connectionId);
 
     res.json({ success: true });
   } catch (err) {
@@ -50,7 +50,7 @@ export const rejectRequest = async (req, res) => {
 // GET FRIENDS
 export const getFriends = async (req, res) => {
   try {
-    const data = await getConnections(req.userId);
+    const data = await getConnections(req.user.id);
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch connections" });
@@ -60,7 +60,7 @@ export const getFriends = async (req, res) => {
 // GET PENDING
 export const getPending = async (req, res) => {
   try {
-    const data = await getPendingRequests(req.userId);
+    const data = await getPendingRequests(req.user.id);
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch requests" });
@@ -69,7 +69,7 @@ export const getPending = async (req, res) => {
 export const searchFriends = async (req, res) => {
   const { q } = req.query;
 
-  const friends = await getConnections(req.userId);
+  const friends = await getConnections(req.user.id);
 
   const filtered = friends.filter((f) =>
     f.fullname.toLowerCase().includes(q.toLowerCase()),
@@ -81,7 +81,7 @@ export const remove = async (req, res) => {
   try {
     const connectionId = parseInt(req.params.connectionId); // ✅ FIX
 
-    await removeConnection(req.userId, connectionId);
+    await removeConnection(req.user.id, connectionId);
 
     res.json({ success: true });
   } catch (err) {
@@ -92,6 +92,6 @@ export const remove = async (req, res) => {
 
 // controller
 export const getSent = async (req, res) => {
-  const data = await getSentRequests(req.userId);
+  const data = await getSentRequests(req.user.id);
   res.json(data);
 };

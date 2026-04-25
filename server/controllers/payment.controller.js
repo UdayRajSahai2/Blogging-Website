@@ -32,7 +32,7 @@ export const createPaymentOrder = async (req, res) => {
       currency,
       receipt: receipt || `rcpt_${Date.now()}`,
       notes: {
-        user_id: req.userId,
+        user_id: req.user.id,
       },
     });
 
@@ -101,14 +101,14 @@ export const verifyPayment = async (req, res) => {
 
     // ✅ Find or create donor
     let donor = await Donor.findOne({
-      where: { user_id: req.userId },
+      where: { user_id: req.user.id },
       transaction,
     });
 
     if (!donor) {
       donor = await Donor.create(
         {
-          user_id: req.userId,
+          user_id: req.user.id,
           customer_id: `cust_${Date.now()}`,
         },
         { transaction },
@@ -122,7 +122,7 @@ export const verifyPayment = async (req, res) => {
     const donation = await Donation.create(
       {
         donor_id: donor.donor_id,
-        user_id: req.userId,
+        user_id: req.user.id,
         customer_id: donor.customer_id,
         purpose,
         amount,

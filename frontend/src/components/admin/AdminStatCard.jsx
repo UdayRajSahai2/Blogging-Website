@@ -71,31 +71,33 @@ const AdminStatCard = ({
     <div
       ref={cardRef}
       onClick={onClick}
-      className={`relative bg-white border rounded-2xl p-5 transition-all ${
-        onClick ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5" : ""
+      className={`relative bg-white border border-gray-200 rounded-xl p-3 sm:p-4 transition-all ${
+        onClick ? "cursor-pointer hover:shadow-md active:scale-[0.98]" : ""
       }`}
     >
       {/* accent */}
       <div
-        className={`absolute top-0 left-0 w-full h-1 rounded-t-2xl ${
+        className={`absolute top-0 left-0 w-full h-[3px] rounded-t-xl ${
           colorMap[color] || colorMap.emerald
         }`}
       />
 
       {/* header */}
-      <div className="flex items-start justify-between">
-        <p className="text-sm text-gray-500">{title}</p>
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] sm:text-xs text-gray-500 truncate">{title}</p>
 
         {icon && (
-          <div className="p-2 rounded-lg bg-gray-100 text-gray-600">{icon}</div>
+          <div className="p-1.5 sm:p-2 rounded-md bg-gray-100 text-gray-600">
+            {icon}
+          </div>
         )}
       </div>
 
       {/* value */}
       {loading ? (
-        <div className="h-6 w-20 bg-gray-200 animate-pulse rounded mt-2" />
+        <div className="h-5 w-16 bg-gray-200 animate-pulse rounded mt-2" />
       ) : (
-        <p className="text-2xl font-bold mt-2">
+        <p className="text-lg sm:text-xl md:text-2xl font-semibold mt-1">
           {isCurrency ? `₹${formattedValue}` : formattedValue}
         </p>
       )}
@@ -103,12 +105,12 @@ const AdminStatCard = ({
       {/* trend */}
       {trend && (
         <div
-          className={`text-xs mt-2 font-medium ${
+          className={`text-[10px] sm:text-xs mt-1 font-medium ${
             trend.positive ? "text-emerald-600" : "text-rose-600"
           }`}
         >
           {trend.positive ? "↑" : "↓"} {trend.value}%
-          <span className="text-gray-400 ml-1">vs last period</span>
+          <span className="text-gray-400 ml-1 hidden sm:inline">vs last</span>
         </div>
       )}
     </div>

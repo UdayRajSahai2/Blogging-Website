@@ -242,6 +242,7 @@ const User = sequelize.define(
     total_reads: { type: DataTypes.INTEGER, defaultValue: 0 },
 
     google_auth: { type: DataTypes.BOOLEAN, defaultValue: false },
+
     is_onboarding_completed: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

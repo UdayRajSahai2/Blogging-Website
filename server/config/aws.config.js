@@ -18,11 +18,20 @@ export const generateUploadURL = async (fileType = "image/jpeg") => {
   const ext = fileType.split("/")[1] || "jpeg";
   const imageName = `${nanoid()}-${Date.now()}.${ext}`;
 
+  const key = `blog-banner-upload/${imageName}`;
+
   const command = new PutObjectCommand({
-    Bucket: process.env.AWS_BUCKET_NAME || "blogging-website-co",
-    Key: imageName,
+    Bucket: process.env.AWS_BUCKET_NAME || "reach-foundation-bucket",
+    Key: key,
     ContentType: fileType,
   });
 
-  return await getSignedUrl(s3, command, { expiresIn: 600 }); // 10 minutes
+  const uploadURL = await getSignedUrl(s3, command, {
+    expiresIn: 600,
+  });
+
+  return {
+    uploadURL,
+    key,
+  };
 };

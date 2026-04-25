@@ -10,7 +10,7 @@ export const makeDonation = async (req, res) => {
   try {
     const { amount, purpose, customer_id, payment_id, payment_signature } =
       req.body;
-    const user_id = req.userId;
+    const user_id = req.user.id;
 
     // Check if user is a registered donor
     const donor = await Donor.findOne({ where: { user_id } });
@@ -62,7 +62,7 @@ export const makeDonation = async (req, res) => {
 // Get user's donation history
 export const donationHistory = async (req, res) => {
   try {
-    const user_id = req.userId;
+    const user_id = req.user.id;
     const { year, limit = 50 } = req.query;
 
     const whereClause = { user_id };
@@ -122,7 +122,7 @@ export const donationHistory = async (req, res) => {
 // ======================================================
 export const getDonationAnalytics = async (req, res) => {
   try {
-    const user_id = req.userId;
+    const user_id = req.user.id;
     const { year } = req.query;
     const currentYear = year ? parseInt(year) : new Date().getFullYear();
 

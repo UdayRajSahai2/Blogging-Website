@@ -35,7 +35,7 @@ const setupAssociations = () => {
   setupUserConnectionAssociations();
   //  NEW ( modular system)
   setupRoleAssociations();
-  console.log("✅ All associations initialized");
+  console.log(" All associations initialized");
   const models = {
     User,
     Blog,

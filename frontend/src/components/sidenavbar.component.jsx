@@ -15,6 +15,7 @@ import {
   ChatBubbleLeftRightIcon,
   HomeIcon,
   HeartIcon,
+  Bars3Icon,
 } from "@heroicons/react/24/solid";
 const SideNav = () => {
   const location = useLocation();
@@ -80,7 +81,7 @@ const SideNav = () => {
             aria-controls="sidebar-navigation"
             className="px-4 h-full flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
-            <i className="fi fi-bs-bars-staggered pointer-events-none"></i>
+            <Bars3Icon className="w-6 h-6 pointer-events-none" />
           </button>
 
           {/* Current Page */}
@@ -152,7 +153,9 @@ const SideNav = () => {
             <PencilSquareIcon className="w-5 h-5" aria-hidden="true" />
             Post blog
           </NavLink>
-          <NavLink
+
+          {/* disabled in production */}
+          {/* <NavLink
             to="/chat"
             className={({ isActive }) =>
               `sidebar-link ${isActive ? "active-link" : ""}`
@@ -160,7 +163,7 @@ const SideNav = () => {
           >
             <ChatBubbleLeftRightIcon className="w-5 h-5" />
             Chat
-          </NavLink>
+          </NavLink> */}
           <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-normal px-2">
             Profile
           </h4>
@@ -195,7 +198,9 @@ const SideNav = () => {
             <BriefcaseIcon className="w-5 h-5" aria-hidden="true" />
             Experience
           </NavLink>
-          <NavLink
+
+          {/* disabled in production */}
+          {/* <NavLink
             to="/dashboard/connections"
             className={({ isActive }) =>
               `sidebar-link ${isActive ? "active-link" : ""}`
@@ -203,7 +208,7 @@ const SideNav = () => {
           >
             <UserIcon className="w-5 h-5" aria-hidden="true" />
             My Connections
-          </NavLink>
+          </NavLink> */}
 
           <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-normal px-2">
             Activity

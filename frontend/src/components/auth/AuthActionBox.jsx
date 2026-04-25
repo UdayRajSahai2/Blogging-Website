@@ -26,7 +26,7 @@ const AuthActionBox = ({
       ${disabled ? "opacity-70 cursor-not-allowed" : "shadow hover:shadow-lg"}`}
     >
       <div className="flex flex-col items-center justify-center text-center gap-2">
-        {icon && <i className={`fi ${icon} text-xl sm:text-2xl`}></i>}
+        {icon && <div className="text-xl sm:text-2xl">{icon}</div>}
 
         {title && <p className="text-sm sm:text-base font-semibold">{title}</p>}
 

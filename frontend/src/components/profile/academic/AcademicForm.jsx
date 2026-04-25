@@ -10,6 +10,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import InputBox from "../../input.component";
 import { useRef, userAuth } from "react";
 import toast from "react-hot-toast";
+import LocationDropdown from "../../../common/LocationDropdown";
 const initialState = {
   level: "",
   title: "",
@@ -23,6 +24,10 @@ const initialState = {
   city: "",
   state: "",
   country: "India",
+  country_code: "",
+  state_code: "",
+  district_code: "",
+  district: "",
   description: "",
   is_primary: false,
   is_current: false,
@@ -67,6 +72,9 @@ export default function AcademicForm({ onNext }) {
   const titleOptions = LEVEL_TITLES[form.level] || [];
   const [suggestion, setSuggestion] = useState("");
   const messageRef = useRef(null);
+  const [countries, setCountries] = useState([]);
+  const [states, setStates] = useState([]);
+  const [districts, setDistricts] = useState([]);
   /* =============================
      LOAD (EDIT MODE)
   ============================= */
@@ -96,9 +104,15 @@ export default function AcademicForm({ onNext }) {
         end_year: data?.end_year || "",
         grade_value: data?.grade_value || "",
         grade_type: data?.grade_type || "%",
-        city: data?.city || "",
-        state: data?.state || "",
+
         country: data?.country || "India",
+        state: data?.state || "",
+        district: data?.city || "",
+
+        country_code: data?.country_code || "",
+        state_code: data?.state_code || "",
+        district_code: data?.district_code || "",
+
         description: data?.description || "",
         is_primary: data?.is_primary || false,
         is_current: data?.is_current || false,
@@ -150,7 +164,35 @@ export default function AcademicForm({ onNext }) {
       return { ...prev, [name]: newValue };
     });
   };
+  const fetchCountries = async () => {
+    try {
+      const res = await fetch("/api/location/countries"); // adjust API
+      const data = await res.json();
+      setCountries(data || []);
+    } catch {
+      setCountries([]);
+    }
+  };
 
+  const fetchStates = async (country_code, type) => {
+    try {
+      const res = await fetch(`/api/location/states/${country_code}`);
+      const data = await res.json();
+      setStates(data || []);
+    } catch {
+      setStates([]);
+    }
+  };
+
+  const fetchDistricts = async (state_code, type) => {
+    try {
+      const res = await fetch(`/api/location/districts/${state_code}`);
+      const data = await res.json();
+      setDistricts(data || []);
+    } catch {
+      setDistricts([]);
+    }
+  };
   /* =============================
      SUBMIT
   ============================= */
@@ -200,7 +242,7 @@ export default function AcademicForm({ onNext }) {
         is_current: form.is_current || false,
         grade_value: form.grade_value || null,
         grade_type: form.grade_type,
-        city: form.city,
+        city: form.district,
         state: form.state,
         country: form.country,
         description: form.description,
@@ -238,7 +280,7 @@ export default function AcademicForm({ onNext }) {
           userAuth?.user_type === "student" &&
           addedCount < 1
         ) {
-          setError("👉 You may want to add your previous class.");
+          setError(" You may want to add your previous class.");
         }
 
         setLastAdded({
@@ -307,7 +349,15 @@ export default function AcademicForm({ onNext }) {
       setSuggestion("");
     }
   }, [form.title, form.level]);
-
+  const updateAddress = (type, key, value) => {
+    setForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+  useEffect(() => {
+    fetchCountries();
+  }, []);
   useEffect(() => {
     if (userAuth?.user_type === "student" && addedCount >= 2) {
       const btn = document.getElementById("submit-btn");
@@ -340,7 +390,7 @@ export default function AcademicForm({ onNext }) {
               education later.
             </>
           ) : (
-            <>📘 Add your education details to continue.</>
+            <> Add your education details to continue.</>
           )}
         </div>
       )}
@@ -349,14 +399,14 @@ export default function AcademicForm({ onNext }) {
           ref={messageRef}
           className="bg-green-50 border border-green-200 text-green-900 p-3 rounded-md text-sm mb-2 space-y-1 scroll-mt-40"
         >
-          {/* ⚠️ WARNING */}
+          {/*  WARNING */}
           {error && <p className="text-orange-600 font-medium">⚠️ {error}</p>}
 
-          {/* ✅ SUCCESS */}
+          {/* SUCCESS */}
           {!error && lastAdded && (
             <>
               <p>
-                {isEditMode ? "✏️ Updated" : "🎓 Added"}{" "}
+                {isEditMode ? " Updated" : " Added"}{" "}
                 <strong>{lastAdded.title}</strong>
                 {userAuth?.user_type === "student" && (
                   <>
@@ -628,35 +678,23 @@ export default function AcademicForm({ onNext }) {
         {/* Location */}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="flex flex-col">
-            <label className="text-xs font-medium mb-1">City</label>
-            <InputBox
-              name="city"
-              placeholder="e.g., Lucknow"
-              value={form.city}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <label className="text-xs font-medium mb-1">State</label>
-            <InputBox
-              name="state"
-              placeholder="e.g., Uttar Pradesh"
-              value={form.state}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <label className="text-xs font-medium mb-1">Country</label>
-            <InputBox
-              name="country"
-              placeholder="e.g., India"
-              value={form.country}
-              onChange={handleChange}
-            />
-          </div>
+          <LocationDropdown
+            type="academic"
+            value={form}
+            onChange={(type, fields) => {
+              setForm((prev) => ({
+                ...prev,
+                ...fields,
+              }));
+            }}
+            labels={{
+              academic: {
+                country: "Country",
+                state: "State",
+                city: "City",
+              },
+            }}
+          />
         </div>
 
         {/* Description */}

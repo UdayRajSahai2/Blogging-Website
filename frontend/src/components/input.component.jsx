@@ -1,5 +1,6 @@
+//frontend\src\components\input.component.jsx
 import { useState } from "react";
-
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 const InputBox = ({
   name,
   type = "text",
@@ -8,39 +9,43 @@ const InputBox = ({
   onChange,
   placeholder,
   icon,
-  prefix, // NEW
+  prefix,
   disabled = false,
+  ...rest
 }) => {
   const [passwordVisible, setPasswordVisible] = useState(false);
 
-  // 🔹 Resolve input type
+  //  Resolve input type
   const inputType =
     type === "password" ? (passwordVisible ? "text" : "password") : type;
 
-  // 🔹 Dynamic padding
+  //  Dynamic padding
   const paddingClass = prefix ? "pl-2 pr-2" : icon ? "pl-9 pr-8" : "px-2";
 
-  // 🔹 Disabled styles
-  const disabledClass = disabled ? "opacity-50 cursor-not-allowed" : "";
+  //  Disabled styles
+  const disabledClass = disabled
+    ? "opacity-60 cursor-not-allowed bg-gray-100"
+    : "";
 
   return (
     <div className="relative w-full mb-2 sm:mb-3">
       <div
         className={`
-      flex items-center h-10 rounded-xl border border-gray-500
-      bg-white/70 backdrop-blur-sm
-      shadow-sm hover:shadow-md
-      transition-all duration-200
-      focus-within:border-indigo-500 
-      focus-within:ring-2 focus-within:ring-indigo-100
-      focus-within:shadow-md
-      focus-within:bg-white
-      ${disabled ? "cursor-not-allowed" : ""}
-    `}
+    flex items-center h-10 rounded-xl border border-gray-500
+    bg-white/70 backdrop-blur-sm
+    shadow-sm transition-all duration-200
+
+    ${
+      !disabled &&
+      "hover:shadow-md focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:shadow-md focus-within:bg-white"
+    }
+
+    ${disabledClass}
+  `}
       >
         {/* PREFIX */}
         {prefix && (
-          <div className="flex items-center gap-1 border-r px-2 h-full">
+          <div className="flex items-center gap-1 border-r px-2 h-full min-w-fit">
             {prefix}
           </div>
         )}
@@ -54,29 +59,35 @@ const InputBox = ({
           onChange={onChange}
           placeholder={placeholder}
           disabled={disabled}
+          inputMode="numeric"
+          {...rest}
           className={`
     flex-1 h-full bg-transparent outline-none
     text-[13px] placeholder:text-gray-500
-    ${prefix ? "px-2" : paddingClass}
+    ${prefix ? "pl-2 pr-3" : paddingClass}
     ${disabled ? "text-gray-600 cursor-not-allowed" : ""}
   `}
         />
 
         {/* ICON (if no prefix) */}
         {!prefix && icon && (
-          <i
-            className={`fi ${icon} absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-800 text-xs`}
-          />
+          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+            {icon}
+          </div>
         )}
 
         {/* PASSWORD TOGGLE */}
         {type === "password" && (
-          <i
-            className={`fi ${
-              passwordVisible ? "fi-rr-eye" : "fi-rr-eye-crossed"
-            } absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs cursor-pointer hover:text-indigo-500 transition`}
+          <div
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer hover:text-indigo-500 transition"
             onClick={() => setPasswordVisible((prev) => !prev)}
-          />
+          >
+            {passwordVisible ? (
+              <EyeSlashIcon className="w-4 h-4" />
+            ) : (
+              <EyeIcon className="w-4 h-4" />
+            )}
+          </div>
         )}
       </div>
     </div>

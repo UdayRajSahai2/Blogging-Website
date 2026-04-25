@@ -1,7 +1,16 @@
 import { useEffect, useState, useMemo } from "react";
 import { getMyAcademics, deleteAcademic } from "../../api/academic.api";
 import { Link } from "react-router-dom";
-
+import {
+  BookOpenIcon,
+  PlusIcon,
+  MagnifyingGlassIcon,
+  PencilSquareIcon,
+  TrashIcon,
+  StarIcon,
+  MapPinIcon,
+  CalendarIcon,
+} from "@heroicons/react/24/solid";
 export default function AcademicPage() {
   const [academics, setAcademics] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +92,7 @@ export default function AcademicPage() {
 
   const EmptyState = () => (
     <div className="text-center py-6 text-sm text-gray-400 flex flex-col items-center gap-1">
-      <i className="fi-rr-book text-lg"></i>
+      <BookOpenIcon className="w-5 h-5" />
       No academic records yet.
     </div>
   );
@@ -103,7 +112,44 @@ export default function AcademicPage() {
       )}
     </div>
   );
+  const formatText = (text = "") => {
+    if (!text) return "";
 
+    const trimmed = text.trim();
+
+    // dotted input → B.E.E
+    if (trimmed.includes(".")) {
+      return trimmed
+        .split(".")
+        .filter(Boolean)
+        .map((part) => part.toUpperCase())
+        .join(".");
+    }
+
+    const clean = trimmed.toLowerCase();
+
+    const degreeMap = {
+      bsc: "B.Sc",
+      btech: "B.Tech",
+      be: "B.E",
+      mtech: "M.Tech",
+      msc: "M.Sc",
+      ba: "B.A",
+      ma: "M.A",
+    };
+
+    if (degreeMap[clean]) return degreeMap[clean];
+
+    const words = clean.split(" ");
+
+    // abbreviation (NO dots)
+    if (words.length === 1 && clean.length <= 5) {
+      return clean.toUpperCase();
+    }
+
+    // normal text
+    return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  };
   /* ======================================================
      UI
   ====================================================== */
@@ -126,7 +172,7 @@ export default function AcademicPage() {
           to="add"
           className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm hover:bg-blue-700 transition"
         >
-          <i className="fi-rr-plus text-xs"></i>
+          <PlusIcon className="w-4 h-4" />
           <span className="hidden sm:inline">Add Academic</span>
         </Link>
       </div>
@@ -134,7 +180,7 @@ export default function AcademicPage() {
       {/* SEARCH */}
       <div className="mb-3">
         <div className="relative w-full sm:w-80">
-          <i className="fi-rr-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
 
           <input
             type="text"
@@ -153,8 +199,16 @@ export default function AcademicPage() {
         {!loading && filtered.length === 0 && <EmptyState />}
 
         {filtered.map((item) => {
+          const toTitleCase = (text = "") =>
+            text
+              .toLowerCase()
+              .split(" ")
+              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+              .join(" ");
+
           const location = [item.city, item.state, item.country]
             .filter(Boolean)
+            .map(toTitleCase)
             .join(", ");
 
           const duration = item.start_year
@@ -177,7 +231,7 @@ export default function AcademicPage() {
                   className="flex items-center gap-1 hover:text-blue-600 transition"
                   title="Edit"
                 >
-                  <i className="fi-rr-edit text-sm"></i>
+                  <PencilSquareIcon className="w-4 h-4" />
                   <span className="hidden sm:inline text-xs md:text-sm">
                     Edit
                   </span>
@@ -188,7 +242,7 @@ export default function AcademicPage() {
                   className="flex items-center gap-1 hover:text-red-600 transition"
                   title="Delete"
                 >
-                  <i className="fi-rr-trash text-sm"></i>
+                  <TrashIcon className="w-4 h-4" />
                   <span className="hidden sm:inline text-xs md:text-sm">
                     Delete
                   </span>
@@ -198,40 +252,51 @@ export default function AcademicPage() {
               {/* CONTENT */}
               <div className="min-w-0 text-xs md:text-sm lg:text-base">
                 {/* TITLE ROW */}
+                {/* TITLE ROW */}
                 <div className="flex flex-wrap items-center gap-2 md:gap-3 font-medium text-gray-900">
-                  <span>{item.title}</span>
+                  <span>{formatText(item.title)}</span>
 
                   {item.level && (
-                    <span className="text-gray-500 font-normal">
-                      {item.level}
-                    </span>
+                    <>
+                      <span className="text-gray-300">•</span>
+                      <span className="text-gray-500 font-normal">
+                        {formatText(item.level)}
+                      </span>
+                    </>
                   )}
 
                   {duration && (
-                    <span className="text-gray-400 font-normal">
-                      {duration}
-                    </span>
+                    <>
+                      <span className="text-gray-300">•</span>
+                      <span className="flex items-center gap-1 text-gray-400 font-normal">
+                        <CalendarIcon className="w-3.5 h-3.5" />
+                        {duration}
+                      </span>
+                    </>
                   )}
 
                   {grade && (
-                    <span className="flex items-center gap-1 text-gray-400 font-normal">
-                      <i className="fi-rr-star text-[11px]"></i>
-                      {grade}
-                    </span>
+                    <>
+                      <span className="text-gray-300">•</span>
+                      <span className="flex items-center gap-1 text-gray-400 font-normal">
+                        <StarIcon className="w-3.5 h-3.5" />
+                        {grade}
+                      </span>
+                    </>
                   )}
                 </div>
 
                 {/* STATUS BADGES */}
                 <StatusBadges item={item} />
 
-                {/* INSTITUTE */}
-                <div className="text-gray-700 mt-1 leading-snug">
-                  {item.institute_name}
+                {/* INSTITUTE + UNIVERSITY */}
+                <div className="mt-1 text-gray-700 text-sm">
+                  {formatText(item.institute_name)}
 
                   {item.university_name && (
                     <span className="text-gray-500">
                       {" "}
-                      · {item.university_name}
+                      · {formatText(item.university_name)}
                     </span>
                   )}
                 </div>
@@ -239,15 +304,15 @@ export default function AcademicPage() {
                 {/* META */}
                 <div className="flex flex-wrap items-center gap-2 md:gap-3 text-gray-500 text-xs md:text-sm mt-1">
                   {item.field_of_study && (
-                    <span className="flex items-center gap-1">
-                      <i className="fi-rr-book text-[11px]"></i>
-                      {item.field_of_study}
+                    <span className="flex items-center gap-1.5">
+                      <BookOpenIcon className="w-3 h-3" />
+                      {formatText(item.field_of_study)}
                     </span>
                   )}
 
                   {location && (
-                    <span className="flex items-center gap-1">
-                      <i className="fi-rr-marker text-[11px]"></i>
+                    <span className="flex items-center gap-1.5">
+                      <MapPinIcon className="w-3 h-3" />
                       {location}
                     </span>
                   )}

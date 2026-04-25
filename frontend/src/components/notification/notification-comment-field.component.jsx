@@ -1,6 +1,6 @@
 import { useContext, useState } from "react";
 import { UserContext } from "../../App";
-import { toast, Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import axios from "axios";
 import { COMMENT_API } from "../../common/api";
 
@@ -121,7 +121,6 @@ const NotificationCommentField = ({
 
   return (
     <>
-      <Toaster />
       <div className="bg-grey/20 p-4 rounded-lg border border-grey/30">
         <div className="space-y-4">
           {/* User info */}

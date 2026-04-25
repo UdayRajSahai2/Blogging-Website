@@ -28,7 +28,7 @@ const AdminBlogs = () => {
   const [rejectModal, setRejectModal] = useState(false);
   const [selectedBlogId, setSelectedBlogId] = useState(null);
   const [reviewNote, setReviewNote] = useState("");
-
+  const [deletedFilter, setDeletedFilter] = useState("active");
   const [noteModal, setNoteModal] = useState({
     open: false,
     text: "",
@@ -36,6 +36,10 @@ const AdminBlogs = () => {
   const [bannerModal, setBannerModal] = useState({
     open: false,
     src: "",
+  });
+  const [viewModal, setViewModal] = useState({
+    open: false,
+    blog: null,
   });
   // ================= DEBOUNCE =================
   useEffect(() => {
@@ -125,7 +129,26 @@ const AdminBlogs = () => {
       setProcessingId(null);
     }
   };
+  const hardDelete = async (blogId) => {
+    if (!window.confirm("Permanently delete this blog? This cannot be undone!"))
+      return;
 
+    try {
+      setProcessingId(blogId);
+
+      await axios.delete(`${ADMIN_API}/blogs/${blogId}/permanent`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      toast.success("Blog permanently deleted");
+      fetchBlogs();
+    } catch (err) {
+      console.error(err);
+      toast.error("Permanent delete failed");
+    } finally {
+      setProcessingId(null);
+    }
+  };
   const restoreBlog = async (blogId) => {
     try {
       setProcessingId(blogId);
@@ -211,7 +234,7 @@ const AdminBlogs = () => {
                       <img
                         src={b.banner}
                         alt="banner"
-                        className="w-16 h-12 object-cover rounded-md flex-shrink-0 cursor-pointer hover:scale-105 transition"
+                        className="w-16 h-12 object-fill rounded-md flex-shrink-0 cursor-pointer hover:scale-105 transition"
                         onClick={() =>
                           setBannerModal({
                             open: true,
@@ -221,12 +244,19 @@ const AdminBlogs = () => {
                       />
 
                       <div className="min-w-0">
-                        <p className="font-medium text-sm line-clamp-1">
+                        <p className="text-xs font-medium truncate">
                           {b.title}
                         </p>
-                        <p className="text-xs text-gray-500 line-clamp-2">
+                        <p className="text-[11px] text-gray-500 line-clamp-1">
                           {b.des || "No description"}
                         </p>
+
+                        <button
+                          className="text-[11px] text-blue-600 hover:underline mt-1"
+                          onClick={() => setViewModal({ open: true, blog: b })}
+                        >
+                          View
+                        </button>
                       </div>
                     </div>
                   </td>
@@ -304,13 +334,13 @@ const AdminBlogs = () => {
                   </td>
 
                   {/* ACTIONS */}
-                  <td className="p-3">
-                    <div className="flex flex-wrap justify-center gap-2 min-w-[200px]">
-                      {!b.is_deleted && (
+                  <td className="px-2 py-2">
+                    <div className="grid grid-cols-2 gap-1 min-w-[160px]">
+                      {!b.is_deleted ? (
                         <>
                           <button
                             disabled={isProcessing || isPublished}
-                            className="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1.5 rounded-md disabled:opacity-40"
+                            className="bg-green-500 hover:bg-green-600 text-white text-[11px] py-1 rounded-md disabled:opacity-40"
                             onClick={() => updateStatus(b.blog_id, "published")}
                           >
                             Approve
@@ -318,7 +348,7 @@ const AdminBlogs = () => {
 
                           <button
                             disabled={isProcessing || isRejected}
-                            className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-1.5 rounded-md disabled:opacity-40"
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white text-[11px] py-1 rounded-md disabled:opacity-40"
                             onClick={() => {
                               setSelectedBlogId(b.blog_id);
                               setReviewNote("");
@@ -330,22 +360,30 @@ const AdminBlogs = () => {
 
                           <button
                             disabled={isProcessing}
-                            className="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded-md"
+                            className="bg-red-500 hover:bg-red-600 text-white text-[11px] py-1 rounded-md col-span-2"
                             onClick={() => softDelete(b.blog_id)}
                           >
                             Delete
                           </button>
                         </>
-                      )}
+                      ) : (
+                        <>
+                          <button
+                            disabled={isProcessing}
+                            className="bg-blue-500 hover:bg-blue-600 text-white text-[11px] py-1 rounded-md"
+                            onClick={() => restoreBlog(b.blog_id)}
+                          >
+                            Restore
+                          </button>
 
-                      {b.is_deleted && (
-                        <button
-                          disabled={isProcessing}
-                          className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1.5 rounded-md"
-                          onClick={() => restoreBlog(b.blog_id)}
-                        >
-                          Restore
-                        </button>
+                          <button
+                            disabled={isProcessing}
+                            className="bg-black hover:bg-gray-800 text-white text-[11px] py-1 rounded-md"
+                            onClick={() => hardDelete(b.blog_id)}
+                          >
+                            Delete Permanently
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -432,15 +470,142 @@ const AdminBlogs = () => {
       )}
       {bannerModal.open && (
         <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-          onClick={() => setBannerModal({ open: false, src: "" })}
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setBannerModal({ open: false, src: "" });
+            }
+          }}
         >
+          {/* Close Button */}
+          <button
+            className="absolute top-4 right-4 text-white text-3xl font-bold hover:scale-110 transition"
+            onClick={() => setBannerModal({ open: false, src: "" })}
+          >
+            ×
+          </button>
+
+          {/* Image */}
           <img
             src={bannerModal.src}
             alt="Full banner"
-            className="max-h-[90vh] max-w-[95vw] rounded-xl shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            className="max-h-[90vh] max-w-[95vw] object-contain rounded-xl shadow-2xl"
           />
+        </div>
+      )}
+      {viewModal.open && (
+        <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center p-3">
+          <div className="bg-white w-full max-w-4xl max-h-[95vh] rounded-xl overflow-hidden flex flex-col">
+            {/* HEADER */}
+            <div className="flex justify-between items-center px-4 py-2 border-b">
+              <h2 className="text-sm font-semibold truncate">
+                {viewModal.blog.title}
+              </h2>
+
+              <button
+                className="text-xl"
+                onClick={() => setViewModal({ open: false, blog: null })}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* BODY */}
+            <div className="overflow-y-auto p-3 space-y-3 text-xs">
+              {/* BANNER */}
+              <img
+                src={viewModal.blog.banner}
+                className="w-full max-h-[250px] object-contain rounded-md"
+              />
+
+              {/* META */}
+              <div className="grid grid-cols-2 gap-2">
+                <p>
+                  <b>Status:</b> {viewModal.blog.status}
+                </p>
+                <p>
+                  <b>Deleted:</b> {viewModal.blog.is_deleted ? "Yes" : "No"}
+                </p>
+                <p>
+                  <b>Author:</b> {viewModal.blog.blogAuthor?.fullname}
+                </p>
+                <p>
+                  <b>Email:</b> {viewModal.blog.blogAuthor?.email}
+                </p>
+              </div>
+
+              {/* TITLE */}
+              <div>
+                <p className="text-[11px] text-gray-400 uppercase">Title</p>
+                <p className="text-sm  text-gray-700">{viewModal.blog.title}</p>
+              </div>
+
+              {/* DESCRIPTION */}
+              <div>
+                <p className="text-[11px] text-gray-400 uppercase">
+                  Description
+                </p>
+                <p className="text-xs text-gray-700">
+                  {viewModal.blog.des || "No description"}
+                </p>
+              </div>
+
+              {/* CONTENT */}
+              <div>
+                <p className="text-[11px] text-gray-400 uppercase">
+                  Content/Paragraph
+                </p>
+
+                <div className="space-y-2 mt-1">
+                  {(() => {
+                    let content = viewModal.blog?.content;
+
+                    if (typeof content === "string") {
+                      try {
+                        content = JSON.parse(content);
+                      } catch {
+                        content = [];
+                      }
+                    }
+
+                    if (!Array.isArray(content)) {
+                      content = content?.blocks || [content];
+                    }
+
+                    return content.map((block, i) => {
+                      // TEXT / PARAGRAPH
+                      if (
+                        block?.type === "text" ||
+                        block?.type === "paragraph"
+                      ) {
+                        return (
+                          <p
+                            key={i}
+                            className="text-xs text-gray-800 leading-relaxed"
+                          >
+                            {block.value || block.data?.text}
+                          </p>
+                        );
+                      }
+
+                      // IMAGE
+                      if (block?.type === "image") {
+                        return (
+                          <img
+                            key={i}
+                            src={block.value || block.data?.file?.url}
+                            className="w-full max-h-[300px] object-contain rounded"
+                          />
+                        );
+                      }
+
+                      return null;
+                    });
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

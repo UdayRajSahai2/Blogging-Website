@@ -177,7 +177,7 @@ const BlogPage = () => {
           value={{
             blog,
             setBlog,
-            refreshBlog, // ⭐ allows blog refresh after edit
+            refreshBlog, //  allows blog refresh after edit
             blogAuthor: blog.blogAuthor,
             activity: blog.activity || {},
             isLikedByUser,
@@ -199,7 +199,7 @@ const BlogPage = () => {
               <img
                 src={banner}
                 alt={title}
-                className="w-full h-[220px] sm:h-[320px] md:h-[420px] object-cover"
+                className="w-full aspect-[16/9] object-fill transition-transform duration-700 group-hover:scale-105"
               />
             </div>
 
@@ -234,11 +234,6 @@ const BlogPage = () => {
               <p className="text-xs md:text-sm text-gray-500">
                 {getDay(publishedAt)}
               </p>
-            </div>
-
-            {/* BLOG INTERACTION */}
-            <div className="sticky top-20 z-10 bg-white">
-              <BlogInteraction />
             </div>
 
             {/* BLOG CONTENT */}

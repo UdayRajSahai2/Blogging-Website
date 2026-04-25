@@ -2,7 +2,9 @@ import InputBox from "../../input.component";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { USER_API } from "../../../common/api";
-const BasicInfoSection = ({ profile, setProfile, access_token }) => {
+import { EnvelopeIcon, AtSymbolIcon } from "@heroicons/react/24/outline";
+
+const BasicInfoSection = ({ profile, setProfile, access_token, errors }) => {
   const { fullname, username, email, mobile_number } = profile;
   const { salutation } = profile.details || {};
   const [isEditingMobile, setIsEditingMobile] = useState(false);
@@ -13,6 +15,7 @@ const BasicInfoSection = ({ profile, setProfile, access_token }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(0);
+
   const sendOtp = async () => {
     try {
       setLoading(true);
@@ -87,7 +90,10 @@ const BasicInfoSection = ({ profile, setProfile, access_token }) => {
     <div className="bg-white border rounded-lg p-2 sm:p-3">
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
         {/* FULL NAME */}
-        <div className="flex flex-col">
+        <div
+          data-error={errors?.salutation ? "true" : undefined}
+          className="flex flex-col"
+        >
           <label className="text-xs font-medium text-gray-600 mb-1">
             Full Name
             <span className="ml-1 text-gray-400 text-[11px]">
@@ -95,7 +101,13 @@ const BasicInfoSection = ({ profile, setProfile, access_token }) => {
             </span>
           </label>
 
-          <div className="flex items-center h-9 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden focus-within:ring-1 focus-within:ring-indigo-100 focus-within:border-indigo-500">
+          <div
+            className={`flex items-center h-9 rounded-lg border overflow-hidden focus-within:ring-1 focus-within:ring-indigo-100 ${
+              errors?.salutation
+                ? "border-red-400 bg-red-50"
+                : "border-gray-200 bg-gray-50 focus-within:border-indigo-500"
+            }`}
+          >
             <select
               name="salutation"
               value={salutation || ""}
@@ -125,19 +137,28 @@ const BasicInfoSection = ({ profile, setProfile, access_token }) => {
               className="flex-1 h-full px-2 text-[13px] bg-transparent outline-none text-gray-500"
             />
           </div>
+
+          {/* INLINE ERROR */}
+          {errors?.salutation && (
+            <p className="text-xs text-red-500 mt-1">{errors.salutation}</p>
+          )}
         </div>
+
         {/* EMAIL */}
         <div className="flex flex-col">
-          <label className="text-xs font-medium text-gray-00 mb-1">Email</label>
+          <label className="text-xs font-medium text-gray-600 mb-1">
+            Email
+          </label>
 
           <InputBox
             name="email"
             value={email || ""}
             disabled
-            icon="fi-rr-envelope"
+            icon={<EnvelopeIcon className="w-4 h-4" />}
             placeholder="Email"
           />
         </div>
+
         {/* USERNAME */}
         <div className="flex flex-col">
           <label className="text-xs font-medium text-gray-600 mb-1">
@@ -147,7 +168,7 @@ const BasicInfoSection = ({ profile, setProfile, access_token }) => {
           <InputBox
             name="username"
             value={username || ""}
-            icon="fi-rr-at"
+            icon={<AtSymbolIcon className="w-4 h-4" />}
             placeholder="Username"
             onChange={(e) =>
               setProfile((prev) => ({

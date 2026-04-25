@@ -4,7 +4,7 @@ import sequelize from "../config/db.config.js";
 
 export const checkNewNotifications = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user.id;
 
     const notifications = await Notification.findAll({
       where: { notification_for: userId },
@@ -34,7 +34,7 @@ export const deleteNotification = async (req, res) => {
   }
 
   const { notification_id } = req.body;
-  const userId = req.userId;
+  const userId = req.user.id;
 
   // Validate input
   if (
@@ -138,7 +138,7 @@ export const deleteNotification = async (req, res) => {
 
 // CORRECTED: Main notifications endpoint
 export const getNotifications = async (req, res) => {
-  const userId = req.userId;
+  const userId = req.user.id;
   const { page = 1, filter = "all", deletedDocCount = 0 } = req.body;
   const maxLimit = 10;
 
@@ -335,7 +335,7 @@ export const getNotifications = async (req, res) => {
 };
 
 export const getAllNotificationsCount = async (req, res) => {
-  const userId = req.userId;
+  const userId = req.user.id;
   const { filter = "all" } = req.body;
 
   try {
@@ -376,7 +376,7 @@ export const getAllNotificationsCount = async (req, res) => {
 };
 export const getUnreadNotificationCount = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user.id;
 
     const count = await Notification.count({
       where: {
