@@ -74,17 +74,14 @@ const BlogCarousel = ({ pageState }) => {
   return (
     <div className="w-full h-full py-0">
       <div
-        className="grid
-                   grid-cols-[1fr_140px]
-                   md:grid-cols-[1fr_0.5fr]
+        className="grid grid-cols-[1fr_140px] md:grid-cols-[1fr_0.5fr]
                    grid-rows-2
                    gap-y-1.4
-                   md:gap-y-1.5
+                   md:gap-y-0.5
                    gap-x-0.4
-                   md:gap-x-1.5
+                   md:gap-x-0.5
                    h-full
-                   min-w-0
-"
+                   min-w-0"
       >
         {/* LEFT BIG */}
         <div className="row-span-2 min-w-0">
@@ -165,16 +162,16 @@ const MiniCarousel = ({ blogs, isFirstBlog = false }) => {
 
         <div
           className="absolute bottom-0 left-0 right-0
-bg-gradient-to-t from-black/80 via-black/40 to-transparent
-text-white
-px-3 sm:px-4
-py-2 sm:py-3
-text-xs sm:text-sm md:text-base
-font-medium
-capitalize
-tracking-wide
-drop-shadow-md
-line-clamp-2"
+                     bg-gradient-to-t from-black/80 via-black/40 to-transparent
+                     text-white
+                     px-3 sm:px-4
+                     py-2 sm:py-3
+                     text-xs sm:text-sm md:text-base
+                     font-medium
+                     capitalize
+                     tracking-wide
+                     drop-shadow-md
+                     line-clamp-2"
         >
           {current.title}
         </div>
@@ -186,14 +183,14 @@ line-clamp-2"
             aria-label="Previous blog"
             onClick={prev}
             className="absolute left-2 top-1/2 -translate-y-1/2
-      flex items-center justify-center
-      w-8 h-8
-      bg-white/70 hover:bg-white
-      text-gray-800
-      rounded-full
-      shadow-sm
-      opacity-0 group-hover:opacity-100
-      transition"
+                       flex items-center justify-center
+                       w-8 h-8
+                       bg-white/70 hover:bg-white
+                       text-gray-800
+                       rounded-full
+                       shadow-sm
+                       opacity-0 group-hover:opacity-100
+                       transition"
           >
             <ChevronLeftIcon className="w-4 h-4" />
           </button>
@@ -202,14 +199,14 @@ line-clamp-2"
             aria-label="Next blog"
             onClick={next}
             className="absolute right-2 top-1/2 -translate-y-1/2
-      flex items-center justify-center
-      w-8 h-8
-      bg-white/70 hover:bg-white
-      text-gray-800
-      rounded-full
-      shadow-sm
-      opacity-0 group-hover:opacity-100
-      transition"
+                          flex items-center justify-center
+                          w-8 h-8
+                          bg-white/70 hover:bg-white
+                          text-gray-800
+                          rounded-full
+                          shadow-sm
+                          opacity-0 group-hover:opacity-100
+                          transition"
           >
             <ChevronRightIcon className="w-4 h-4" />
           </button>

@@ -59,9 +59,7 @@ const SocialLinksSection = ({ profile, setProfile }) => {
     let val = value.trim();
 
     if (key === "whatsapp") {
-      if (/^\d{10}$/.test(val)) {
-        val = `https://wa.me/91${val}`;
-      }
+      val = val.replace(/\D/g, "").slice(-10);
     } else if (key === "website") {
       if (!val.startsWith("http")) {
         val = `https://${val}`;

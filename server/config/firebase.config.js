@@ -1,5 +1,5 @@
 import admin from "firebase-admin";
-import serviceAccountKey from "./firebase-service-account.json" with { type: "json" };
+import serviceAccountKey from "./reachfoundationngo-firebase-adminsdk-fbsvc-40b436aefc.json" with { type: "json" };
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccountKey),

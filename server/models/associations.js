@@ -24,7 +24,7 @@ import setupUserAddressAssociations from "./associations/userAddressAssociations
 import setupRoleAssociations from "./roles/roleAssociations.js";
 import setupUserInterestsAssociations from "./associations/userInterestsAssociations.js";
 import setupUserConnectionAssociations from "./associations/userConnectionAssociations.js";
-
+import setupPageAssociations from "./associations/pageAssocations.js";
 // Function to set up all associations
 
 const setupAssociations = () => {
@@ -35,6 +35,8 @@ const setupAssociations = () => {
   setupUserConnectionAssociations();
   //  NEW ( modular system)
   setupRoleAssociations();
+  setupPageAssociations();
+
   console.log(" All associations initialized");
   const models = {
     User,

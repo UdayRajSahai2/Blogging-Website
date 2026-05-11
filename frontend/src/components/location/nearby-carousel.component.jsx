@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import NearbyFlipCard from "./nearby-flip-card.component";
-
+import { UsersIcon } from "@heroicons/react/24/outline";
 const NearbyCarousel = ({ users = [], intervalMs = 5000 }) => {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -60,12 +60,12 @@ const NearbyCarousel = ({ users = [], intervalMs = 5000 }) => {
     return (
       <>
         <div className="hidden sm:flex items-center justify-center gap-2 text-dark-grey bg-grey/10 rounded-lg py-6">
-          <i className="fi fi-rr-users opacity-70"></i>
+          <UsersIcon className="w-4 h-4 opacity-70" />
           <span>No nearby users found</span>
         </div>
 
         <p className="sm:hidden flex items-center justify-center gap-1 text-dark-grey text-sm py-2">
-          <i className="fi fi-rr-users opacity-70"></i>
+          <UsersIcon className="w-4 h-4 opacity-70" />
           No nearby users found
         </p>
       </>

@@ -5,8 +5,6 @@ import ConversationParticipant from "../chat/conversationParticipant.js";
 import MessageSeen from "../chat/messageSeen.js";
 
 const setupChatAssociations = () => {
-  console.log("💬 Chat associations...");
-
   // ================= Conversation ↔ Participants =================
   Conversation.hasMany(ConversationParticipant, {
     foreignKey: "conversation_id",

@@ -30,6 +30,7 @@ import ChatPage from "./pages/chat/ChatPage";
 import DonorDashboard from "./components/donation/donor-dashboard.component";
 import OnboardingPage from "./pages/onboarding/OnboardingPage";
 import WelcomePage from "./pages/WelcomePage";
+import PageRenderer from "./pages/menubar/PageRenderer";
 
 // import Dashboard from "./pages/Dashboard"; //for multiple role profiles
 
@@ -56,7 +57,7 @@ export const UserContext = createContext({
   setUserAuth: () => {},
 });
 
-// 🔒 Protected Route
+//  Protected Route
 const ProtectedRoute = ({ user, children }) => {
   if (!user.access_token) return <Navigate to="/signin" replace />;
   return children;
@@ -96,6 +97,7 @@ const App = () => {
               </Route>
 
               <Route path="blogs" element={<AdminBlogs />} />
+
               <Route path="finance" element={<AdminFinance />} />
               <Route
                 path="finance/expenditures"
@@ -213,7 +215,10 @@ const App = () => {
             <Route path="edit-profile" element={<EditProfile />} />
             <Route path="change-password" element={<ChangePassword />} />
           </Route>
-          {/* 404 */}
+          {/*  PageRenderer pages */}
+          <Route path=":slug/*" element={<PageRenderer />} />
+
+          {/*  404 fallback */}
           <Route path="*" element={<PageNotFound />} />
         </Route>
       </Routes>

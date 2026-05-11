@@ -15,7 +15,6 @@ import {
 export const getUserBlogs = async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log("Fetching blogs for user ID:", userId);
     const blogs = await Blog.findAll({
       where: { author: userId },
       attributes: [
@@ -604,6 +603,17 @@ export const createOrUpdateBlog = async (req, res) => {
         .trim() + nanoid();
 
     if (id) {
+      //  Get existing blog
+      const existingBlog = await Blog.findOne({
+        where: { blog_id, author: authorId },
+      });
+
+      //  BLOCK ALL edits if blog is under review
+      if (existingBlog && existingBlog.status === "pending") {
+        return res.status(400).json({
+          error: "Blog is under review and cannot be edited",
+        });
+      }
       // UPDATE EXISTING BLOG
       const updatePayload = {
         title,
@@ -729,8 +739,30 @@ export const getBlogById = async (req, res) => {
     //  track read
     if (mode !== "edit") {
       const userId = req.user?.id;
+
+      // Logged-in users
       if (userId) {
-        await Read.create({ blog_id, user_id: userId });
+        const existingRead = await Read.findOne({
+          where: {
+            blog_id,
+            user_id: userId,
+          },
+        });
+
+        if (!existingRead) {
+          await Read.create({
+            blog_id,
+            user_id: userId,
+          });
+        }
+      }
+
+      // Guests
+      else if (!req.body.alreadyViewed) {
+        await Read.create({
+          blog_id,
+          user_id: null,
+        });
       }
     }
 
@@ -745,14 +777,14 @@ export const getBlogById = async (req, res) => {
         where: { user_id: blog.author },
       });
     }
+    const blogData = blog.get({ plain: true });
+
+    blogData.total_likes = total_likes;
+    blogData.total_comments = total_comments;
+    blogData.total_reads = total_reads;
 
     return res.status(200).json({
-      blog: {
-        ...blog.get({ plain: true }),
-        total_likes,
-        total_comments,
-        total_reads,
-      },
+      blog: blogData,
     });
   } catch (err) {
     console.error("Error in getBlog:", err);
@@ -761,7 +793,7 @@ export const getBlogById = async (req, res) => {
 };
 
 export const handleLike = async (req, res) => {
-  // ✅ Validate request body
+  //  Validate request body
   if (!req.body || typeof req.body !== "object") {
     return res.status(400).json({
       success: false,
@@ -773,7 +805,7 @@ export const handleLike = async (req, res) => {
   const { blog_id, isLiked } = req.body;
   const userId = req.user.id;
 
-  // ✅ Auth safety
+  //  Auth safety
   if (!userId) {
     return res.status(401).json({
       success: false,
@@ -781,7 +813,7 @@ export const handleLike = async (req, res) => {
     });
   }
 
-  // ✅ Validate inputs
+  //  Validate inputs
   if (typeof isLiked !== "boolean") {
     return res.status(400).json({
       success: false,
@@ -801,7 +833,7 @@ export const handleLike = async (req, res) => {
 
   try {
     // ==================================================
-    // 🔍 Get blog with lock
+    //  Get blog with lock
     // ==================================================
     const blog = await Blog.findOne({
       where: { blog_id: trimmedBlogId },
@@ -825,7 +857,7 @@ export const handleLike = async (req, res) => {
     }
 
     // ==================================================
-    // 🔍 Verify user exists
+    //  Verify user exists
     // ==================================================
     const user = await User.findByPk(userId, {
       attributes: ["user_id", "fullname", "username", "profile_img"],
@@ -843,7 +875,7 @@ export const handleLike = async (req, res) => {
     let finalLikeStatus;
 
     // ==================================================
-    // ❤️ LIKE
+    //  LIKE
     // ==================================================
     if (isLiked) {
       try {
@@ -857,7 +889,7 @@ export const handleLike = async (req, res) => {
 
         finalLikeStatus = true;
 
-        // 🔔 Create notification (no self-like)
+        //  Create notification (no self-like)
         const blogAuthorId = blog.author || blog?.blogAuthor?.user_id;
 
         if (blogAuthorId && blogAuthorId !== userId) {
@@ -887,7 +919,7 @@ export const handleLike = async (req, res) => {
     }
 
     // ==================================================
-    // 💔 UNLIKE
+    //  UNLIKE
     // ==================================================
     else {
       const deletedLikeCount = await Like.destroy({
@@ -911,7 +943,7 @@ export const handleLike = async (req, res) => {
     }
 
     // ==================================================
-    // 🔢 Get updated count
+    //  Get updated count
     // ==================================================
     const total_likes = await Like.count({
       where: { blog_id: trimmedBlogId },

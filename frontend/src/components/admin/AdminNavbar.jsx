@@ -43,13 +43,11 @@ const AdminNavbar = () => {
           </Link>
 
           {/*  RIGHT → ACTIONS */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* GO TO SITE */}
-            <Link
-              to="/"
-              className="text-sm text-gray-600 hover:underline hidden sm:block"
-            >
-              Go to Site
+            <Link to="/" className="text-sm text-gray-600 hover:underline">
+              <span className="sm:hidden">Site</span>
+              <span className="hidden sm:inline">Go to Site</span>
             </Link>
 
             {/* ADMIN NAME */}
@@ -70,7 +68,7 @@ const AdminNavbar = () => {
 
                 <button
                   onClick={handleLogout}
-                  className="text-xs bg-black text-white px-3 py-1 rounded hidden sm:block"
+                  className="text-xs bg-black text-white px-3 py-1 rounded"
                 >
                   Logout
                 </button>

@@ -7,8 +7,8 @@ import UserNavigationPanel from "./user-navigation.component";
 import axios from "axios";
 import { NOTIFICATION_API } from "../../common/api";
 import NotificationPanel from "../notification/notification-panel.component";
-import NavbarMenu from "./NavbarMenu";
-import menuData from "./menuData";
+import NavbarMenu from "../menubar/NavbarMenu";
+
 import {
   MagnifyingGlassIcon,
   PencilSquareIcon,
@@ -17,6 +17,15 @@ import {
   HeartIcon,
   ShoppingCartIcon,
 } from "@heroicons/react/24/outline";
+import {
+  FaYoutube,
+  FaInstagram,
+  FaFacebookF,
+  FaTwitter,
+  FaGithub,
+  FaWhatsapp,
+  FaGlobe,
+} from "react-icons/fa";
 const Navbar = ({ onInterestClick, activeInterest, profile }) => {
   const [searchBoxVisibility, setSearchBoxVisibility] = useState(false);
   const [userNavPanel, setUserNavPanel] = useState(false);
@@ -33,7 +42,15 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
   } = useContext(UserContext);
 
   const navigate = useNavigate();
-
+  const socialIcons = {
+    youtube: FaYoutube,
+    instagram: FaInstagram,
+    facebook: FaFacebookF,
+    twitter: FaTwitter,
+    github: FaGithub,
+    website: FaGlobe,
+    whatsapp: FaWhatsapp,
+  };
   // 1. Unified Notification Logic
   // fetch function
   const fetchNotificationCount = async () => {
@@ -131,7 +148,7 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
               <div className="relative min-w-[160px] flex-1 max-w-[220px] md:max-w-md">
                 <input
                   type="text"
-                  placeholder="Search..."
+                  placeholder="Search profiles,blogs..."
                   className="w-full h-8 md:h-10 pl-8 md:pl-10 pr-2 md:pr-4 text-xs md:text-sm rounded-full border bg-gray-50 focus:ring-2 focus:ring-purple-500"
                   onKeyDown={handleSearch}
                 />
@@ -152,7 +169,6 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
 
               {/* ================= SOCIAL ICONS ================= */}
               <div className="flex items-center gap-[2px] shrink-0">
-                {/* ICONS */}
                 {[
                   "youtube",
                   "instagram",
@@ -164,10 +180,7 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                 ].map((key) => {
                   const link = profile?.details?.[key];
 
-                  const iconClass =
-                    key !== "website"
-                      ? `fi fi-brands-${key}`
-                      : "fi fi-rr-globe";
+                  const Icon = socialIcons[key];
 
                   return (
                     <a
@@ -180,12 +193,12 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                       }}
                       className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100 transition text-[11px]"
                     >
-                      <i className={iconClass} />
+                      <Icon />
                     </a>
                   );
                 })}
 
-                {/* CART (OUTSIDE MAP) */}
+                {/* CART */}
                 <button className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100 transition">
                   <ShoppingCartIcon className="w-4 h-4" />
                 </button>
@@ -211,15 +224,6 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                   </>
                 ) : (
                   <>
-                    {/* disabled in production */}
-                    {/* CHAT */}
-                    {/* <button
-              onClick={() => navigate("/chat")}
-              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition"
-            >
-            <ChatBubbleLeftIcon className="w-5 h-5 text-gray-700" />
-            </button> */}
-
                     {/* POST */}
                     <Link
                       to="/editor"
@@ -233,9 +237,9 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                     <div className="relative" ref={notificationRef}>
                       <button
                         onClick={handleNotificationClick}
-                        className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center hover:bg-gray-100 rounded-full relative"
+                        className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition"
                       >
-                        <BellIcon className="w-4 h-4 md:w-5 md:h-5 text-gray-700" />
+                        <BellIcon className="w-4 h-4  text-gray-700" />
 
                         {notificationCount > 0 && (
                           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] md:text-[10px] px-1 rounded-full">
@@ -248,6 +252,14 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                         <NotificationPanel notifications={notifications} />
                       )}
                     </div>
+                    {/* disabled in production */}
+                    {/* CHAT */}
+                    {/* <button
+                      onClick={() => navigate("/chat")}
+                      className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition"
+                    >
+                      <ChatBubbleLeftIcon className="w-4 h-4 text-gray-700" />
+                    </button> */}
 
                     {/* PROFILE */}
                     <div
@@ -420,10 +432,7 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                   ].map((key) => {
                     const link = profile?.details?.[key];
 
-                    const iconClass =
-                      key !== "website"
-                        ? `fi fi-brands-${key}`
-                        : "fi fi-rr-globe";
+                    const Icon = socialIcons[key];
 
                     return (
                       <a
@@ -434,9 +443,9 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                         onClick={(e) => {
                           if (!link) e.preventDefault();
                         }}
-                        className="w-1 h-1 flex items-center justify-center rounded-full bg-gray-100 text-[9px] flex-shrink-0"
+                        className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-100 text-[9px] flex-shrink-0"
                       >
-                        <i className={iconClass} />
+                        <Icon />
                       </a>
                     );
                   })}
@@ -446,7 +455,7 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
           </div>
 
           {/* MENU */}
-          <NavbarMenu menuData={menuData} />
+          <NavbarMenu />
         </div>
         <div></div>
       </nav>

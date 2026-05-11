@@ -70,7 +70,7 @@ export const getAdminStats = async (req, res) => {
 ========================= */
 export const getAllUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 20, search = "", deleted } = req.query;
+    const { page = 1, limit = 20, search = "", deleted, status } = req.query;
 
     const parsedLimit = Math.min(parseInt(limit) || 20, 100);
     const parsedPage = Math.max(parseInt(page) || 1, 1);
@@ -78,7 +78,7 @@ export const getAllUsers = async (req, res) => {
 
     const whereClause = {};
 
-    // ✅ filter logic
+    //  filter logic
     if (deleted === "true") {
       whereClause.is_deleted = true;
     } else if (deleted === "false") {
@@ -86,7 +86,7 @@ export const getAllUsers = async (req, res) => {
     }
     // else → BOTH
 
-    // ✅ search
+    //  search
     if (search?.trim()) {
       whereClause[Op.or] = [
         { fullname: { [Op.like]: `%${search}%` } },
@@ -98,11 +98,19 @@ export const getAllUsers = async (req, res) => {
       where: whereClause,
       attributes: [
         "user_id",
+        "customer_id",
         "fullname",
         "email",
+
+        "country_code",
+        "state_code",
+        "district_code",
+        "block_code",
+        "village_code",
+
         "system_role",
         "createdAt",
-        "is_deleted", // IMPORTANT
+        "is_deleted",
       ],
       order: [["createdAt", "DESC"]],
       limit: parsedLimit,
@@ -386,7 +394,7 @@ export const updateUserRole = async (req, res) => {
 ========================= */
 export const getAllBlogs = async (req, res) => {
   try {
-    const { page = 1, limit = 20, search = "", deleted } = req.query;
+    const { page = 1, limit = 20, search = "", deleted, status } = req.query;
 
     const parsedLimit = Math.min(parseInt(limit) || 20, 100);
     const parsedPage = Math.max(parseInt(page) || 1, 1);
@@ -396,7 +404,12 @@ export const getAllBlogs = async (req, res) => {
 
     if (deleted === "true") whereClause.is_deleted = true;
     if (deleted === "false") whereClause.is_deleted = false;
+    //  STATUS FILTER
+    const allowedStatus = ["draft", "pending", "published", "rejected"];
 
+    if (status && allowedStatus.includes(status)) {
+      whereClause.status = status;
+    }
     if (search) {
       whereClause.title = {
         [Op.like]: `%${search}%`,

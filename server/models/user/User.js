@@ -153,7 +153,7 @@ const User = sequelize.define(
     },
     is_location_public: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false, // Users can choose to share their location
+      defaultValue: true, // Users can choose to share their location
     },
     display_location: {
       type: DataTypes.STRING,

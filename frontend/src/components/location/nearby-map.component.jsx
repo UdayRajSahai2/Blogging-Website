@@ -52,7 +52,11 @@ const FitToRadius = ({ center, radius }) => {
 
     setTimeout(() => {
       map.invalidateSize();
-      map.fitBounds(bounds, { padding: [0, 0] });
+      map.fitBounds(bounds, {
+        paddingTopLeft: [1, 1],
+        paddingBottomRight: [16, 16],
+        maxZoom: 11,
+      });
       fitted.current = true;
     }, 150);
   }, [center, radius, map]);

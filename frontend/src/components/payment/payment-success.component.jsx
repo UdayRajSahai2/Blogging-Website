@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import PaymentDetails from "./payment-details.component";
-
+import { CheckIcon } from "@heroicons/react/24/outline";
 const PaymentSuccess = ({ donation, onClose }) => {
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
 
@@ -39,7 +39,7 @@ const PaymentSuccess = ({ donation, onClose }) => {
             {" "}
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               {" "}
-              <i className="fi fi-rr-check text-2xl text-green-600"></i>{" "}
+              <CheckIcon className="w-7 h-7 text-green-600" />{" "}
             </div>
             <h2 className="text-2xl font-bold text-dark-grey mb-2">
               Payment Successful!

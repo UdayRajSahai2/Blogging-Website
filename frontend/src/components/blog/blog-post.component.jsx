@@ -79,12 +79,12 @@ const BlogPostCard = ({ content, author, openProfile }) => {
           <span className="text-gray-300">•</span>
 
           {/* Date */}
-          <span className="text-gray-500">
+          <span className="text-gray-500 whitespace-nowrap">
             {publishedAt ? getDay(publishedAt) : ""}
           </span>
 
           {/* Likes */}
-          <span className="ml-auto flex items-center gap-1 text-gray-600">
+          <span className="ml-auto flex items-center gap-1 text-gray-600 shrink-0">
             <FiHeart size={14} />
             {total_likes || 0}
           </span>
@@ -100,11 +100,30 @@ const BlogPostCard = ({ content, author, openProfile }) => {
           <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">{des}</p>
         )}
 
-        {/* Tag */}
-        {tags?.[0] && (
-          <span className="inline-flex items-center text-[11px] px-2 py-[1px] rounded-md bg-purple-50 text-purple-600 font-medium w-fit">
-            #{tags[0]}
-          </span>
+        {/* Tags */}
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {tags.slice(0, 4).map((tag, index) => (
+              <span
+                key={index}
+                className="
+                          inline-flex
+                          items-center
+                          text-[10px]
+                          sm:text-[11px]
+                          px-0.5
+                          py-0.5
+                          rounded-md
+                          bg-purple-50
+                          text-purple-600
+                          font-medium
+                          leading-none
+                       "
+              >
+                #{String(tag).replace(/^#/, "")}
+              </span>
+            ))}
+          </div>
         )}
       </div>
     </Link>

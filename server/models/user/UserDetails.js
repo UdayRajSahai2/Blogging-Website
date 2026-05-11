@@ -28,7 +28,7 @@ const UserDetails = sequelize.define(
       allowNull: true,
     },
 
-    // ✅ NEW
+    // NEW
     user_type: {
       type: DataTypes.ENUM("student", "professional", "retired", "unknown"),
       allowNull: true,

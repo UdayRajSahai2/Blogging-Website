@@ -478,7 +478,7 @@ const EditProfile = ({ onNext, isOnboarding }) => {
   };
 
   useEffect(() => {
-    setIsPublic(profile?.is_location_public);
+    setIsPublic(Boolean(profile?.is_location_public));
   }, [profile]);
 
   const toggleLocationPrivacy = async () => {

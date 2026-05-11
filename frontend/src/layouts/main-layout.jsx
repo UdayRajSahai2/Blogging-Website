@@ -11,7 +11,7 @@ const MainLayout = ({ left, right }) => {
         </aside>
 
         {/* CENTER */}
-        <main className="order-1 xl:order-2 w-full">
+        <main className="order-1 xl:order-2 w-full min-w-0">
           <Outlet />
         </main>
 

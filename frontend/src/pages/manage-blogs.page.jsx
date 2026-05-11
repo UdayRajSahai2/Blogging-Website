@@ -26,7 +26,10 @@ const MyBlogs = () => {
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
-
+  const [noteModal, setNoteModal] = useState({
+    open: false,
+    text: "",
+  });
   // FETCH BLOGS
   useEffect(() => {
     if (!access_token) {
@@ -186,15 +189,6 @@ const MyBlogs = () => {
                         {badge.text}
                       </span>
 
-                      {/* EDIT */}
-                      <Link
-                        to={`/editor/${blog.blog_id}`}
-                        className="flex items-center gap-1 text-[12px] sm:text-xs px-1.5 sm:px-2 py-0.5 border rounded-md hover:bg-gray-100 transition"
-                      >
-                        <PencilSquareIcon className="w-3 h-3" />
-                        Edit
-                      </Link>
-
                       {/* VIEW */}
                       {blog.status === "published" && !blog.is_deleted && (
                         <Link
@@ -208,10 +202,45 @@ const MyBlogs = () => {
 
                       {/* REVIEW MESSAGE */}
                       {blog.status === "rejected" && blog.review_note && (
-                        <span className="text-[10px] text-red-600 truncate max-w-[120px]">
-                          {blog.review_note}
+                        <span
+                          className="text-[10px] text-red-600 underline cursor-pointer"
+                          onClick={() =>
+                            setNoteModal({ open: true, text: blog.review_note })
+                          }
+                        >
+                          View rejection reason
                         </span>
                       )}
+                      {noteModal.open && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                          <div className="bg-white rounded-xl p-6 max-w-md w-[90%]">
+                            <h3 className="text-lg font-semibold mb-3">
+                              Review Note
+                            </h3>
+
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                              {noteModal.text}
+                            </p>
+
+                            <button
+                              className="mt-5 px-4 py-2 bg-black text-white rounded-lg"
+                              onClick={() =>
+                                setNoteModal({ open: false, text: "" })
+                              }
+                            >
+                              Close
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {/* EDIT */}
+                      <Link
+                        to={`/editor/${blog.blog_id}`}
+                        className="flex items-center gap-1 text-[12px] sm:text-xs px-1.5 sm:px-2 py-0.5 border rounded-md hover:bg-gray-100 transition"
+                      >
+                        <PencilSquareIcon className="w-3 h-3" />
+                        Edit
+                      </Link>
                     </div>
                   </div>
                 </div>

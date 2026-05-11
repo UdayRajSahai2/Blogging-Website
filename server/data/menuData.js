@@ -1,3 +1,4 @@
+//server\data\menuData.js
 const slugify = (text) =>
   text
     .toLowerCase()

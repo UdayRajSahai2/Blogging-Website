@@ -34,9 +34,6 @@ const Blog = sequelize.define(
         key: "user_id", // Name of the referenced column
       },
     },
-    activity: {
-      type: DataTypes.JSON,
-    },
     draft: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

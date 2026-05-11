@@ -1,17 +1,32 @@
 import { useState, useRef, useEffect } from "react";
-import MenuItem from "../../pages/home/MenuItem";
+import MenuItem from "../../pages/menubar/MenuItem";
 import { NavLink } from "react-router-dom";
 import { isRouteEnabled } from "../../config/enabledRoutes";
-const NavbarMenu = ({ menuData }) => {
+import { getMenu } from "../../api/menu.api";
+
+const NavbarMenu = () => {
+  const [menuData, setMenuData] = useState([]);
   const [active, setActive] = useState(null);
-  const ref = useRef();
-  const MAX_TABS = 5;
-  const itemRefs = useRef([]);
-  const visibleTabs = menuData.slice(0, MAX_TABS);
-  const moreTabs = menuData.slice(MAX_TABS);
   const [openNested, setOpenNested] = useState(null);
   const [activePath, setActivePath] = useState([]);
   const [anchorRect, setAnchorRect] = useState(null);
+
+  const ref = useRef();
+  const itemRefs = useRef([]);
+
+  const MAX_TABS = 5;
+
+  //  FETCH MENU FROM BACKEND
+  useEffect(() => {
+    getMenu()
+      .then((res) => setMenuData(res.data))
+      .catch(() => setMenuData([]));
+  }, []);
+
+  //  NOW SAFE (after fetch)
+  const visibleTabs = menuData.slice(0, MAX_TABS);
+  const moreTabs = menuData.slice(MAX_TABS);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -20,9 +35,7 @@ const NavbarMenu = ({ menuData }) => {
     };
 
     const handleEsc = (e) => {
-      if (e.key === "Escape") {
-        setActive(null);
-      }
+      if (e.key === "Escape") setActive(null);
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -33,6 +46,7 @@ const NavbarMenu = ({ menuData }) => {
       document.removeEventListener("keydown", handleEsc);
     };
   }, []);
+
   const isOverflowingRight = (index) => {
     const el = itemRefs.current[index];
     if (!el) return false;
@@ -90,7 +104,7 @@ const NavbarMenu = ({ menuData }) => {
             {item.children && active === i && (
               <div
                 className={`absolute top-full mt-1 w-56 
-      bg-white
+        bg-slate-50
       border border-gray-200
       rounded-md
       shadow-md
@@ -99,15 +113,15 @@ const NavbarMenu = ({ menuData }) => {
     `}
               >
                 <div className="py-1">
-                  <div className="max-h-[70vh] overflow-y-auto pr-1">
+                  <div className="max-h-[70vh] overflow-visible pr-1">
                     {item.children?.map((child, j) => (
                       <div
                         key={j}
-                        className="px-2 py-1 text-xs text-gray-900 
-           border-b border-gray-200
-           last:border-b-0
-           hover:bg-blue-50 hover:text-blue-900
-           transition cursor-pointer"
+                        className="
+    text-xs text-gray-900
+    border-b border-gray-200
+    last:border-b-0
+  "
                       >
                         <MenuItem item={child} />
                       </div>

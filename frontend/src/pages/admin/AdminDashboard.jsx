@@ -56,7 +56,7 @@ const AdminDashboard = () => {
     const controller = new AbortController();
     fetchStats(controller.signal);
 
-    return () => controller.abort(); // ✅ prevent memory leak
+    return () => controller.abort(); //  prevent memory leak
   }, [fetchStats, userAuth?.access_token]);
 
   /**

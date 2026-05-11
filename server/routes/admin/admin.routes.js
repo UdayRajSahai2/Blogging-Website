@@ -12,7 +12,6 @@ import {
   deleteBlogPermanent,
   deleteUserPermanent,
 } from "../../controllers/admin/admin.controller.js";
-
 import { verifyJWT } from "../../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../../middlewares/role.middleware.js";
 

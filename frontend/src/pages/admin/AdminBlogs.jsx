@@ -196,6 +196,7 @@ const AdminBlogs = () => {
         >
           <option value="all">All Status</option>
           <option value="draft">Draft</option>
+          <option value="pending">Pending</option>
           <option value="published">Published</option>
           <option value="rejected">Rejected</option>
         </select>
@@ -419,16 +420,30 @@ const AdminBlogs = () => {
       {rejectModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-[400px]">
-            <h3 className="text-lg font-semibold mb-3">Reject Blog</h3>
+            <h3 className="text-lg font-semibold mb-1">Reject Blog</h3>
 
-            <textarea
-              placeholder="Enter rejection reason..."
-              value={reviewNote}
-              onChange={(e) => setReviewNote(e.target.value)}
-              className="w-full border rounded-lg p-2 h-24 mb-4"
-            />
+            {/*  Limit hint */}
+            <p className="text-xs text-gray-400 mb-2">
+              Enter rejection reason (max 500 characters)
+            </p>
 
-            <div className="flex justify-end gap-2">
+            {/*  Textarea */}
+            <div className="relative">
+              <textarea
+                placeholder="Enter rejection reason..."
+                value={reviewNote}
+                maxLength={500} // enforce limit
+                onChange={(e) => setReviewNote(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-3 h-24 pr-14 resize-none outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400"
+              />
+
+              {/*  Counter inside */}
+              <span className="absolute bottom-2 right-3 text-xs text-gray-400">
+                {reviewNote.length} / 500
+              </span>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-4">
               <button
                 className="px-4 py-2 border rounded-lg"
                 onClick={() => setRejectModal(false)}
@@ -457,6 +472,9 @@ const AdminBlogs = () => {
 
             <p className="text-sm text-gray-700 whitespace-pre-wrap">
               {noteModal.text}
+            </p>
+            <p className="text-xs text-gray-400 text-right mt-2">
+              {noteModal.text?.length || 0} / 500
             </p>
 
             <button

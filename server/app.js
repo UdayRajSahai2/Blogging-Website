@@ -2,9 +2,7 @@ import express from "express";
 import cors from "cors";
 
 // ================= CORS CONFIG =================
-
 // Domains you trust (no protocol needed)
-
 const app = express();
 
 app.set("trust proxy", 1);
@@ -18,8 +16,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      console.log(" Incoming Origin:", origin);
-
       if (!origin) return callback(null, true);
 
       const cleanOrigin = origin.replace(/\/$/, "");
@@ -28,7 +24,6 @@ app.use(
         return callback(null, true);
       }
 
-      console.log(" CORS BLOCKED:", origin);
       return callback(new Error("CORS not allowed"));
     },
     credentials: true,
@@ -45,8 +40,6 @@ app.use((req, res, next) => {
 
 // Debug incoming requests (VERY useful)
 app.use((req, res, next) => {
-  console.log("", req.method, req.url);
-  console.log(" Origin:", req.headers.origin);
   next();
 });
 app.use(express.json({ limit: "10mb" }));
@@ -74,7 +67,8 @@ import roleRoutes from "./routes/role.routes.js";
 import userInterestsRoutes from "./routes/userInterests.routes.js";
 import connectionRoutes from "./routes/connection.routes.js";
 import locationRoutes from "./routes/location.routes.js";
-
+import pageRoutes from "./routes/page.routes.js";
+import menuRoutes from "./routes/menu.routes.js";
 app.use("/api/auth", authRoutes);
 app.use("/api/blog", blogRoutes);
 app.use("/api/user", userRoutes);
@@ -96,6 +90,8 @@ app.use("/api/roles", roleRoutes);
 app.use("/api/interests", userInterestsRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/connections", connectionRoutes);
+app.use("/api/pages", pageRoutes);
+app.use("/api/menu", menuRoutes);
 
 // ================= HEALTH CHECK =================
 

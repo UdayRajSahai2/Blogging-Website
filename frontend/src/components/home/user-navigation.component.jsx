@@ -5,7 +5,17 @@ import { UserContext } from "../../App";
 import { removeFromSession } from "../../common/session";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-
+import {
+  PencilSquareIcon,
+  ShieldCheckIcon,
+  UserIcon,
+  DocumentTextIcon,
+  Cog6ToothIcon,
+  ArrowRightOnRectangleIcon,
+  CalendarDaysIcon,
+  ChatBubbleLeftRightIcon,
+  Squares2X2Icon,
+} from "@heroicons/react/24/outline";
 const UserNavigationPanel = () => {
   const navigate = useNavigate();
   const { userAuth, setUserAuth } = useContext(UserContext);
@@ -88,10 +98,10 @@ const UserNavigationPanel = () => {
         {/* Write Button (Mobile Only) */}
         <Link
           to="/editor"
-          className="md:hidden block px-4 py-3 bg-purple text-white text-center font-medium hover:bg-purple transition-colors"
+          className="md:hidden flex items-center justify-center gap-2 px-1 py-1 bg-purple text-white text-sm font-medium hover:bg-purple transition-colors"
         >
-          <i className="fi fi-rr-file-edit mr-2"></i>
-          Post your blog
+          <PencilSquareIcon className="w-4 h-4 shrink-0" />
+          Post blog
         </Link>
 
         {/* Main Navigation */}
@@ -101,7 +111,7 @@ const UserNavigationPanel = () => {
               to="/admin"
               className="flex items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-all font-semibold"
             >
-              <i className="fi fi-rr-shield mr-3"></i>
+              <ShieldCheckIcon className="w-4 h-4 mr-3" />
               Admin Panel
             </Link>
           )}
@@ -110,7 +120,7 @@ const UserNavigationPanel = () => {
             to={`dashboard/user/${username}`}
             className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
           >
-            <i className="fi fi-rr-user mr-3 text-purple-600"></i>
+            <UserIcon className="w-4 h-4 mr-3 text-purple-600" />
             My Profile
           </Link>
 
@@ -118,14 +128,14 @@ const UserNavigationPanel = () => {
             to="/dashboard/blogs"
             className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
           >
-            <i className="fi fi-rr-document mr-3 text-purple-600"></i>
+            <DocumentTextIcon className="w-4 h-4 mr-3 text-purple-600" />
             My Blogs
           </Link>
           <Link
             to="/settings/edit-profile"
             className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
           >
-            <i className="fi fi-rr-settings mr-3 text-purple-600"></i>
+            <Cog6ToothIcon className="w-4 h-4 mr-3 text-purple-600" />
             Settings
           </Link>
         </div>
@@ -139,7 +149,7 @@ const UserNavigationPanel = () => {
           disabled={loggingOut}
           className="w-full flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-all disabled:opacity-50"
         >
-          <i className="fi fi-rr-sign-out mr-3"></i>
+          <ArrowRightOnRectangleIcon className="w-4 h-4 mr-3" />
           <div className="text-left">
             <p className="font-medium">
               {loggingOut ? "Signing out..." : "Sign Out"}
@@ -161,8 +171,8 @@ export default UserNavigationPanel;
             to="/events/my"
             className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-all"
           >
-            <i className="fi fi-rr-calendar mr-3 text-purple-600"></i>
-            My Events
+            <CalendarDaysIcon className="w-4 h-4 mr-3 text-purple-600" />
+My Events
           </Link> */
 }
 
@@ -174,8 +184,8 @@ export default UserNavigationPanel;
             to="/chat"
             className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-all"
           >
-            <i className="fi fi-rr-messages mr-3 text-purple-600"></i>
-            My Chats
+         <ChatBubbleLeftRightIcon className="w-4 h-4 mr-3 text-purple-600" />
+My Chats
           </Link> */
 }
 {
@@ -186,7 +196,7 @@ export default UserNavigationPanel;
             to="/dashboard-home"
             className="flex items-center px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 transition-all font-medium"
           >
-            <i className="fi fi-rr-apps mr-3"></i>
-            Dashboard
+            <Squares2X2Icon className="w-4 h-4 mr-3" />
+Dashboard
           </Link> */
 }

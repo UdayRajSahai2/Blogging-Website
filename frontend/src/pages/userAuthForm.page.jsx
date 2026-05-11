@@ -19,6 +19,8 @@ import {
   EnvelopeIcon,
   KeyIcon,
 } from "@heroicons/react/24/outline";
+import ReactCountryFlag from "react-country-flag";
+
 const UserAuthForm = ({ type }) => {
   const navigate = useNavigate();
   const { userAuth, setUserAuth } = useContext(UserContext);
@@ -268,8 +270,6 @@ const UserAuthForm = ({ type }) => {
       let longitude = geo.longitude;
 
       if (!latitude || !longitude) {
-        console.log("📍 Requesting location for Google login...");
-
         if (navigator.geolocation) {
           const position = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -288,8 +288,6 @@ const UserAuthForm = ({ type }) => {
         }
       }
 
-      console.log("Sending Google auth with location:", latitude, longitude);
-
       const { data } = await axios.post(`${AUTH_API}/google-auth`, {
         access_token: idToken,
         latitude,
@@ -300,10 +298,8 @@ const UserAuthForm = ({ type }) => {
 
       storeInSession("user", data);
       storeInSession("onboarding", type === "sign-up");
-      console.log("Auth response:", data);
       setUserAuth(data);
       if (type === "sign-up") {
-        console.log("FORCE onboarding (signup)");
         navigate("/welcome");
       } else {
         navigate("/");
@@ -485,7 +481,6 @@ const UserAuthForm = ({ type }) => {
       storeInSession("onboarding", type === "sign-up");
       setUserAuth(data);
       if (type === "sign-up") {
-        console.log("FORCE onboarding (signup)");
         navigate("/welcome");
       } else {
         navigate("/");
@@ -640,7 +635,15 @@ const UserAuthForm = ({ type }) => {
                       inputMode="numeric"
                       prefix={
                         <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <span>🇮🇳</span>
+                          <ReactCountryFlag
+                            countryCode="IN"
+                            svg
+                            style={{
+                              width: "18px",
+                              height: "12px",
+                            }}
+                          />
+
                           <span className="font-medium">+91</span>
                         </div>
                       }

@@ -1,4 +1,4 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { BlogContext } from "../../pages/blog.page";
 import { Link } from "react-router-dom";
 import { UserContext } from "../../App";
@@ -9,12 +9,22 @@ import {
   PencilIcon,
   EyeIcon,
   ChatBubbleLeftRightIcon,
+  ShareIcon,
+  ClipboardDocumentIcon,
+  HeartIcon as HeartOutline,
 } from "@heroicons/react/24/outline";
-import { FaXTwitter } from "react-icons/fa6";
+import { HeartIcon as HeartSolid } from "@heroicons/react/24/solid";
+import {
+  FaWhatsapp,
+  FaTwitter,
+  FaLinkedin,
+  FaFacebook,
+  FaTelegram,
+} from "react-icons/fa";
+import ShareButton from "../../common/ShareButtonFirefox";
 const BlogInteraction = () => {
   const {
     blog,
-    activity,
     blogAuthor,
     setBlog,
     isLikedByUser,
@@ -26,17 +36,33 @@ const BlogInteraction = () => {
   const { userAuth } = useContext(UserContext) || {};
   const { username, access_token, user_id: currentUserId } = userAuth || {};
 
-  // ✅ Single source of truth for blog id
+  //  Single source of truth for blog id
   const blogId = blog?.blog_id ?? null;
 
-  // ✅ Activity fallback logic (USES `activity`)
-  const total_likes = activity?.total_likes ?? blog?.total_likes ?? 0;
-  const total_comments = activity?.total_comments ?? blog?.total_comments ?? 0;
-  const total_reads = activity?.total_reads ?? blog?.total_reads ?? 0;
-
+  const total_likes = blog?.total_likes ?? 0;
+  const total_comments = blog?.total_comments ?? 0;
+  const total_reads = blog?.total_reads ?? 0;
   const title = blog?.title ?? "";
   const { username: author_username = "" } = blogAuthor || {};
+  const [showShareButton, setShowShareButton] = useState(false);
 
+  const shareButtonRef = useRef(null);
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        shareButtonRef.current &&
+        !shareButtonRef.current.contains(event.target)
+      ) {
+        setShowShareButton(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
   /* ---------------- CHECK LIKE STATUS ---------------- */
   useEffect(() => {
     if (!access_token || !blogId) return;
@@ -59,7 +85,49 @@ const BlogInteraction = () => {
       console.error("Error checking like status:", err.response?.data);
     }
   };
+  const blogUrl = window.location.href;
 
+  const encodedUrl = encodeURIComponent(blogUrl);
+  const encodedTitle = encodeURIComponent(`Read "${title}"`);
+
+  const shareLinks = {
+    whatsapp: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`,
+    twitter: `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+    telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}`,
+  };
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(blogUrl);
+
+      toast.success("Blog link copied");
+    } catch (err) {
+      toast.error("Failed to copy link");
+    }
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title,
+      text: `Read "${title}"`,
+      url: blogUrl,
+    };
+
+    // Native mobile share
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (err) {
+        console.log(err);
+      }
+    }
+
+    // Desktop fallback
+    setShowShareButton((prev) => !prev);
+  };
   /* ---------------- HANDLE LIKE ---------------- */
   const handleLike = async () => {
     if (!access_token || !currentUserId) {
@@ -117,7 +185,6 @@ const BlogInteraction = () => {
       toast.error(err.response?.data?.message || "Failed to update like");
     }
   };
-
   /* ---------------- UI ---------------- */
   return (
     <>
@@ -136,11 +203,11 @@ const BlogInteraction = () => {
                 ${!blogId ? "opacity-50 cursor-not-allowed" : "hover:bg-blue/20"}
               `}
             >
-              <i
-                className={
-                  "fi " + (isLikedByUser ? "fi-sr-heart" : "fi-rr-heart")
-                }
-              ></i>
+              {isLikedByUser ? (
+                <HeartSolid className="w-5 h-5 text-red-500" />
+              ) : (
+                <HeartOutline className="w-5 h-5 text-gray-700" />
+              )}
             </button>
             <p className="text-xl text-dark-grey">{total_likes}</p>
           </div>
@@ -158,14 +225,14 @@ const BlogInteraction = () => {
             <p className="text-xl text-dark-grey">{total_comments}</p>
           </div>
 
-          {/* Reads (USES activity) */}
+          {/* Reads */}
           <div className="flex gap-2 items-center">
             <EyeIcon className="w-5 h-5 text-gray-500" />
             <p className="text-xl text-dark-grey">{total_reads}</p>
           </div>
         </div>
 
-        {/* RIGHT: Edit & Twitter */}
+        {/* RIGHT: Edit */}
         <div className="flex items-center gap-4">
           {username === author_username && blogId && (
             <Link
@@ -178,14 +245,21 @@ const BlogInteraction = () => {
             </Link>
           )}
 
-          <a
-            href={`https://twitter.com/intent/tweet?text=Read ${title}&url=${window.location.href}`}
-            className="flex items-center text-xl hover:text-twitter"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <FaXTwitter className="text-xl" />
-          </a>
+          <div ref={shareButtonRef} className="relative">
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-gray-800 hover:text-indigo-600 hover:bg-gray-100 rounded-md transition"
+            >
+              <ShareIcon className="w-4 h-4" />
+              Share
+            </button>
+
+            <ShareButton
+              show={showShareButton}
+              shareLinks={shareLinks}
+              copyLink={copyLink}
+            />
+          </div>
         </div>
       </div>
 

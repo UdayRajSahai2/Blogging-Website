@@ -3,7 +3,7 @@ import axios from "axios";
 import { UserContext } from "../../App";
 import Loader from "../loader.component";
 import { PAYMENT_API } from "../../common/api";
-
+import { XMarkIcon } from "@heroicons/react/24/outline";
 const PaymentDetails = ({ paymentId, onClose }) => {
   const { userAuth } = useContext(UserContext);
   const token = userAuth?.access_token;
@@ -89,7 +89,7 @@ const PaymentDetails = ({ paymentId, onClose }) => {
           {" "}
           <div className="text-red-500 mb-4">
             {" "}
-            <i className="fi fi-rr-cross text-3xl"></i>{" "}
+            <XMarkIcon className="w-8 h-8" />{" "}
           </div>{" "}
           <h2 className="text-xl font-bold text-dark-grey mb-2">Error</h2>{" "}
           <p className="text-dark-grey mb-4">{error}</p>{" "}
@@ -132,7 +132,7 @@ const PaymentDetails = ({ paymentId, onClose }) => {
             className="text-dark-grey hover:text-black text-xl"
           >
             {" "}
-            <i className="fi fi-rr-cross"></i>{" "}
+            <XMarkIcon className="w-5 h-5" />{" "}
           </button>{" "}
         </div>
         <div className="space-y-6">

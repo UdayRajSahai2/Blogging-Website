@@ -1,20 +1,63 @@
 import { Link } from "react-router-dom";
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { UserContext } from "../../App";
 import { useNavigate } from "react-router-dom";
+import { getUserMeta } from "../../utils/userMeta";
 import ConnectionButton from "../connection/ConnectionButton";
+import ShareButton from "../../common/ShareButtonFirefox";
 import { createConversationAPI } from "../../api/chat.api";
 import {
   MapPinIcon,
   UserIcon,
   HeartIcon,
   CakeIcon,
+  ShareIcon,
+  BriefcaseIcon,
+  AcademicCapIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/solid";
+import {
+  ClipboardDocumentIcon,
+  DocumentTextIcon,
+} from "@heroicons/react/24/outline";
+import toast from "react-hot-toast";
+import {
+  FaYoutube,
+  FaInstagram,
+  FaLinkedin,
+  FaFacebook,
+  FaTelegram,
+  FaTwitter,
+  FaGithub,
+  FaWhatsapp,
+  FaGlobe,
+} from "react-icons/fa";
 
 const ProfileHeader = ({ profile }) => {
   const navigate = useNavigate();
   const { userAuth } = useContext(UserContext);
   const [connectionStatus, setConnectionStatus] = useState(null);
+  const profileUrl = `${window.location.origin}/user/${profile.username}`;
+  const [showShareButton, setShowShareButton] = useState(false);
+  const shareButtonRef = useRef(null);
+  const encodedUrl = encodeURIComponent(profileUrl);
+
+  const shareLinks = {
+    whatsapp: `https://wa.me/?text=${encodedUrl}`,
+    twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+    telegram: `https://t.me/share/url?url=${encodedUrl}`,
+  };
+  const socialIcons = {
+    youtube: FaYoutube,
+    instagram: FaInstagram,
+    facebook: FaFacebook,
+    twitter: FaTwitter,
+    github: FaGithub,
+    website: FaGlobe,
+    whatsapp: FaWhatsapp,
+  };
   if (!profile) return null; // safety
 
   const {
@@ -52,19 +95,25 @@ const ProfileHeader = ({ profile }) => {
     switch (type) {
       case "professional":
         return {
-          label: "💼 Professional",
-          className: "bg-green-100 text-green-700",
+          label: "Professional",
+          icon: BriefcaseIcon,
+          className: "bg-emerald-100 text-emerald-700",
         };
+
       case "student":
         return {
-          label: "🎓 Student",
-          className: "bg-blue-100 text-blue-700",
+          label: "Student",
+          icon: AcademicCapIcon,
+          className: "bg-sky-100 text-sky-700",
         };
+
       case "retired":
         return {
-          label: "🏖️ Retired",
-          className: "bg-purple-100 text-purple-700",
+          label: "Retired",
+          icon: SparklesIcon,
+          className: "bg-zinc-100 text-zinc-700",
         };
+
       default:
         return null;
     }
@@ -84,7 +133,7 @@ const ProfileHeader = ({ profile }) => {
      META
   ========================= */
 
-  const { gender, marital_status, dob } = useUserMeta(details);
+  const { gender, marital_status, dob } = getUserMeta(details);
 
   const metaItems = [
     display_location && {
@@ -157,21 +206,21 @@ const ProfileHeader = ({ profile }) => {
 
       const occupation = details?.occupation_status;
 
-      // 🧑‍💼 Working
+      //  Working
       if (occupation === "working") return role;
 
-      // 🎓 Student
+      // Student
       if (occupation === "student") {
         const edu = latestEdu?.title || latestEdu?.level || "";
         return edu || "Student";
       }
 
-      // 🏖️ Retired
+      //  Retired
       if (occupation === "retired") {
         return role ? `Former ${role}` : "";
       }
 
-      // ✨ Not working
+      //  Not working
       if (occupation === "not_working") return "";
 
       return "";
@@ -201,6 +250,54 @@ const ProfileHeader = ({ profile }) => {
     }
   };
 
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+
+      toast.success("Profile link copied");
+    } catch (err) {
+      console.log(err);
+
+      toast.error("Failed to copy link");
+    }
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: `${profile.fullname}'s Profile`,
+      text: profile.bio || "Check out this profile",
+      url: profileUrl,
+    };
+
+    // MOBILE NATIVE SHARE
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (err) {
+        console.log(err);
+      }
+    }
+
+    // DESKTOP FALLBACK
+    setShowShareButton((prev) => !prev);
+  };
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        shareButtonRef.current &&
+        !shareButtonRef.current.contains(event.target)
+      ) {
+        setShowShareButton(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
   return (
     <div className="w-full border border-gray-200 shadow-lg">
       {/* BLUE BANNER */}
@@ -226,13 +323,14 @@ const ProfileHeader = ({ profile }) => {
                 <span className="text-gray-500 mr-1">Username:</span>@{username}
               </p>
 
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1 flex-wrap">
                 {/* Badge */}
                 {badge && (
                   <span
-                    className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${badge.className}`}
+                    className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium ${badge.className}`}
                   >
-                    {badge.label}
+                    <badge.icon className="w-3 h-3 !text-gray-700 flex-shrink-0" />
+                    <span className="text-gray-700">{badge.label}</span>
                   </span>
                 )}
 
@@ -252,7 +350,7 @@ const ProfileHeader = ({ profile }) => {
           {/* ================= RIGHT ================= */}
           <div className="flex items-center justify-between md:justify-end gap-3 flex-wrap">
             {/* Stats */}
-            <div className="flex items-center gap-3 text-[11px] text-gray-600 whitespace-nowrap">
+            <div className="flex items-center gap-1 text-[11px] text-gray-600 whitespace-nowrap">
               <span>
                 <b>{total_posts}</b> Blogs
               </span>
@@ -271,11 +369,13 @@ const ProfileHeader = ({ profile }) => {
             {socialPlatforms.some((key) => profile.details?.[key]) && (
               <div className="flex items-center gap-2">
                 {socialPlatforms.map((key) => {
-                  const link = profile.details?.[key];
-                  const iconClass =
-                    key !== "website"
-                      ? `fi fi-brands-${key}`
-                      : "fi fi-rr-globe";
+                  let link = profile.details?.[key];
+
+                  if (key === "whatsapp" && link) {
+                    link = `https://wa.me/91${link}`;
+                  }
+
+                  const Icon = socialIcons[key];
 
                   return link ? (
                     <a
@@ -286,12 +386,27 @@ const ProfileHeader = ({ profile }) => {
                       onClick={(e) => e.stopPropagation()}
                       className="text-gray-600 hover:text-indigo-600 text-sm"
                     >
-                      <i className={iconClass} />
+                      <Icon />
                     </a>
                   ) : null;
                 })}
               </div>
             )}
+            <div ref={shareButtonRef} className="relative">
+              <button
+                onClick={handleShare}
+                className="flex items-center gap-0.5 px-1.5 py-0.5 text-indigo-600 hover:text-gray-600 rounded-md border text-[10px] leading-none hover:bg-gray-100 transition"
+              >
+                <ShareIcon className="w-3 h-3" />
+                Share
+              </button>
+
+              <ShareButton
+                show={showShareButton}
+                shareLinks={shareLinks}
+                copyLink={copyLink}
+              />
+            </div>
           </div>
         </div>
 
@@ -312,13 +427,15 @@ const ProfileHeader = ({ profile }) => {
         </div>
         {/* ================= BIO ================= */}
         {bio && (
-          <p className="text-[12px] text-gray-600 mt-[2px] line-clamp-1">
-            <span className="text-gray-400 mr-1">📝</span>
-            {truncateWords(bio, 25)}
+          <p className="flex items-center min-w-0 text-[12px] text-gray-600 mt-[2px]">
+            <DocumentTextIcon className="w-3.5 h-3.5 text-gray-400 mr-1 shrink-0" />
+
+            <span className="line-clamp-1">{bio}</span>
           </p>
         )}
+
         {/* disabled in production */}
-        {/* 🔹 ACTION BUTTON */}
+        {/*  ACTION BUTTON */}
         {/* {userAuth?.access_token && !isCurrentUser && (
           <div className="flex justify-start sm:ml-auto">
             {connectionStatus === "connected" ? (
@@ -340,25 +457,6 @@ const ProfileHeader = ({ profile }) => {
       </div>
     </div>
   );
-};
-
-/* ---------------- HOOK ---------------- */
-
-export const useUserMeta = (details = {}) => {
-  const { gender, marital_status, date_of_birth } = details;
-
-  const dob = date_of_birth
-    ? new Date(date_of_birth).toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
-      })
-    : null;
-
-  return {
-    gender,
-    marital_status,
-    dob,
-  };
 };
 
 export default ProfileHeader;

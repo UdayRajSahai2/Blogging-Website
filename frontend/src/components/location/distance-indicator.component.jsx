@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-
+import { MapPinIcon } from "@heroicons/react/24/outline";
 const DistanceIndicator = () => {
   const [distance, setDistance] = useState(null);
 
@@ -19,7 +19,7 @@ const DistanceIndicator = () => {
 
   return (
     <div className="distance-indicator">
-      <i className="fi fi-rr-marker"></i>
+      <MapPinIcon className="w-4 h-4" />
       {distance ? (
         <span>Near You: {distance} Mtr away</span>
       ) : (

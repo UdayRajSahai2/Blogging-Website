@@ -103,7 +103,7 @@ const ProfilePage = ({ username, goBack }) => {
       const isNumeric = !isNaN(profileId);
 
       const payload = isNumeric
-        ? { user_id: Number(profileId) } // ✅ FIX
+        ? { user_id: Number(profileId) } //  FIX
         : { username: profileId };
 
       const { data: user } = await axios.post(
@@ -181,11 +181,9 @@ const ProfilePage = ({ username, goBack }) => {
   useEffect(() => {
     const refreshProfileLocation = async () => {
       try {
-        console.log("🔄 Refreshing profile location...");
-
         if (!profileId) return;
 
-        // 🔥 FIX: detect id vs username
+        // FIX: detect id vs username
         const isNumeric = !isNaN(profileId);
 
         const payload = isNumeric

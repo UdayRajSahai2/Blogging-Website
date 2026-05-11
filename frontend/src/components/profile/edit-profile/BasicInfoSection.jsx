@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { USER_API } from "../../../common/api";
 import { EnvelopeIcon, AtSymbolIcon } from "@heroicons/react/24/outline";
-
+import ReactCountryFlag from "react-country-flag";
 const BasicInfoSection = ({ profile, setProfile, access_token, errors }) => {
   const { fullname, username, email, mobile_number } = profile;
   const { salutation } = profile.details || {};
@@ -196,7 +196,15 @@ const BasicInfoSection = ({ profile, setProfile, access_token, errors }) => {
                   className="w-full" //  IMPORTANT (force full width)
                   prefix={
                     <div className="flex items-center gap-1">
-                      <span>🇮🇳</span>
+                      <ReactCountryFlag
+                        countryCode="IN"
+                        svg
+                        style={{
+                          width: "18px",
+                          height: "12px",
+                        }}
+                      />
+
                       <span className="text-gray-600 text-xs font-medium">
                         +91
                       </span>

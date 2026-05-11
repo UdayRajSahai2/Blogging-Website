@@ -1,7 +1,8 @@
 // frontend/src/pages/blog.page.jsx
 import { Link, useParams } from "react-router-dom";
 import axios from "axios";
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState, useContext } from "react";
+import { UserContext } from "../App";
 import AnimationWrapper from "../common/page-animation";
 import Loader from "../components/loader.component";
 import { getDay } from "../common/date";
@@ -10,6 +11,7 @@ import BlogPostCard from "../components/blog/blog-post.component";
 import BlogContent from "../components/blog/blog-content.component";
 import CommentsContainer from "../components/comment/comments.component";
 import { BLOG_API } from "../common/api";
+import SimilarBlogCard from "../components/blog/SimilarBlogCard";
 
 export const blogStructure = {
   title: "",
@@ -36,7 +38,8 @@ const BlogPage = () => {
   const [commentsWrapper, setCommentsWrapper] = useState(false);
   const [totalParentCommentsLoaded, setTotalParentCommentsLoaded] = useState(0);
   const [comments, setComments] = useState({ results: [] });
-
+  const { userAuth } = useContext(UserContext);
+  const { access_token } = userAuth || {};
   // ===== SAFE BLOG PROCESS =====
   const processBlogData = (blogData) => {
     if (!blogData) {
@@ -92,7 +95,32 @@ const BlogPage = () => {
   // ===== FETCH BLOG =====
   const fetchBlog = async () => {
     try {
-      const { data } = await axios.post(`${BLOG_API}/get-blog`, { blog_id });
+      const viewedBlogs = JSON.parse(
+        localStorage.getItem("viewedBlogs") || "[]",
+      );
+
+      const alreadyViewed = viewedBlogs.includes(blog_id);
+
+      const { data } = await axios.post(
+        `${BLOG_API}/get-blog`,
+        {
+          blog_id,
+          alreadyViewed,
+        },
+        access_token
+          ? {
+              headers: {
+                Authorization: `Bearer ${access_token}`,
+              },
+            }
+          : {},
+      );
+
+      if (!alreadyViewed) {
+        viewedBlogs.push(blog_id);
+
+        localStorage.setItem("viewedBlogs", JSON.stringify(viewedBlogs));
+      }
 
       processBlogData(data.blog);
     } catch (err) {
@@ -179,7 +207,6 @@ const BlogPage = () => {
             setBlog,
             refreshBlog, //  allows blog refresh after edit
             blogAuthor: blog.blogAuthor,
-            activity: blog.activity || {},
             isLikedByUser,
             setLikedByUser,
             commentsWrapper,
@@ -193,7 +220,7 @@ const BlogPage = () => {
           <CommentsContainer />
 
           {/* MAIN WRAPPER */}
-          <div className="w-full max-w-4xl xl:max-w-5xl mx-auto px-2 sm:px-6 lg:px-2 py-2 md:py-10 lg:py-2">
+          <div className="w-full max-w-4xl xl:max-w-5xl mx-auto px-0 sm:px-1 lg:px-1 py-0 md:py-1 lg:py-1">
             {/* BLOG BANNER */}
             <div className="overflow-hidden rounded-md">
               <img
@@ -204,14 +231,14 @@ const BlogPage = () => {
             </div>
 
             {/* TITLE */}
-            <div className="mt-2 md:mt-10">
+            <div className="mt-2 md:mt-2">
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight tracking-tight">
                 {title}
               </h1>
             </div>
 
             {/* AUTHOR INFO */}
-            <div className="flex items-center justify-between flex-wrap gap-3 mt-4">
+            <div className="flex items-center justify-between flex-wrap gap-3 mt-2">
               <div className="flex items-center gap-3">
                 <img
                   src={profile_img}
@@ -255,24 +282,24 @@ const BlogPage = () => {
             </article>
 
             {/* INTERACTION AGAIN */}
-            <div className="sticky top-20 z-10 bg-white py-2">
+            <div className="sticky top-20 z-10 bg-white">
               <BlogInteraction />
             </div>
 
             {/* SIMILAR BLOGS */}
             {similarBlogs?.length > 0 && (
-              <div className="mt-16">
-                <h2 className="text-xl md:text-2xl font-semibold mb-6">
+              <div className="">
+                <h4 className="text-lg md:text-xl font-semibold tracking-tight mb-2">
                   Similar Blogs
-                </h2>
+                </h4>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[1px] lg:gap-[3px]">
                   {similarBlogs.map((blogItem, i) => (
                     <AnimationWrapper
                       key={i}
                       transition={{ duration: 1, delay: i * 0.08 }}
                     >
-                      <BlogPostCard
+                      <SimilarBlogCard
                         content={blogItem}
                         author={blogItem.blogAuthor}
                       />

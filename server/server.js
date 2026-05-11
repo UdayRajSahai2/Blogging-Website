@@ -23,10 +23,10 @@ import { User, Blog, setupAssociations } from "./models/associations.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-console.log("📁 [SYSTEM] Root Directory:", __dirname);
+console.log(" [SYSTEM] Root Directory:", __dirname);
 
 // ================= INIT ASSOCIATIONS =================
-console.log("🔗 [INIT] Setting up model associations...");
+console.log(" [INIT] Setting up model associations...");
 setupAssociations();
 console.log(" [INIT] Associations initialized successfully");
 
@@ -36,7 +36,7 @@ console.log(" [DEBUG] Blog associations:", Object.keys(Blog.associations));
 // ================= DB CONNECTION =================
 const connectDB = async () => {
   try {
-    console.log("🛢️ [DB] Connecting to MySQL...");
+    console.log("[DB] Connecting to MySQL...");
 
     await sequelize.authenticate();
     console.log(" [DB] Connection established");
@@ -88,7 +88,7 @@ async function startServer() {
 
     // ================= START SERVER =================
     httpServer.listen(PORT, async () => {
-      console.log("🌐 [SERVER] Server is live");
+      console.log(" [SERVER] Server is live");
       console.log(` [SERVER] URL: http://localhost:${PORT}`);
       console.log(
         ` [SERVER] Environment: ${process.env.NODE_ENV || "development"}`,

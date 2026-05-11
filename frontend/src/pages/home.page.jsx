@@ -111,7 +111,7 @@ const HomePage = ({ pageState, setPageState }) => {
           ) : blogs.results.length ? (
             blogs.results.map((blog, i) => (
               <AnimationWrapper
-                transition={{ duration: 1, delay: i * 0.1 }}
+                transition={{ duration: 1, delay: i * 0.03 }}
                 key={i}
               >
                 <BlogPostCard content={blog} author={blog.blogAuthor} />
@@ -135,7 +135,7 @@ const HomePage = ({ pageState, setPageState }) => {
           ) : trendingBlogs.length ? (
             trendingBlogs.map((blog, i) => (
               <AnimationWrapper
-                transition={{ duration: 1, delay: i * 0.1 }}
+                transition={{ duration: 1, delay: i * 0.03 }}
                 key={i}
               >
                 <MinimalBlogPost blog={blog} index={i} />

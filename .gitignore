@@ -15,4 +15,4 @@ server/data/village-lgd-codes.json
 server/data/*firebase*.json
 server/data/*-firebase-adminsdk-*.json
 server/env.txt
-server/config/firebase-service-account.json
+server/config/reachfoundationngo-firebase-adminsdk-fbsvc-40b436aefc.json

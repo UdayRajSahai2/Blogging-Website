@@ -8,6 +8,8 @@ import {
   BriefcaseIcon,
   MapPinIcon,
   DocumentTextIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 const NearbyFlipCard = ({
   user,
@@ -227,7 +229,7 @@ const NearbyFlipCard = ({
             onMouseEnter={() => setFlipped(false)}
             className="pointer-events-auto w-7 h-7 rounded-full bg-white/70 backdrop-blur-sm shadow hover:bg-white flex items-center justify-center disabled:opacity-40"
           >
-            <i className="fi fi-rr-angle-left text-xs" />
+            <ChevronLeftIcon className="w-4 h-4" />
           </button>
 
           <button
@@ -240,7 +242,7 @@ const NearbyFlipCard = ({
             onMouseEnter={() => setFlipped(false)}
             className="pointer-events-auto w-7 h-7 rounded-full bg-white/70 backdrop-blur-sm shadow hover:bg-white flex items-center justify-center disabled:opacity-40"
           >
-            <i className="fi fi-rr-angle-right text-xs" />
+            <ChevronRightIcon className="w-4 h-4" />
           </button>
         </div>
       )}

@@ -20,7 +20,15 @@ const AdminUsers = () => {
   //  search state
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-
+  const explainCustomerId = (user) => {
+    return `
+Country: ${user.country_code || "000"}
+State: ${user.state_code || "00"}
+District: ${user.district_code || "00"}
+Block: ${user.block_code || "00"}
+Village: ${user.village_code || "000"}
+`;
+  };
   // ================= DEBOUNCE =================
   useEffect(() => {
     const t = setTimeout(() => {
@@ -182,234 +190,428 @@ const AdminUsers = () => {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Users Management</h1>
+    <div className="w-full max-w-full overflow-hidden px-0 sm:px-4">
+      {/* HEADER */}
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h1 className="text-lg sm:text-2xl font-bold">Users Management</h1>
 
-      {/* SEARCH */}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Search by name or email..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full md:w-80 p-2 border rounded-lg"
-        />
-      </div>
+          <div className="text-xs sm:text-sm text-gray-500">
+            Total Users: {users?.length || 0}
+          </div>
+        </div>
 
-      {/* FILTER */}
-      <div className="mb-4 flex gap-2">
-        <button
-          onClick={() => setFilter("all")}
-          className={`px-3 py-1 rounded ${
-            filter === "all" ? "bg-black text-white" : "border"
-          }`}
-        >
-          All
-        </button>
+        {/* SEARCH */}
+        <div className="w-full">
+          <input
+            type="text"
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full md:w-80 p-2 border rounded-lg"
+          />
+        </div>
 
-        <button
-          onClick={() => setFilter("active")}
-          className={`px-3 py-1 rounded ${
-            filter === "active" ? "bg-green-600 text-white" : "border"
-          }`}
-        >
-          Active
-        </button>
+        {/* FILTER */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            onClick={() => setFilter("all")}
+            className={`px-3 py-1 rounded ${
+              filter === "all" ? "bg-black text-white" : "border"
+            }`}
+          >
+            All
+          </button>
 
-        <button
-          onClick={() => setFilter("deleted")}
-          className={`px-3 py-1 rounded ${
-            filter === "deleted" ? "bg-red-500 text-white" : "border"
-          }`}
-        >
-          Deleted
-        </button>
-      </div>
+          <button
+            onClick={() => setFilter("active")}
+            className={`px-3 py-1 rounded ${
+              filter === "active" ? "bg-green-600 text-white" : "border"
+            }`}
+          >
+            Active
+          </button>
 
-      {/* TABLE */}
-      <div className="overflow-x-auto rounded-xl border">
-        <table className="w-full text-sm min-w-[700px]">
-          <thead>
-            <tr className="bg-gray-100 text-left">
-              <th className="p-3">ID</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>System Role</th>
-              <th>Joined</th>
-              <th>Status</th>
-              <th className="text-center">Actions</th>
-            </tr>
-          </thead>
+          <button
+            onClick={() => setFilter("deleted")}
+            className={`px-3 py-1 rounded ${
+              filter === "deleted" ? "bg-red-500 text-white" : "border"
+            }`}
+          >
+            Deleted
+          </button>
+        </div>
 
-          <tbody>
-            {users.map((u) => {
-              const isProcessing = processingId === u.user_id;
-              const isSelf = u.user_id === currentUserId;
+        {/* TABLE */}
+        {/* MOBILE CARDS */}
+        <div className="md:hidden space-y-3">
+          {users.map((u) => {
+            const isProcessing = processingId === u.user_id;
+            const isSelf = u.user_id === currentUserId;
 
-              return (
-                <tr
-                  key={u.user_id}
-                  className={`border-t ${
-                    u.is_deleted ? "bg-red-50 opacity-60" : ""
-                  }`}
+            return (
+              <div
+                key={u.user_id}
+                className={`border rounded-xl p-3 bg-white shadow-sm ${
+                  u.is_deleted ? "bg-red-50 opacity-70" : ""
+                }`}
+              >
+                {/* TOP */}
+                <div className="flex justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-sm truncate">
+                      {u.fullname}
+                    </h3>
+
+                    <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                  </div>
+
+                  <span className="text-[10px] capitalize font-semibold whitespace-nowrap">
+                    {u.system_role}
+                  </span>
+                </div>
+                {/* CUSTOMER ID */}
+                <div
+                  className=" text-[12px] font-mono text-cyan-700 break-all"
+                  title={`Country: ${u.country_code}
+                          State: ${u.state_code}
+                          District: ${u.district_code}
+                          Block: ${u.block_code}
+                          Village: ${u.village_code}
+                          Unique: ${u.customer_id?.slice(-4)}`}
                 >
-                  <td className="p-3">{u.user_id}</td>
-                  <td>{u.fullname}</td>
-                  <td>{u.email}</td>
-                  <td className="font-semibold capitalize">{u.system_role}</td>
-
-                  <td>
+                  [{u.country_code} {u.state_code} {u.district_code}
+                  {u.block_code} {u.village_code} {u.customer_id?.slice(-4)}]
+                </div>
+                {/* META */}
+                <div className="mt-2 flex justify-between text-[11px] text-gray-500">
+                  <span>
                     {u.createdAt
                       ? new Date(u.createdAt).toLocaleDateString()
                       : "-"}
-                  </td>
+                  </span>
 
-                  {/* STATUS */}
-                  <td>
-                    {u.is_deleted ? (
-                      <span className="text-red-500 font-semibold">
-                        Deleted
-                      </span>
-                    ) : (
-                      <span className="text-green-600 font-semibold">
-                        Active
-                      </span>
-                    )}
-                  </td>
+                  <span
+                    className={
+                      u.is_deleted
+                        ? "text-red-500 font-semibold"
+                        : "text-green-600 font-semibold"
+                    }
+                  >
+                    {u.is_deleted ? "Deleted" : "Active"}
+                  </span>
+                </div>
+                {/* ACTIONS */}
+                <div className="flex flex-wrap justify-start gap-1">
+                  {!isSelf ? (
+                    <>
+                      {/* ROLE */}
+                      {!u.is_deleted &&
+                        (u.system_role === "user" ? (
+                          <button
+                            disabled={isProcessing}
+                            className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-3 py-1 rounded"
+                            onClick={() => changeRole(u.user_id, "admin")}
+                          >
+                            {isProcessing ? "..." : "Make Admin"}
+                          </button>
+                        ) : (
+                          <button
+                            disabled={isProcessing}
+                            className="bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 text-white px-3 py-1 rounded"
+                            onClick={() => changeRole(u.user_id, "user")}
+                          >
+                            {isProcessing ? "..." : "Remove Admin"}
+                          </button>
+                        ))}
 
-                  {/* ACTIONS */}
-                  <td className="space-x-2 text-center">
-                    {!isSelf ? (
-                      <>
-                        {/* ROLE */}
-                        {!u.is_deleted &&
-                          (u.system_role === "user" ? (
-                            <button
-                              disabled={isProcessing}
-                              className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-3 py-1 rounded"
-                              onClick={() => changeRole(u.user_id, "admin")}
-                            >
-                              {isProcessing ? "..." : "Make Admin"}
-                            </button>
+                      {u.is_deleted ? (
+                        <>
+                          {/* RESTORE */}
+                          <button
+                            disabled={isProcessing}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
+                            onClick={() => restoreUser(u.user_id)}
+                          >
+                            {isProcessing ? "..." : "Restore"}
+                          </button>
+
+                          {/* PERMANENT DELETE */}
+                          {confirmId === u.user_id ? (
+                            <>
+                              <button
+                                className="bg-gray-300 px-2 py-1 rounded"
+                                onClick={() => setConfirmId(null)}
+                              >
+                                Cancel
+                              </button>
+
+                              <button
+                                className="bg-black text-white px-2 py-1 rounded"
+                                onClick={() => {
+                                  deleteUserPermanent(u.user_id);
+                                  setConfirmId(null);
+                                }}
+                              >
+                                Confirm Delete
+                              </button>
+                            </>
                           ) : (
                             <button
                               disabled={isProcessing}
-                              className="bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 text-white px-3 py-1 rounded"
-                              onClick={() => changeRole(u.user_id, "user")}
+                              className="bg-black hover:bg-gray-900 text-white px-3 py-1 rounded"
+                              onClick={() => setConfirmId(u.user_id)}
                             >
-                              {isProcessing ? "..." : "Remove Admin"}
+                              Delete Permanently
                             </button>
-                          ))}
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {/* SOFT DELETE */}
+                          {confirmId === u.user_id ? (
+                            <>
+                              <button
+                                className="bg-gray-300 px-2 py-1 rounded"
+                                onClick={() => setConfirmId(null)}
+                              >
+                                Cancel
+                              </button>
 
-                        {u.is_deleted ? (
-                          <>
-                            {/* RESTORE */}
+                              <button
+                                className="bg-red-600 text-white px-2 py-1 rounded"
+                                onClick={() => {
+                                  deleteUser(u.user_id);
+                                  setConfirmId(null);
+                                }}
+                              >
+                                Confirm
+                              </button>
+                            </>
+                          ) : (
                             <button
                               disabled={isProcessing}
-                              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
-                              onClick={() => restoreUser(u.user_id)}
+                              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                              onClick={() => setConfirmId(u.user_id)}
                             >
-                              {isProcessing ? "..." : "Restore"}
+                              Delete
                             </button>
+                          )}
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-xs text-gray-500">Current User</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
-                            {/* PERMANENT DELETE */}
-                            {confirmId === u.user_id ? (
-                              <>
-                                <button
-                                  className="bg-gray-300 px-2 py-1 rounded"
-                                  onClick={() => setConfirmId(null)}
-                                >
-                                  Cancel
-                                </button>
+        {/* DESKTOP TABLE */}
+        <div className="hidden md:block w-full overflow-x-auto rounded-xl border bg-white">
+          <table className="w-full text-xs sm:text-sm min-w-[900px]">
+            <thead>
+              <tr className="bg-gray-100 text-left">
+                <th className="p-3">ID</th>
+                <th>Name</th>
+                <th>Customer ID</th>
+                <th>Email</th>
+                <th>System Role</th>
+                <th>Joined</th>
+                <th>Status</th>
+                <th className="text-center">Actions</th>
+              </tr>
+            </thead>
 
-                                <button
-                                  className="bg-black text-white px-2 py-1 rounded"
-                                  onClick={() => {
-                                    deleteUserPermanent(u.user_id);
-                                    setConfirmId(null);
-                                  }}
-                                >
-                                  Confirm Delete
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                disabled={isProcessing}
-                                className="bg-black hover:bg-gray-900 text-white px-3 py-1 rounded"
-                                onClick={() => setConfirmId(u.user_id)}
-                              >
-                                Delete Permanently
-                              </button>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            {/* SOFT DELETE */}
-                            {confirmId === u.user_id ? (
-                              <>
-                                <button
-                                  className="bg-gray-300 px-2 py-1 rounded"
-                                  onClick={() => setConfirmId(null)}
-                                >
-                                  Cancel
-                                </button>
+            <tbody>
+              {users.map((u) => {
+                const isProcessing = processingId === u.user_id;
+                const isSelf = u.user_id === currentUserId;
 
-                                <button
-                                  className="bg-red-600 text-white px-2 py-1 rounded"
-                                  onClick={() => {
-                                    deleteUser(u.user_id);
-                                    setConfirmId(null);
-                                  }}
-                                >
-                                  Confirm
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                disabled={isProcessing}
-                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-                                onClick={() => setConfirmId(u.user_id)}
-                              >
-                                Delete
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-xs text-gray-500">
-                        Current User
+                return (
+                  <tr
+                    key={u.user_id}
+                    className={`border-t ${
+                      u.is_deleted ? "bg-red-50 opacity-60" : ""
+                    }`}
+                  >
+                    <td className="p-3">{u.user_id}</td>
+                    <td>{u.fullname}</td>
+                    <td className="text-[12px] font-mono whitespace-nowrap relative group">
+                      <span className="text-cyan-700">
+                        [{u.country_code} {u.state_code} {u.district_code}
+                        {u.block_code} {u.village_code}{" "}
+                        {u.customer_id?.slice(-4)}]
                       </span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
 
-      {/* PAGINATION */}
-      <div className="flex justify-between items-center mt-4">
-        <button
-          disabled={page === 1}
-          onClick={() => setPage((p) => p - 1)}
-          className="px-3 py-1 border rounded disabled:opacity-40"
-        >
-          Prev
-        </button>
+                      <div className="absolute hidden group-hover:block left-0 top-4 z-50 bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                        {u.country_code}=Country | {u.state_code}=State |{" "}
+                        {u.district_code}=District | {u.block_code}=Block |{" "}
+                        {u.village_code}=Village | {u.customer_id?.slice(-4)}=
+                        Unique
+                      </div>
+                    </td>
 
-        <span className="text-sm text-gray-600">
-          Page {page} of {totalPages}
-        </span>
+                    <td>{u.email}</td>
+                    <td className="font-semibold capitalize">
+                      {u.system_role}
+                    </td>
 
-        <button
-          disabled={page === totalPages}
-          onClick={() => setPage((p) => p + 1)}
-          className="px-3 py-1 border rounded disabled:opacity-40"
-        >
-          Next
-        </button>
+                    <td>
+                      {u.createdAt
+                        ? new Date(u.createdAt).toLocaleDateString()
+                        : "-"}
+                    </td>
+
+                    {/* STATUS */}
+                    <td>
+                      {u.is_deleted ? (
+                        <span className="text-red-500 font-semibold">
+                          Deleted
+                        </span>
+                      ) : (
+                        <span className="text-green-600 font-semibold">
+                          Active
+                        </span>
+                      )}
+                    </td>
+
+                    {/* ACTIONS */}
+                    <td className="space-x-2 text-center">
+                      {!isSelf ? (
+                        <>
+                          {/* ROLE */}
+                          {!u.is_deleted &&
+                            (u.system_role === "user" ? (
+                              <button
+                                disabled={isProcessing}
+                                className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-3 py-1 rounded"
+                                onClick={() => changeRole(u.user_id, "admin")}
+                              >
+                                {isProcessing ? "..." : "Make Admin"}
+                              </button>
+                            ) : (
+                              <button
+                                disabled={isProcessing}
+                                className="bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 text-white px-3 py-1 rounded"
+                                onClick={() => changeRole(u.user_id, "user")}
+                              >
+                                {isProcessing ? "..." : "Remove Admin"}
+                              </button>
+                            ))}
+
+                          {u.is_deleted ? (
+                            <>
+                              {/* RESTORE */}
+                              <button
+                                disabled={isProcessing}
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
+                                onClick={() => restoreUser(u.user_id)}
+                              >
+                                {isProcessing ? "..." : "Restore"}
+                              </button>
+
+                              {/* PERMANENT DELETE */}
+                              {confirmId === u.user_id ? (
+                                <>
+                                  <button
+                                    className="bg-gray-300 px-2 py-1 rounded"
+                                    onClick={() => setConfirmId(null)}
+                                  >
+                                    Cancel
+                                  </button>
+
+                                  <button
+                                    className="bg-black text-white px-2 py-1 rounded"
+                                    onClick={() => {
+                                      deleteUserPermanent(u.user_id);
+                                      setConfirmId(null);
+                                    }}
+                                  >
+                                    Confirm Delete
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  disabled={isProcessing}
+                                  className="bg-black hover:bg-gray-900 text-white px-3 py-1 rounded"
+                                  onClick={() => setConfirmId(u.user_id)}
+                                >
+                                  Delete Permanently
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {/* SOFT DELETE */}
+                              {confirmId === u.user_id ? (
+                                <>
+                                  <button
+                                    className="bg-gray-300 px-2 py-1 rounded"
+                                    onClick={() => setConfirmId(null)}
+                                  >
+                                    Cancel
+                                  </button>
+
+                                  <button
+                                    className="bg-red-600 text-white px-2 py-1 rounded"
+                                    onClick={() => {
+                                      deleteUser(u.user_id);
+                                      setConfirmId(null);
+                                    }}
+                                  >
+                                    Confirm
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  disabled={isProcessing}
+                                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                                  onClick={() => setConfirmId(u.user_id)}
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-xs text-gray-500">
+                          Current User
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* PAGINATION */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-center mt-4">
+          <button
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="px-3 py-1 border rounded disabled:opacity-40"
+          >
+            Prev
+          </button>
+
+          <span className="text-sm text-gray-600">
+            Page {page} of {totalPages}
+          </span>
+
+          <button
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            className="px-3 py-1 border rounded disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );

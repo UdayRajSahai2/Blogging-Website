@@ -5,10 +5,18 @@
 export const enabledRoutes = ["/"];
 
 export const isRouteEnabled = (path) => {
-  return enabledRoutes.some(
-    (route) => path === route || path.startsWith(route + "/"),
-  );
+  return enabledRoutes.some((route) => {
+    if (route === "/") {
+      return path === "/";
+    }
+
+    return path === route || path.startsWith(route + "/");
+  });
 };
+
+// for temporarily check all tabs.
+// export const isRouteEnabled = () => true;
+// export const isRouteEnabled = () => false;
 
 // Example:
 // enableRoute("/news-discounts");

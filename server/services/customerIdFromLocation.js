@@ -147,15 +147,39 @@ export function generateCustomerIdFromLocation({
   ].join("-");
 
   const customer_id = `${countryCode}${stateCode}${districtCode}${blockCode}${villageCode}${randomCode}`;
+
   return {
     customer_id,
     abbr,
+
     codes: {
       country: countryCode,
       state: stateCode,
       district: districtCode,
       block: blockCode,
       village: villageCode,
+    },
+
+    breakdown: {
+      formatted: `${countryCode} ${stateCode} ${districtCode} ${blockCode} ${villageCode} ${randomCode}`,
+
+      labels: {
+        country: "Country Code",
+        state: "State Code",
+        district: "District Code",
+        block: "Block/Subdistrict Code",
+        village: "Village Code",
+        random: "Random Unique Number",
+      },
+
+      values: {
+        country: countryCode,
+        state: stateCode,
+        district: districtCode,
+        block: blockCode,
+        village: villageCode,
+        random: randomCode,
+      },
     },
   };
 }

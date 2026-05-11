@@ -4,17 +4,51 @@ import { User } from "../models/associations.js";
 
 export const assignCustomerLocation = async (user, latitude, longitude) => {
   try {
-    if (!latitude || !longitude) {
-      console.log(" No location provided");
+    // VALIDATE COORDS PROPERLY
+    if (
+      latitude == null ||
+      longitude == null ||
+      Number.isNaN(latitude) ||
+      Number.isNaN(longitude)
+    ) {
+      console.log(" No valid location provided");
+
+      console.log(" Incoming coordinates:", {
+        latitude,
+        longitude,
+      });
+
       return user;
     }
 
-    console.log("📍 Processing location for user:", user.user_id);
+    console.log(" Processing location for user:", user.user_id);
 
-    // skip if outside India (LGD only supports India)
+    console.log(" Incoming coordinates:", {
+      latitude,
+      longitude,
+    });
+
+    //  ALWAYS SAVE RAW COORDS FIRST
+    await user.update({
+      current_latitude: latitude,
+      current_longitude: longitude,
+      location_updated_at: new Date(),
+    });
+
+    console.log(" Raw coordinates saved");
+
+    console.log(" Checking India bounds...");
+
+    //  OUTSIDE INDIA → SAVE COORDS ONLY
     if (latitude < 6 || latitude > 38 || longitude < 68 || longitude > 98) {
-      console.log(" Location outside India — skipping LGD lookup");
-      return user;
+      console.log(" Outside India — saved raw coordinates only");
+
+      console.log(" Outside India detected", {
+        latitude,
+        longitude,
+      });
+
+      return await User.findByPk(user.user_id);
     }
 
     let nominatimUrl = process.env.NOMINATIM_URL;
@@ -25,26 +59,44 @@ export const assignCustomerLocation = async (user, latitude, longitude) => {
         .replace(/\{lon\}/g, longitude);
     }
 
-    console.log("Calling Nominatim:", nominatimUrl);
+    console.log(" Sending request to Nominatim...");
 
     const geoRes = await axios.get(nominatimUrl, {
       headers: {
         "User-Agent": "reachfoundationngo-app/1.0",
       },
-      timeout: 5000, // prevent hanging
+      timeout: 5000,
     });
 
-    const address = geoRes.data.address || {};
+    console.log("Nominatim response received");
+
+    const address = geoRes?.data?.address || {};
 
     const country = address.country || "India";
-    const state = address.state || address.state_district || "";
-    //  ADD THIS
+
+    let state =
+      address.state ||
+      address.region ||
+      address.state_district ||
+      address.county ||
+      "";
+
     const city =
       address.city || address.town || address.village || address.suburb || "";
 
+    //  Delhi fallback
+    if (!state && city === "Delhi") {
+      state = "Delhi";
+    }
+
     const display_location = [city, state, country].filter(Boolean).join(", ");
+
     const district =
-      address.county || address.city_district || address.state_district || "";
+      address.county ||
+      address.city_district ||
+      address.state_district ||
+      address.city ||
+      "";
 
     const blockOrSub =
       address.city_district ||
@@ -64,7 +116,15 @@ export const assignCustomerLocation = async (user, latitude, longitude) => {
       address.suburb ||
       "";
 
-    console.log("Parsed location:", {
+    console.log("Parsed city/state:", {
+      city,
+      state,
+      country,
+    });
+
+    console.log(" Display location:", display_location);
+
+    console.log(" Parsed location:", {
       country,
       state,
       district,
@@ -72,7 +132,18 @@ export const assignCustomerLocation = async (user, latitude, longitude) => {
       village,
     });
 
+    //  COMMON UPDATE DATA
+    const updateData = {
+      current_city: city,
+      current_state: state,
+      current_country: country,
+      display_location,
+    };
+
+    //  GENERATE CUSTOMER ID ONLY ONCE
     if (!user.customer_id) {
+      console.log(" Generating customer ID...");
+
       const { customer_id, abbr, codes } = generateCustomerIdFromLocation({
         country,
         state,
@@ -81,7 +152,7 @@ export const assignCustomerLocation = async (user, latitude, longitude) => {
         village,
       });
 
-      await user.update({
+      Object.assign(updateData, {
         customer_id,
         abbr,
         country_code: codes.country,
@@ -89,38 +160,43 @@ export const assignCustomerLocation = async (user, latitude, longitude) => {
         district_code: codes.district,
         block_code: codes.block,
         village_code: codes.village,
-
-        current_latitude: latitude,
-        current_longitude: longitude,
-        location_updated_at: new Date(),
-
-        //  ADD THESE
-        current_city: city,
-        current_state: state,
-        current_country: country,
-        display_location,
       });
 
-      console.log("Customer ID generated:", customer_id);
-    } else {
-      await user.update({
-        current_latitude: latitude,
-        current_longitude: longitude,
-        location_updated_at: new Date(),
-
-        // ADD THESE
-        current_city: city,
-        current_state: state,
-        current_country: country,
-        display_location,
+      console.log(" Customer ID generated:", {
+        customer_id,
+        abbr,
+        codes,
       });
-
-      console.log("📍 Location updated");
     }
+
+    //  UPDATE LOCATION DETAILS
+    await user.update(updateData);
+
+    console.log(" User location/profile updated successfully");
+
+    console.log(" Location updated");
 
     return await User.findByPk(user.user_id);
   } catch (err) {
     console.error(" Location service error:", err.message);
-    return user; // login should not fail
+
+    console.error(" Full error object:", err);
+
+    //  NEVER LOSE COORDS EVEN IF GEOCODING FAILS
+    try {
+      console.log(" Saving fallback coordinates...");
+
+      await user.update({
+        current_latitude: latitude,
+        current_longitude: longitude,
+        location_updated_at: new Date(),
+      });
+
+      console.log(" Fallback coordinates saved");
+    } catch (saveErr) {
+      console.error(" Failed to save fallback coords:", saveErr.message);
+    }
+
+    return await User.findByPk(user.user_id);
   }
 };

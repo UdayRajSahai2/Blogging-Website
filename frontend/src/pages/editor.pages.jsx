@@ -4,7 +4,6 @@ import axios from "axios";
 
 import { UserContext } from "../App";
 import BlogEditor from "../components/blog/blog-editor.component";
-import PublishForm from "../components/blog/publish-form.component";
 import Loader from "../components/loader.component";
 import { BLOG_API } from "../common/api";
 
@@ -24,8 +23,6 @@ const blogStructure = {
 export const EditorContext = createContext({
   blog: blogStructure,
   setBlog: () => {},
-  editorState: "editor",
-  setEditorState: () => {},
   textEditor: { isReady: false },
   setTextEditor: () => {},
 });
@@ -36,7 +33,6 @@ const Editor = () => {
   const { blog_id } = useParams();
 
   const [blog, setBlog] = useState(blogStructure);
-  const [editorState, setEditorState] = useState("editor");
   const [textEditor, setTextEditor] = useState({ isReady: false });
   const [loading, setLoading] = useState(true);
 
@@ -125,13 +121,11 @@ const Editor = () => {
       value={{
         blog,
         setBlog,
-        editorState,
-        setEditorState,
         textEditor,
         setTextEditor,
       }}
     >
-      {editorState === "editor" ? <BlogEditor /> : <PublishForm />}
+      <BlogEditor />
     </EditorContext.Provider>
   );
 };

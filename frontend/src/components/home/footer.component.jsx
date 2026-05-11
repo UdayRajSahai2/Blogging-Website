@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import logo from "../../imgs/logo.png";
 import fullLogo from "../../imgs/full-logo.png";
-
+import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from "react-icons/fa";
 const Footer = () => {
   return (
     <footer className="bg-gradient-to-r from-slate-700 to-slate-800 text-white mt-1">
@@ -28,16 +28,19 @@ const Footer = () => {
 
             <div className="flex gap-3 text-lg">
               <a className="text-gray-400 hover:text-white">
-                <i className="fi fi-brands-facebook"></i>
+                <FaFacebook />
               </a>
+
               <a className="text-gray-400 hover:text-white">
-                <i className="fi fi-brands-twitter"></i>
+                <FaTwitter />
               </a>
+
               <a className="text-gray-400 hover:text-white">
-                <i className="fi fi-brands-instagram"></i>
+                <FaInstagram />
               </a>
+
               <a className="text-gray-400 hover:text-white">
-                <i className="fi fi-brands-linkedin"></i>
+                <FaLinkedin />
               </a>
             </div>
           </div>
