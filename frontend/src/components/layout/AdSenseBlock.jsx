@@ -12,7 +12,7 @@ const AdSenseBlock = ({ showAds = false }) => {
 
   return (
     <div className="col-span-2 rounded-lg p-0 bg-gradient-to-br from-indigo-50 via-white to-blue-50 border shadow-sm text-center">
-      <p className="text-[11px] font-medium text-indigo-500 mb-1 tracking-wide">
+      <p className="text-[11px] font-semibold text-indigo-500 mb-1 tracking-wide">
         Advertise with us
       </p>
 

@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-
+import {
+  MapPinIcon,
+  CloudIcon,
+  FireIcon,
+  SunIcon,
+} from "@heroicons/react/24/solid";
 const TrendingCard = () => {
   const [weather, setWeather] = useState(null);
   const [news, setNews] = useState([]);
@@ -72,26 +77,37 @@ const TrendingCard = () => {
     <div className="rounded-lg p-1.5 bg-white/80 backdrop-blur border border-gray-200 shadow-sm overflow-hidden">
       {/* WEATHER BLOCK */}
       <div className="mb-2">
-        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-0.5">
-          Weather
-        </p>
+        <div className="px-1 pb-1 flex items-center gap-1 text-gray-700">
+          <CloudIcon className="w-3.5 h-3.5 text-blue-500" />
 
-        <div className="bg-blue-50/60 rounded-md px-2 py-1">
+          <p className="font-semibold text-[11px] tracking-wide">WEATHER</p>
+        </div>
+
+        <div className="bg-blue-50/60 rounded-md px-1 py-1">
           {loadingWeather ? (
             <p className="text-[11px] text-gray-400">Loading...</p>
           ) : weather ? (
-            <p className="flex items-center gap-2 text-[12px] text-gray-800 leading-snug">
-              <span>🌡️</span>
-              <span className="font-semibold">
-                {Math.round(weather.main.temp)}°C
-              </span>
-              <span className="text-gray-500 truncate max-w-[80px]">
-                {weather.weather[0].description}
-              </span>
-              <span className="text-gray-500 text-[10px] truncate">
-                • {weather.name}
-              </span>
-            </p>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-gray-800 leading-snug w-full">
+              <div className="flex items-center gap-2 min-w-0">
+                <SunIcon className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
+
+                <span className="font-semibold shrink-0">
+                  {Math.round(weather.main.temp)}°C
+                </span>
+
+                <span className="text-gray-500 capitalize break-words">
+                  {weather.weather[0].description}
+                </span>
+              </div>
+
+              <div className="flex items-start gap-1 text-gray-500 text-[12px] min-w-0">
+                <MapPinIcon className="w-3 h-3 shrink-0 mt-[1px]" />
+
+                <span className="break-words leading-tight">
+                  {weather.name}
+                </span>
+              </div>
+            </div>
           ) : (
             <p className="text-[11px] text-red-400">Unavailable</p>
           )}
@@ -100,9 +116,13 @@ const TrendingCard = () => {
 
       {/* NEWS BLOCK */}
       <div>
-        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-0.5">
-          Trending News
-        </p>
+        <div className="px-1 pb-1 flex items-center gap-1 text-gray-700">
+          <FireIcon className="w-3.5 h-3.5 text-orange-500" />
+
+          <p className="font-semibold text-[11px] tracking-wide">
+            TRENDING NEWS
+          </p>
+        </div>
 
         <div className="relative overflow-hidden group">
           {loadingNews ? (

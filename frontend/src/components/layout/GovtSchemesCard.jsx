@@ -27,9 +27,9 @@ const GovtSchemesCard = () => {
   return (
     <div className="rounded-lg bg-gradient-to-br from-indigo-50 via-white to-blue-50 border shadow-sm">
       {/* Header */}
-      <div className="px-3 pt-0 pb-1 flex items-center gap-1">
+      <div className="px-3 pt-0 pb-1 flex items-center gap-2">
         <BuildingLibraryIcon className="w-4 h-4 text-indigo-600" />
-        <p className="font-semibold text-sm">Govt Schemes</p>
+        <p className="font-semibold text-sm">Government Schemes</p>
       </div>
 
       {/* Scrollable Content */}

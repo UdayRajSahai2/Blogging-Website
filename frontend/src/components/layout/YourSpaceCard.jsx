@@ -1,10 +1,28 @@
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 
+import {
+  UserCircleIcon,
+  PencilSquareIcon,
+  StarIcon,
+} from "@heroicons/react/24/outline";
+
 const items = [
-  { label: "Post your profile", path: "/", icon: "👤" },
-  { label: "Post your blog", path: "/editor", icon: "✍️" },
-  { label: "Performance rating", path: "/", icon: "⭐" },
+  {
+    label: "Post your profile",
+    path: "/",
+    icon: UserCircleIcon,
+  },
+  {
+    label: "Post your blog",
+    path: "/editor",
+    icon: PencilSquareIcon,
+  },
+  {
+    label: "Performance rating",
+    path: "/",
+    icon: StarIcon,
+  },
 ];
 
 const YourSpaceCard = () => {
@@ -19,11 +37,12 @@ const YourSpaceCard = () => {
   }, []);
 
   const currentItem = items[index];
+  const Icon = currentItem.icon;
 
   const content = (
     <div className="w-full flex justify-center animate-slide">
       <div className="flex items-center gap-2">
-        <span className="text-base sm:text-xl">{currentItem.icon}</span>
+        <Icon className="w-4 h-4 sm:w-4 sm:h-4" />
 
         <p className="text-[12px] font-semibold leading-tight whitespace-nowrap">
           {currentItem.label}
