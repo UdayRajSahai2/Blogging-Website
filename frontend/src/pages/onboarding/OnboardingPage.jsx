@@ -1,7 +1,7 @@
 import { useState, useContext, useEffect } from "react";
 import { UserContext } from "../../App";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import axios from "axios";
+import { completeOnboarding } from "../../api/auth.api";
 import toast from "react-hot-toast";
 import { storeInSession } from "../../common/session";
 import { CheckCircleIcon, UserCircleIcon } from "@heroicons/react/24/solid";
@@ -10,7 +10,7 @@ import {
   getNextStep,
   getCurrentStepFromData,
 } from "../onboarding/onboarding.controller";
-import { AUTH_API } from "../../common/api";
+
 import { getUserTypeFromOccupation } from "../../common/userType.utils";
 
 export default function OnboardingPage() {
@@ -110,11 +110,7 @@ export default function OnboardingPage() {
   /* FINISH */
   const handleFinish = async () => {
     try {
-      await axios.post(`${AUTH_API}/complete-onboarding`, null, {
-        headers: {
-          Authorization: `Bearer ${userAuth.access_token}`,
-        },
-      });
+      await completeOnboarding();
 
       setCompleted(true);
 

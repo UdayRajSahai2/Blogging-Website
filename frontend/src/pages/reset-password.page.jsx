@@ -3,9 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import AnimationWrapper from "../common/page-animation";
 import InputBox from "../components/input.component";
 import toast from "react-hot-toast";
-import axios from "axios";
+import { validatePasswordResetToken, resetPassword } from "../api/auth.api";
 import Loader from "../components/loader.component";
-import { AUTH_API } from "../common/api";
+
 import { KeyIcon } from "@heroicons/react/24/outline";
 const ResetPasswordPage = () => {
   const formRef = useRef();
@@ -30,7 +30,7 @@ const ResetPasswordPage = () => {
 
     const verify = async () => {
       try {
-        await axios.post(`${AUTH_API}/validate-password-reset-token`, {
+        await validatePasswordResetToken({
           token,
         });
         setTokenValid(true); // mark token as valid
@@ -46,7 +46,7 @@ const ResetPasswordPage = () => {
   }, [token, navigate]);
 
   /** Reset Password */
-  const resetPassword = async () => {
+  const handleResetPassword = async () => {
     if (loading) return;
 
     const password = formRef.current.password.value.trim();
@@ -62,7 +62,7 @@ const ResetPasswordPage = () => {
 
     setLoading(true);
     try {
-      await axios.post(`${AUTH_API}/reset-password`, { token, password });
+      await resetPassword({ token, password });
       toast.success("Password updated! Redirecting to login...");
 
       setTimeout(() => navigate("/signin"), 4000);
@@ -75,7 +75,7 @@ const ResetPasswordPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    resetPassword();
+    handleResetPassword();
   };
 
   /** Show loader while verifying token */

@@ -39,7 +39,7 @@ export const getUserBlogs = async (req, res) => {
 };
 
 export const getLatestBlogs = async (req, res) => {
-  let maxLimit = 5;
+  let maxLimit = 7; // Default limit
   let { page } = req.body;
 
   try {

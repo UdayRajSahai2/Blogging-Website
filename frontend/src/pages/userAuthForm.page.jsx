@@ -1,7 +1,7 @@
 import { useContext, useRef, useState, useEffect } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import axios from "axios";
+
 import AnimationWrapper from "../common/page-animation";
 import InputBox from "../components/input.component";
 import googleIcon from "../imgs/google.png";
@@ -9,7 +9,13 @@ import { storeInSession } from "../common/session";
 import { UserContext } from "../App";
 import { authWithGoogle } from "../common/firebase";
 import Loader from "../components/loader.component";
-import { AUTH_API } from "../common/api";
+import {
+  signIn,
+  signUp,
+  googleAuth,
+  verifyEmailOtp,
+  completeSignup,
+} from "../api/auth.api";
 import AuthLeftActions from "../components/auth/AuthLeftActions";
 import AuthRightActions from "../components/auth/AuthRightActions";
 import AuthBottomActions from "../components/auth/AuthBottomActions";
@@ -109,9 +115,9 @@ const UserAuthForm = ({ type }) => {
     setLoading(true);
 
     try {
-      const { data } = await axios.post(AUTH_API + serverRoute, formData, {
-        timeout: 15000, // avoid hanging requests
-      });
+      const authFn = type === "sign-in" ? signIn : signUp;
+
+      const { data } = await authFn(formData);
 
       toast.dismiss(loadingToast);
 
@@ -288,7 +294,7 @@ const UserAuthForm = ({ type }) => {
         }
       }
 
-      const { data } = await axios.post(`${AUTH_API}/google-auth`, {
+      const { data } = await googleAuth({
         access_token: idToken,
         latitude,
         longitude,
@@ -377,7 +383,7 @@ const UserAuthForm = ({ type }) => {
     setLoading(true);
 
     try {
-      await axios.post(`${AUTH_API}/signup`, {
+      await signUp({
         ...formData,
         latitude: geo.latitude,
         longitude: geo.longitude,
@@ -435,7 +441,7 @@ const UserAuthForm = ({ type }) => {
     setLoading(true);
 
     try {
-      const { data } = await axios.post(`${AUTH_API}/verify-email-otp`, {
+      const { data } = await verifyEmailOtp({
         email,
         otp: otpValue,
       });
@@ -473,7 +479,7 @@ const UserAuthForm = ({ type }) => {
     try {
       const email = formElement.current.email.value;
 
-      const { data } = await axios.post(`${AUTH_API}/complete-signup`, {
+      const { data } = await completeSignup({
         email,
       });
 
@@ -648,23 +654,9 @@ const UserAuthForm = ({ type }) => {
                         </div>
                       }
                     />
-                    {(isMobileFocused || mobileNumber.length > 0) && (
-                      <p
-                        className={`text-xs mt-0 ${
-                          mobileNumber.length === 0
-                            ? "text-gray-400"
-                            : mobileChecks.valid
-                              ? "text-green-500"
-                              : "text-red-500"
-                        }`}
-                      >
-                        {(isMobileFocused || mobileNumber.length > 0) &&
-                          mobileNumber.length > 0 &&
-                          !mobileChecks.valid && (
-                            <p className="text-xs  text-red-500">
-                              Enter a valid 10-digit mobile number
-                            </p>
-                          )}
+                    {mobileNumber.length > 0 && !mobileChecks.valid && (
+                      <p className="text-xs text-red-500 mt-0">
+                        Enter a valid 10-digit mobile number
                       </p>
                     )}
                   </>

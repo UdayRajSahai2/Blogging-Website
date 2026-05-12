@@ -2,6 +2,7 @@ import { useContext, useState } from "react";
 import AnimationWrapper from "../../common/page-animation";
 import { Link } from "react-router-dom";
 import { UserContext } from "../../App";
+import { logoutUser } from "../../api/auth.api";
 import { removeFromSession } from "../../common/session";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -32,12 +33,10 @@ const UserNavigationPanel = () => {
     const toastId = toast.loading("Signing out...");
 
     try {
-      // (Optional API call — skip if not needed)
-      // await axios.post(AUTH_API + "/logout");
+      await logoutUser();
     } catch (err) {
       console.warn("Logout API failed");
     } finally {
-      // Clear session
       removeFromSession("user");
 
       setUserAuth({
@@ -48,11 +47,13 @@ const UserNavigationPanel = () => {
         isOnboardingCompleted: null,
       });
 
-      // Toast update (IMPORTANT FIX)
-      toast.success("Logged out successfully", { id: toastId });
+      toast.success("Logged out successfully", {
+        id: toastId,
+      });
 
-      // Redirect
-      navigate("/signin", { replace: true });
+      navigate("/signin", {
+        replace: true,
+      });
 
       setLoggingOut(false);
     }

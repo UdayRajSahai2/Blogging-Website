@@ -12,6 +12,7 @@ import {
   verifyForgotPasswordOTP,
   validatePasswordResetToken,
   completeOnboarding,
+  logoutUser,
 } from "../controllers/auth.controller.js";
 import {
   sendOtpLimiter,
@@ -43,5 +44,6 @@ router.post("/reset-password", resetPasswordLimiter, resetPassword);
 /* ---------------- Protected ---------------- */
 
 router.post("/change-password", verifyJWT, changePassword);
+router.post("/logout", verifyJWT, logoutUser);
 
 export default router;

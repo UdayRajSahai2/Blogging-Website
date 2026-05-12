@@ -3,9 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import AnimationWrapper from "../common/page-animation";
 import InputBox from "../components/input.component";
 import toast from "react-hot-toast";
-import axios from "axios";
+import { forgotPassword, verifyPasswordOtp } from "../api/auth.api";
 import Loader from "../components/loader.component";
-import { AUTH_API } from "../common/api";
 import { EnvelopeIcon } from "@heroicons/react/24/outline";
 const ForgotPasswordPage = () => {
   const formRef = useRef();
@@ -42,7 +41,7 @@ const ForgotPasswordPage = () => {
 
     setLoading(true);
     try {
-      await axios.post(`${AUTH_API}/forgot-password`, { email });
+      await forgotPassword({ email });
       sessionStorage.setItem("reset_email", email);
       toast.success("OTP sent to your email");
       setOtpSent(true);
@@ -69,10 +68,10 @@ const ForgotPasswordPage = () => {
 
     setLoading(true);
     try {
-      const { data } = await axios.post(
-        `${AUTH_API}/verify-password-email-otp`,
-        { email, otp },
-      );
+      const { data } = await verifyPasswordOtp({
+        email,
+        otp,
+      });
 
       toast.success("OTP verified");
       navigate(`/reset-password?token=${data.resetToken}`);

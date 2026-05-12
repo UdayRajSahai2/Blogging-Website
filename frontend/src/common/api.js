@@ -1,11 +1,7 @@
 // src/common/api.js
+import { BASE_URL } from "../config/api.config";
 
-const RAW_BASE_URL = import.meta.env.VITE_SERVER_DOMAIN || "";
-
-// fallback to same domain in production
-const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/$/, "") : "";
-
-export const AUTH_API = `${BASE_URL}/api/auth`;
+// export const AUTH_API = `${BASE_URL}/api/auth`;
 export const BLOG_API = `${BASE_URL}/api/blog`;
 export const USER_API = `${BASE_URL}/api/user`;
 export const UPLOAD_API = `${BASE_URL}/api/upload`;

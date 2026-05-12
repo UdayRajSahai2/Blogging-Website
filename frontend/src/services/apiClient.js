@@ -2,13 +2,8 @@
 //centralized Axios HTTP client with interceptors for auth and error handling for all API requests, authentication headers, and global error handling.
 import axios from "axios";
 import { lookInSession, removeFromSession } from "../common/session";
+import { BASE_URL } from "../config/api.config";
 
-const RAW_BASE_URL = import.meta.env.VITE_SERVER_DOMAIN || "";
-
-// fallback to same domain in production
-const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/$/, "") : "";
-
-/* AXIOS INSTANCE */
 const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,

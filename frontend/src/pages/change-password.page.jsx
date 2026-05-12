@@ -1,15 +1,10 @@
-import { useContext, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import AnimationWrapper from "../common/page-animation";
 import InputBox from "../components/input.component";
-import { UserContext } from "../App";
-import axios from "axios";
-import { AUTH_API } from "../common/api";
+import { changePassword } from "../api/auth.api";
 import { LockOpenIcon } from "@heroicons/react/24/outline";
 const ChangePassword = () => {
-  const {
-    userAuth: { access_token },
-  } = useContext(UserContext);
   const changePasswordForm = useRef();
   const [loading, setLoading] = useState(false);
 
@@ -46,15 +41,10 @@ const ChangePassword = () => {
     const loadingToast = toast.loading("Updating password...");
 
     try {
-      const response = await axios.post(
-        `${AUTH_API}/change-password`,
-        { currentPassword, newPassword },
-        {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-          },
-        },
-      );
+      const response = await changePassword({
+        currentPassword,
+        newPassword,
+      });
 
       toast.dismiss(loadingToast);
       toast.success(

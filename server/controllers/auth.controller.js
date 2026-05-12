@@ -709,3 +709,16 @@ export const completeOnboarding = async (req, res) => {
     return res.status(500).json({ error: "Failed to complete onboarding" });
   }
 };
+
+export const logoutUser = async (req, res) => {
+  try {
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Logout failed",
+    });
+  }
+};
