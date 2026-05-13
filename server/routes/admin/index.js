@@ -9,13 +9,13 @@ import adminRoleRoutes from "./admin.role.routes.js";
 
 const router = express.Router();
 
-// 🔐 Global protection
+//  Global protection
 router.use(verifyJWT, authorizeRoles("admin"));
 
-// 📦 Core routes
+//  Core routes
 router.use("/", adminCoreRoutes);
 
-// 🎭 Role management routes
+// Role management routes
 router.use("/roles", adminRoleRoutes);
 
 export default router;

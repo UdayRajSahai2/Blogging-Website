@@ -5,7 +5,7 @@ import sequelize from "../config/db.config.js";
 import { fn, col } from "sequelize";
 let treeCache = null;
 let treeCacheTime = 0;
-// ✅ CREATE INTEREST (WITH HIERARCHY)
+//  CREATE INTEREST (WITH HIERARCHY)
 export const createInterest = async ({ name, parent_id = null }) => {
   const cleanName = name.trim();
 
@@ -32,7 +32,7 @@ export const createInterest = async ({ name, parent_id = null }) => {
   return interest;
 };
 
-// ✅ GET TREE (RECURSIVE)
+//  GET TREE (RECURSIVE)
 export const getInterestTree = async () => {
   const now = Date.now();
 
@@ -67,7 +67,7 @@ export const getInterestTree = async () => {
   return tree;
 };
 
-// ✅ GET ALL (FLAT WITH COUNT)
+// GET ALL (FLAT WITH COUNT)
 export const getAllInterests = async ({ page, limit }) => {
   const offset = (page - 1) * limit;
 
@@ -94,7 +94,7 @@ export const getAllInterests = async ({ page, limit }) => {
   });
 };
 
-// ✅ ADD USER INTERESTS
+// ADD USER INTERESTS
 export const addUserInterests = async (
   user_id,
   interest_ids,
@@ -119,7 +119,7 @@ export const addUserInterests = async (
     throw new Error("Some interest_ids are invalid");
   }
 
-  // 🔥 Dynamic leaf check (best)
+  //  Dynamic leaf check (best)
   const children = await Interest.findAll({
     where: {
       parent_id: cleanIds,
@@ -151,7 +151,7 @@ export const addUserInterests = async (
   };
 };
 
-// ✅ GET USER INTERESTS (WITH PATH)
+// GET USER INTERESTS (WITH PATH)
 export const getUserInterests = async (user_id) => {
   const user = await User.findByPk(user_id, {
     include: {
@@ -175,7 +175,7 @@ export const getUserInterests = async (user_id) => {
   return result;
 };
 
-// ✅ REPLACE USER INTERESTS
+//  REPLACE USER INTERESTS
 export const replaceUserInterests = async (user_id, interest_ids) => {
   const t = await sequelize.transaction();
 
@@ -201,7 +201,7 @@ export const replaceUserInterests = async (user_id, interest_ids) => {
   }
 };
 
-// ✅ REMOVE USER INTEREST
+// REMOVE USER INTEREST
 export const removeUserInterest = async (user_id, interest_id) => {
   await UserInterest.destroy({
     where: { user_id, interest_id },
@@ -210,7 +210,7 @@ export const removeUserInterest = async (user_id, interest_id) => {
   return { success: true };
 };
 
-// ✅ DELETE INTEREST (SAFE TREE DELETE)
+//  DELETE INTEREST (SAFE TREE DELETE)
 export const deleteInterest = async (interest_id) => {
   const children = await Interest.count({
     where: { parent_id: interest_id },
@@ -225,7 +225,7 @@ export const deleteInterest = async (interest_id) => {
   return { success: true };
 };
 
-// ✅ GET FULL PATH (breadcrumb)
+// GET FULL PATH (breadcrumb)
 export const getInterestPath = async (interest_id) => {
   const all = await Interest.findAll({
     where: { is_deleted: false },

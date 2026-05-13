@@ -16,7 +16,7 @@ export const createConversationService = async ({
   isGroup = false,
   groupName = null,
 }) => {
-  // 🔐 FRIEND VALIDATION
+  //  FRIEND VALIDATION
   const connections = await UserConnection.findAll({
     where: {
       status: "accepted",
@@ -34,7 +34,7 @@ export const createConversationService = async ({
     }
   }
 
-  // 🟢 prevent duplicate 1-1 chat
+  // prevent duplicate 1-1 chat
   if (!isGroup && userIds.length === 1) {
     const otherUserId = userIds[0];
 
@@ -93,7 +93,7 @@ export const sendMessageService = async ({
   messageType = "text",
   fileUrl = null,
 }) => {
-  // ✅ membership check
+  //  membership check
   const participant = await ConversationParticipant.findOne({
     where: {
       conversation_id: conversationId,
@@ -116,7 +116,7 @@ export const sendMessageService = async ({
       { transaction: t },
     );
 
-    // ✅ mark sender as seen
+    //  mark sender as seen
     await MessageSeen.create(
       {
         message_id: message.message_id,
@@ -125,7 +125,7 @@ export const sendMessageService = async ({
       { transaction: t },
     );
 
-    // 📈 increment unread for others
+    //  increment unread for others
     await ConversationParticipant.increment(
       { unread_count: 1 },
       {
@@ -137,7 +137,7 @@ export const sendMessageService = async ({
       },
     );
 
-    // 🔥 update last message reference
+    //  update last message reference
     await Conversation.update(
       {
         last_message_id: message.message_id,
@@ -162,7 +162,7 @@ export const sendMessageService = async ({
           attributes: ["user_id"],
         },
       ],
-      transaction: t, // 🔥 VERY IMPORTANT
+      transaction: t, //  VERY IMPORTANT
     });
 
     return fullMessage || message;

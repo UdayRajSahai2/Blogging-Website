@@ -177,7 +177,7 @@ const AdminBlogs = () => {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Blog Moderation</h1>
+      <h1 className="text-2xl font-bold mb-2">Blog Moderation</h1>
 
       {/*  SEARCH + FILTER */}
       <div className="flex flex-col md:flex-row gap-3 mb-4">
@@ -245,7 +245,7 @@ const AdminBlogs = () => {
                       />
 
                       <div className="min-w-0">
-                        <p className="text-xs font-medium truncate">
+                        <p className="text-xs font-medium line-clamp-1">
                           {b.title}
                         </p>
                         <p className="text-[11px] text-gray-500 line-clamp-1">
@@ -567,7 +567,52 @@ const AdminBlogs = () => {
                   {viewModal.blog.des || "No description"}
                 </p>
               </div>
+              {/* TAGS */}
+              <div>
+                <p className="text-[11px] text-gray-400 uppercase">Tags</p>
 
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {(() => {
+                    let tags = viewModal.blog?.tags;
+
+                    // Parse stringified tags if needed
+                    if (typeof tags === "string") {
+                      try {
+                        tags = JSON.parse(tags.replace(/'/g, '"'));
+                      } catch {
+                        tags = [tags];
+                      }
+                    }
+
+                    // Fallback
+                    if (!Array.isArray(tags)) tags = [];
+
+                    // Empty state
+                    if (!tags.length) {
+                      return (
+                        <span className="text-xs text-gray-500">No tags</span>
+                      );
+                    }
+
+                    return tags.map((tag, i) => (
+                      <span
+                        key={i}
+                        className="
+            text-[10px]
+            px-2
+            py-0.5
+            rounded-md
+            bg-purple-50
+            text-purple-700
+            border border-purple-100
+          "
+                      >
+                        #{tag}
+                      </span>
+                    ));
+                  })()}
+                </div>
+              </div>
               {/* CONTENT */}
               <div>
                 <p className="text-[11px] text-gray-400 uppercase">

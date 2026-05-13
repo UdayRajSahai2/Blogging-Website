@@ -12,6 +12,8 @@ import BlogContent from "../components/blog/blog-content.component";
 import CommentsContainer from "../components/comment/comments.component";
 import { BLOG_API } from "../common/api";
 import SimilarBlogCard from "../components/blog/SimilarBlogCard";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { useRef } from "react";
 
 export const blogStructure = {
   title: "",
@@ -40,6 +42,20 @@ const BlogPage = () => {
   const [comments, setComments] = useState({ results: [] });
   const { userAuth } = useContext(UserContext);
   const { access_token } = userAuth || {};
+
+  const scrollRef = useRef(null);
+
+  const scroll = (direction) => {
+    if (!scrollRef.current) return;
+
+    const container = scrollRef.current;
+    const scrollAmount = 240;
+
+    container.scrollBy({
+      left: direction === "right" ? scrollAmount : -scrollAmount,
+      behavior: "smooth",
+    });
+  };
   // ===== SAFE BLOG PROCESS =====
   const processBlogData = (blogData) => {
     if (!blogData) {
@@ -288,25 +304,125 @@ const BlogPage = () => {
 
             {/* SIMILAR BLOGS */}
             {similarBlogs?.length > 0 && (
-              <div className="">
-                <h4 className="text-lg md:text-xl font-semibold tracking-tight mb-2">
+              <section>
+                {/* Header */}
+                <h4 className="text-lg md:text-xl font-semibold tracking-tight text-gray-900 mb-2">
                   Similar Blogs
                 </h4>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[1px] lg:gap-[3px]">
-                  {similarBlogs.map((blogItem, i) => (
-                    <AnimationWrapper
-                      key={i}
-                      transition={{ duration: 1, delay: i * 0.08 }}
-                    >
-                      <SimilarBlogCard
-                        content={blogItem}
-                        author={blogItem.blogAuthor}
-                      />
-                    </AnimationWrapper>
-                  ))}
+                {/* Slider Wrapper */}
+                <div className="relative group">
+                  {similarBlogs.length > 4 && (
+                    <>
+                      {/* Left Arrow */}
+                      <button
+                        onClick={() => scroll("left")}
+                        className="
+    hidden md:flex
+    items-center justify-center
+
+    absolute
+    left-2
+    top-[45px]
+    z-20
+
+    w-8 h-8
+    rounded-full
+
+    bg-white/40
+    backdrop-blur-md
+    border border-white/30
+
+    text-gray-700
+    shadow-md
+
+    opacity-0
+    group-hover:opacity-100
+
+    hover:bg-white/60
+
+    transition-all
+    duration-200
+  "
+                      >
+                        <FiChevronLeft size={16} />
+                      </button>
+
+                      {/* Right Arrow */}
+                      <button
+                        onClick={() => scroll("right")}
+                        className="
+    hidden md:flex
+    items-center justify-center
+
+    absolute
+    right-2
+    top-[45px]
+    z-20
+
+    w-8 h-8
+    rounded-full
+
+    bg-white/40
+    backdrop-blur-md
+    border border-white/30
+
+    text-gray-700
+    shadow-md
+
+    opacity-0
+    group-hover:opacity-100
+
+    hover:bg-white/60
+
+    transition-all
+    duration-200
+  "
+                      >
+                        <FiChevronRight size={16} />
+                      </button>
+                    </>
+                  )}
+
+                  {/* Slider */}
+                  <div
+                    ref={scrollRef}
+                    className="
+    flex
+    gap-[6px]
+    overflow-x-auto
+    scroll-smooth
+    scrollbar-hide
+    snap-x
+    snap-mandatory
+    pb-1
+  "
+                  >
+                    {similarBlogs.map((blogItem, i) => (
+                      <div
+                        key={blogItem.blog_id || i}
+                        className="
+              min-w-[220px]
+              max-w-[220px]
+              flex-shrink-0
+            "
+                      >
+                        <AnimationWrapper
+                          transition={{
+                            duration: 0.45,
+                            delay: i * 0.05,
+                          }}
+                        >
+                          <SimilarBlogCard
+                            content={blogItem}
+                            author={blogItem.blogAuthor}
+                          />
+                        </AnimationWrapper>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </section>
             )}
           </div>
         </BlogContext.Provider>

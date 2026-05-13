@@ -123,13 +123,13 @@ export const createAcademicService = async (body, user_id, transaction) => {
     );
   }
 
-  // ✅ FORCE NORMALIZED TITLE INTO DB
+  //  FORCE NORMALIZED TITLE INTO DB
   body.title = normalizedTitle;
 
-  // ✅ CREATE
+  // CREATE
   const created = await UserAcademic.create(body, { transaction });
 
-  // ✅ FINAL RETURN
+  //  FINAL RETURN
   return {
     ...created.toJSON(),
     suggestion,
