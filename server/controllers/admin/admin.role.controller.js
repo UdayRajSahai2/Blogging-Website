@@ -69,7 +69,7 @@ export const deleteRole = async (req, res) => {
       return res.status(404).json({ error: "Role not found" });
     }
 
-    // 🔥 PUT IT HERE (BEFORE DELETE)
+    // PUT IT HERE (BEFORE DELETE)
     const usage = await UserRole.findOne({ where: { role_id } });
 
     if (usage) {
@@ -161,7 +161,7 @@ export const rejectRole = async (req, res) => {
     res.status(500).json({ error: "Rejection failed" });
   }
 };
-// 🔐 ADMIN: Assign role to ANY user
+//  ADMIN: Assign role to ANY user
 export const assignRoleToUserByAdmin = async (req, res) => {
   const { userId, role, is_primary = false } = req.body;
 
@@ -202,7 +202,7 @@ export const assignRoleToUserByAdmin = async (req, res) => {
       },
     });
 
-    // 🔥 HANDLE EXISTING ROLE
+    //  HANDLE EXISTING ROLE
     if (existing) {
       if (existing.status === "pending") {
         await existing.update({
@@ -231,7 +231,7 @@ export const assignRoleToUserByAdmin = async (req, res) => {
       user_id: userId,
       role_id: roleRecord.role_id,
       is_primary,
-      status: "approved", // 🔥 IMPORTANT
+      status: "approved", //  IMPORTANT
     });
 
     return res.json({
@@ -264,7 +264,7 @@ export const getUsersByRole = async (req, res) => {
     const users = await UserRole.findAll({
       where: {
         role_id: roleRecord.role_id,
-        status: "approved", // 🔥 IMPORTANT
+        status: "approved", // IMPORTANT
       },
       include: [
         {
@@ -331,7 +331,7 @@ export const updateUserRole = async (req, res) => {
       });
     }
 
-    // 🔍 Find roles
+    //  Find roles
     const oldRoleRecord = await Role.findOne({
       where: { role_name: oldRole.toLowerCase() },
     });
@@ -346,7 +346,7 @@ export const updateUserRole = async (req, res) => {
       });
     }
 
-    // 🔄 Update role
+    //  Update role
     const updated = await UserRole.update(
       { role_id: newRoleRecord.role_id },
       {

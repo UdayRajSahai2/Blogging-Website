@@ -104,7 +104,7 @@ export const sendMessageService = async ({
   if (!participant) throw new Error("Unauthorized");
 
   return await sequelize.transaction(async (t) => {
-    // 📨 create message
+    //  create message
     const message = await Message.create(
       {
         conversation_id: conversationId,
@@ -223,7 +223,7 @@ export const getMessages = async ({
   const where = { conversation_id: conversationId };
 
   if (cursor) {
-    where.createdAt = { [Op.lt]: cursor }; // 🔥 cursor pagination
+    where.createdAt = { [Op.lt]: cursor }; //  cursor pagination
   }
 
   return await Message.findAll({

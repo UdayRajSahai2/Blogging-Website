@@ -1,15 +1,17 @@
+import { useState } from "react";
+
 import AdminNavbar from "../components/admin/AdminNavbar";
-import { Outlet } from "react-router-dom";
+import AdminLayout from "../pages/admin/AdminLayout";
 
 const AdminAppLayout = () => {
-  return (
-    <>
-      <AdminNavbar />
+  const [open, setOpen] = useState(false);
 
-      <div className="pt-0">
-        <Outlet />
-      </div>
-    </>
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <AdminNavbar onMenuClick={() => setOpen(true)} />
+
+      <AdminLayout open={open} closeSidebar={() => setOpen(false)} />
+    </div>
   );
 };
 

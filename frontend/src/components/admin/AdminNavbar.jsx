@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { UserContext } from "../../App";
 import logo from "../../imgs/logo.png";
 
-const AdminNavbar = () => {
+const AdminNavbar = ({ onMenuClick }) => {
   const { userAuth, setUserAuth } = useContext(UserContext);
 
   const { access_token, fullname, profile_img } = userAuth || {};
@@ -78,11 +78,18 @@ const AdminNavbar = () => {
         </div>
 
         {/*  MOBILE SEARCH */}
-        <div className="sm:hidden pb-2">
+        <div className="sm:hidden pb-2 flex items-center gap-2">
+          <button
+            onClick={onMenuClick}
+            className="bg-white border rounded px-3 py-2 shadow"
+          >
+            ☰
+          </button>
+
           <input
             type="text"
             placeholder="Search admin..."
-            className="w-full h-9 px-3 border rounded-full"
+            className="flex-1 h-9 px-3 border rounded-full"
           />
         </div>
       </div>

@@ -79,7 +79,7 @@ export const searchFriends = async (req, res) => {
 };
 export const remove = async (req, res) => {
   try {
-    const connectionId = parseInt(req.params.connectionId); // ✅ FIX
+    const connectionId = parseInt(req.params.connectionId);
 
     await removeConnection(req.user.id, connectionId);
 

@@ -11,7 +11,6 @@ import Loader from "./components/loader.component";
 import AppLayout from "./layouts/AppLayout";
 // Admin
 import AdminAppLayout from "./layouts/AdminAppLayout";
-import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminFinance from "./pages/admin/finance/AdminFinance";
@@ -83,29 +82,33 @@ const App = () => {
 
       <Routes>
         {/* ================= ADMIN (FULLY SEPARATE) ================= */}
-        <Route path="/admin" element={<AdminAppLayout />}>
-          <Route element={<AdminRoute />}>
-            <Route element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="users" element={<AdminUsers />} />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminAppLayout />
+            </AdminRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
 
-              {/* NEW */}
-              <Route path="roles">
-                <Route index element={<Navigate to="requests" />} />
-                <Route path="requests" element={<AdminRoles />} />
-                <Route path="manage" element={<AdminRolePanel />} />
-              </Route>
+          <Route path="users" element={<AdminUsers />} />
 
-              <Route path="blogs" element={<AdminBlogs />} />
+          <Route path="roles">
+            <Route index element={<Navigate to="requests" />} />
 
-              <Route path="finance" element={<AdminFinance />} />
-              <Route
-                path="finance/expenditures"
-                element={<AdminExpenditures />}
-              />
-              <Route path="finance/balance" element={<AdminBalance />} />
-            </Route>
+            <Route path="requests" element={<AdminRoles />} />
+
+            <Route path="manage" element={<AdminRolePanel />} />
           </Route>
+
+          <Route path="blogs" element={<AdminBlogs />} />
+
+          <Route path="finance" element={<AdminFinance />} />
+
+          <Route path="finance/expenditures" element={<AdminExpenditures />} />
+
+          <Route path="finance/balance" element={<AdminBalance />} />
         </Route>
 
         {/* ================= USER APP ================= */}

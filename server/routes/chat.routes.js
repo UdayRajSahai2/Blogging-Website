@@ -15,27 +15,27 @@ import {
 
 const router = express.Router();
 
-// 🔐 Protect all routes
+//  Protect all routes
 router.use(verifyJWT);
 
 // =============================
 // CONVERSATIONS
 // =============================
 
-// ✅ Create conversation
+//  Create conversation
 router.post("/conversations", createConversation);
 
-// ✅ Get all conversations for user
+//  Get all conversations for user
 router.get("/conversations", getConversations);
 
 // =============================
 // MESSAGES
 // =============================
 
-// ✅ Send message
+// Send message
 router.post("/messages", sendMessage);
 
-// ✅ Get messages (with pagination)
+//  Get messages (with pagination)
 router.get("/conversations/:conversationId/messages", getConversationMessages);
 
 // DELETE conversation (leave or delete)
@@ -45,16 +45,16 @@ router.delete("/conversations/:conversationId", deleteConversation);
 // GROUP MANAGEMENT
 // =============================
 
-// ✅ Add member
+//  Add member
 router.post("/conversations/:conversationId/members", addMember);
 
-// ✅ Remove member
+//  Remove member
 router.delete("/conversations/:conversationId/members/:userId", removeMember);
 
-// ✅ Leave group
+//  Leave group
 router.delete("/conversations/:conversationId/leave", leaveGroup);
 
-// ✅ Update role
+//  Update role
 router.patch("/conversations/:conversationId/members/:userId/role", updateRole);
 
 export default router;

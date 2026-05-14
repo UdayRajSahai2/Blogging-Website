@@ -28,7 +28,7 @@ export const sendConnectionRequest = async (senderId, receiverId) => {
       throw new Error("Already connected");
     }
 
-    // 🔥 pending request exists
+    //  pending request exists
     if (existing.status === "pending") {
       // if OTHER user sent → auto accept
       if (existing.receiver_id === senderId) {
@@ -40,7 +40,7 @@ export const sendConnectionRequest = async (senderId, receiverId) => {
       throw new Error("Request already pending");
     }
 
-    // 🔥 rejected → allow resend
+    // rejected → allow resend
     if (existing.status === "rejected") {
       existing.status = "pending";
       existing.sender_id = senderId;
@@ -124,7 +124,7 @@ export const getConnections = async (userId) => {
 
     return {
       ...user.toJSON(),
-      connection_id: c.connection_id, // 🔥 REQUIRED
+      connection_id: c.connection_id, //  REQUIRED
     };
   });
 };

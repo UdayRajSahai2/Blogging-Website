@@ -17,7 +17,7 @@ const AdminBlogs = () => {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
-
+  const [totalBlogs, setTotalBlogs] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -70,7 +70,8 @@ const AdminBlogs = () => {
         });
 
         setBlogs(data?.data || []);
-        setTotalPages(data?.pagination?.totalPages || 1);
+        setTotalPages(data?.pagination?.total || 1);
+        setTotalBlogs(data?.pagination?.total || 0);
       } catch (err) {
         if (axios.isCancel(err)) return;
         console.error(err);
@@ -177,29 +178,38 @@ const AdminBlogs = () => {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-2">Blog Moderation</h1>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+        {/* LEFT SIDE */}
+        <div>
+          <h1 className="text-2xl font-bold mb-2">Blog Moderation</h1>
 
-      {/*  SEARCH + FILTER */}
-      <div className="flex flex-col md:flex-row gap-3 mb-4">
-        <input
-          type="text"
-          placeholder="Search blogs..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full md:w-80 p-2 border rounded-lg"
-        />
+          <div className="flex flex-col md:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Search blogs..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full md:w-80 p-2 border rounded-lg"
+            />
 
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="p-2 border rounded-lg"
-        >
-          <option value="all">All Status</option>
-          <option value="draft">Draft</option>
-          <option value="pending">Pending</option>
-          <option value="published">Published</option>
-          <option value="rejected">Rejected</option>
-        </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="p-2 border rounded-lg"
+            >
+              <option value="all">All Status</option>
+              <option value="draft">Draft</option>
+              <option value="pending">Pending</option>
+              <option value="published">Published</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+
+        {/* RIGHT SIDE */}
+        <div className="text-sm font-semibold text-slate-700">
+          Total Blogs: <span className="text-black">{totalBlogs}</span>
+        </div>
       </div>
 
       {/* TABLE */}
@@ -598,14 +608,14 @@ const AdminBlogs = () => {
                       <span
                         key={i}
                         className="
-            text-[10px]
-            px-2
-            py-0.5
-            rounded-md
-            bg-purple-50
-            text-purple-700
-            border border-purple-100
-          "
+                                    text-[10px]
+                                    px-2
+                                    py-0.5
+                                    rounded-md
+                                    bg-purple-50
+                                    text-purple-700
+                                    border border-purple-100
+                           "
                       >
                         #{tag}
                       </span>

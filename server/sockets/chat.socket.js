@@ -4,12 +4,12 @@ import {
   markMessagesSeen,
 } from "../services/chat.service.js";
 
-// 🔥 support multiple sockets per user
+//  support multiple sockets per user
 const onlineUsers = new Map(); // userId -> Set(socketIds)
 
 export const initChatSocket = (io) => {
   // =============================
-  // 🔐 AUTH MIDDLEWARE
+  //  AUTH MIDDLEWARE
   // =============================
   io.use((socket, next) => {
     try {
@@ -29,13 +29,13 @@ export const initChatSocket = (io) => {
   });
 
   // =============================
-  // 🔌 CONNECTION
+  //  CONNECTION
   // =============================
   io.on("connection", (socket) => {
     const userId = socket.user.id;
     console.log("⚡ Connected:", userId);
 
-    // ✅ store multiple sockets per user
+    //  store multiple sockets per user
     if (!onlineUsers.has(userId)) {
       onlineUsers.set(userId, new Set());
     }
@@ -48,7 +48,7 @@ export const initChatSocket = (io) => {
     io.emit("online_users", Array.from(onlineUsers.keys()));
 
     // =============================
-    // 📥 JOIN CONVERSATION
+    // JOIN CONVERSATION
     // =============================
     socket.on("join_conversation", ({ conversationId }) => {
       if (!conversationId) return;
@@ -57,7 +57,7 @@ export const initChatSocket = (io) => {
     });
 
     // =============================
-    // 📤 SEND MESSAGE
+    //  SEND MESSAGE
     // =============================
     socket.on("send_message", async (payload, callback) => {
       try {
@@ -75,10 +75,10 @@ export const initChatSocket = (io) => {
           fileUrl,
         });
 
-        // 🔥 send actual message (not just refresh)
+        //  send actual message (not just refresh)
         io.to(`conversation_${conversationId}`).emit("new_message", msg);
 
-        // 🔥 notify ALL participants (not just room)
+        //  notify ALL participants (not just room)
         io.emit("conversation_updated", {
           conversationId,
         });
@@ -91,7 +91,7 @@ export const initChatSocket = (io) => {
     });
 
     // =============================
-    // ✍️ TYPING START
+    //  TYPING START
     // =============================
     socket.on("typing_start", ({ conversationId }) => {
       socket.to(`conversation_${conversationId}`).emit("typing_start", {
@@ -100,7 +100,7 @@ export const initChatSocket = (io) => {
     });
 
     // =============================
-    // ✍️ TYPING STOP
+    //  TYPING STOP
     // =============================
     socket.on("typing_stop", ({ conversationId }) => {
       socket.to(`conversation_${conversationId}`).emit("typing_stop", {
@@ -109,7 +109,7 @@ export const initChatSocket = (io) => {
     });
 
     // =============================
-    // 👀 MARK AS SEEN
+    //  MARK AS SEEN
     // =============================
     socket.on("mark_seen", async ({ conversationId }, callback) => {
       try {
@@ -127,17 +127,17 @@ export const initChatSocket = (io) => {
     });
 
     // =============================
-    // 🔔 NEW MESSAGE NOTIFICATION
+    //  NEW MESSAGE NOTIFICATION
     // =============================
     socket.on("notify_new_message", ({ conversationId }) => {
       socket.to(`conversation_${conversationId}`).emit("refresh_conversations");
     });
 
     // =============================
-    // ❌ DISCONNECT
+    //  DISCONNECT
     // =============================
     socket.on("disconnect", () => {
-      console.log("❌ Disconnected:", userId);
+      console.log(" Disconnected:", userId);
 
       if (onlineUsers.has(userId)) {
         onlineUsers.get(userId).delete(socket.id);
