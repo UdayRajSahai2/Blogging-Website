@@ -2,17 +2,15 @@ import { Link } from "react-router-dom";
 import logo from "../../imgs/logo.png";
 import ReactCountryFlag from "react-country-flag";
 import { HeartIcon } from "@heroicons/react/24/solid";
-import { MdCopyright } from "react-icons/md";
+import { Copyright } from "lucide-react";
 import {
-  FaFacebook,
-  FaTwitter,
-  FaInstagram,
-  FaLinkedin,
-  FaYoutube,
-  FaWhatsapp,
-} from "react-icons/fa";
-
-import { FaXTwitter } from "react-icons/fa6";
+  FacebookIcon,
+  TwitterIcon,
+  InstagramIcon,
+  LinkedinIcon,
+  YoutubeIcon,
+  WhatsappIcon,
+} from "../../common/icons/SocialIcons";
 
 const Footer = () => {
   return (
@@ -39,29 +37,28 @@ const Footer = () => {
               Connect with people and share stories with the community.
             </p>
 
-            <div className="flex flex-wrap gap-3 text-sm mt-2">
-              <a className="text-gray-400 hover:text-[#1877F2] transition">
-                <FaFacebook />
+            <div className=" flex flex-wrap items-center gap-1">
+              <a className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:text-[#1877F2]">
+                <FacebookIcon className="h-3 w-3" />
               </a>
 
-              <a className="text-gray-400 hover:text-white transition">
-                <FaXTwitter />
+              <a className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:text-white">
+                <TwitterIcon className="h-3 w-3" />
               </a>
 
-              <a className="text-gray-400 hover:text-[#E4405F] transition">
-                <FaInstagram />
+              <a className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:text-[#E4405F]">
+                <InstagramIcon className="h-3 w-3" />
               </a>
 
-              <a className="text-gray-400 hover:text-[#0A66C2] transition">
-                <FaLinkedin />
+              <a className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:text-[#FF0000]">
+                <YoutubeIcon className="h-3 w-3" />
               </a>
 
-              <a className="text-gray-400 hover:text-[#FF0000] transition">
-                <FaYoutube />
+              <a className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:text-[#25D366]">
+                <WhatsappIcon className="h-3 w-3" />
               </a>
-
-              <a className="text-gray-400 hover:text-[#25D366] transition">
-                <FaWhatsapp />
+              <a className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:text-[#0A66C2]">
+                <LinkedinIcon className="h-3 w-3" />
               </a>
             </div>
           </div>
@@ -138,7 +135,7 @@ const Footer = () => {
             />
 
             <div className="flex items-center gap-1 text-gray-400">
-              <MdCopyright className="w-3 h-3 opacity-80" />
+              <Copyright size={14} />
 
               <span className="text-[11px]">2026 REACH Foundation</span>
             </div>

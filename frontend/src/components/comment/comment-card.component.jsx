@@ -1,6 +1,6 @@
 import { useContext, useState } from "react";
 import { UserContext } from "../../App";
-import { BlogContext } from "../../pages/blog.page";
+import { BlogContext } from "../../context/blog.context";
 import CommentField from "./comment-field.component";
 import { getDay } from "../../common/date";
 import axios from "axios";
@@ -277,13 +277,14 @@ const CommentCard = ({
                     <button
                       onClick={handleDeleteComment}
                       disabled={isDeleting}
-                      className="px-3 py-1 bg-red text-white text-sm rounded hover:bg-red/90 transition-colors disabled:opacity-50"
+                      className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors disabled:opacity-50"
                     >
                       {isDeleting ? "Deleting..." : "Delete"}
                     </button>
+
                     <button
                       onClick={() => setShowDeleteConfirm(false)}
-                      className="px-3 py-1 bg-grey text-dark-grey text-sm rounded hover:bg-grey/80 transition-colors"
+                      className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300 transition-colors"
                     >
                       Cancel
                     </button>

@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState, useRef } from "react";
-import { BlogContext } from "../../pages/blog.page";
+import { BlogContext } from "../../context/blog.context";
 import CommentField from "./comment-field.component";
 import AnimationWrapper from "../../common/page-animation";
 import CommentCard from "./comment-card.component";

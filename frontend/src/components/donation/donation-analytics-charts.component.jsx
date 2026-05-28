@@ -3,11 +3,9 @@ import axios from "axios";
 import { UserContext } from "../../App";
 import Loader from "../loader.component";
 import { DONATION_API } from "../../common/api";
-import {
-  CurrencyRupeeIcon,
-  HeartIcon,
-  SparklesIcon,
-} from "@heroicons/react/24/outline";
+import CurrencyRupeeIcon from "@heroicons/react/24/outline/CurrencyRupeeIcon";
+import HeartIcon from "@heroicons/react/24/outline/HeartIcon";
+import SparklesIcon from "@heroicons/react/24/outline/SparklesIcon";
 /* ================================
    SIMPLE BAR CHART
 ================================ */

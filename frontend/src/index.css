@@ -1,4 +1,3 @@
-/* @import "@flaticon/flaticon-uicons/css/all/all"; */
 
 @tailwind base;
 @tailwind components;
@@ -19,13 +18,12 @@
     }
 
   html {
-    
       scroll-behavior: smooth;
   }
 
  body {
    @apply font-inter text-base text-black;
-  @apply overflow-x-hidden;
+   @apply overflow-x-hidden;
  }
 
   i {
@@ -60,8 +58,8 @@
   @apply w-full rounded-md px-3 py-2 bg-grey pl-10 border border-grey focus:bg-transparent placeholder:text-black text-sm;
 }
 
-input:disabled,
-input:disabled~.input-icon {
+ input:disabled,
+ input:disabled~.input-icon {
   @apply opacity-50;
 }
 
@@ -147,8 +145,6 @@ input:disabled~.input-icon {
     @apply text-4xl sm:text-3xl lg:text-5xl font-bold text-grey leading-none;
   }
 
-  /* Enhanced Navbar Styles - Add these to your existing index.css */
-
   /* Hide scrollbar for interests section */
   .scrollbar-hide {
     -ms-overflow-style: none;
@@ -215,42 +211,20 @@ input:disabled~.input-icon {
 }
 
 /* Main marquee class */
-.marquee {
+  .marquee {
   display: flex;
   min-width: max-content;
   animation: marqueeScroll 20s linear infinite;
 }
 
 /*  Pause on hover */
-.group:hover .marquee {
-  animation-play-state: paused;
+  .group:hover .marquee {
+  animation-play-state: paused; 
 }
   .gradient-animate {
     background: linear-gradient(-45deg, #8b5cf6, #3b82f6, #06b6d4, #10b981);
     background-size: 400% 400%;
     animation: gradient-shift 15s ease infinite;
-  }
-
-  /* Enhanced button hover effects */
-  .btn-enhanced {
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s ease;
-  }
-
-  .btn-enhanced::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s;
-  }
-
-  .btn-enhanced:hover::before {
-    left: 100%;
   }
 
   /* Notification badge pulse animation */
@@ -272,28 +246,83 @@ input:disabled~.input-icon {
     animation: pulse 2s infinite;
   }
 
-  /* Interest tags hover animation */
-  .interest-tag-enhanced {
-    position: relative;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
 
-  .interest-tag-enhanced::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #8b5cf6, #3b82f6);
-    transition: all 0.3s ease;
-    transform: translateX(-50%);
-  }
+/* =========================================
+   TIPTAP EDITOR IMAGE STYLES
+========================================= */
 
-  .interest-tag-enhanced:hover::after {
-    width: 100%;
-  }
+/* ALL EDITOR IMAGES */
+.ProseMirror img {
+  max-width: 100%;
+  border-radius: 8px;
+}
 
+/* LEFT FLOAT IMAGE */
+.editor-image-left {
+  float: left;
+  width: 300px;
+  margin: 10px 20px 10px 0;
+  border-radius: 8px;
+}
+
+/* RIGHT FLOAT IMAGE */
+.editor-image-right {
+  float: right;
+  width: 300px;
+  margin: 10px 0 10px 20px;
+  border-radius: 8px;
+}
+
+
+/* EDITOR CURSOR */
+.ProseMirror {
+  caret-color: black;
+}
+
+/* CLEAR FLOATS INSIDE EDITOR */
+.ProseMirror::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+/* =========================================
+   FRONTEND CONTENT RENDERING
+========================================= */
+
+/* ALL CONTENT IMAGES */
+.content-editor img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+/* PARAGRAPH SPACING */
+.content-editor p {
+  margin-bottom: 16px;
+}
+
+/* LEFT FLOAT IMAGE */
+.content-editor .editor-image-left {
+  float: left;
+  width: 300px;
+  margin: 10px 20px 10px 0;
+  border-radius: 8px;
+}
+
+/* RIGHT FLOAT IMAGE */
+.content-editor .editor-image-right {
+  float: right;
+  width: 300px;
+  margin: 10px 0 10px 20px;
+  border-radius: 8px;
+}
+
+/* CLEAR FLOATS */
+.content-editor::after {
+  content: "";
+  display: block;
+  clear: both;
+}
   /* Mobile responsive adjustments */
   @media (max-width: 640px) {
     .mobile-text-sm {
@@ -309,19 +338,6 @@ input:disabled~.input-icon {
   /* Search input focus glow */
   .search-input-glow:focus {
     box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
-  }
-
-  /* Profile image border animation */
-  .profile-border-animate {
-    border: 2px solid transparent;
-    background: linear-gradient(white, white) padding-box,
-      linear-gradient(45deg, #8b5cf6, #3b82f6) border-box;
-    transition: all 0.3s ease;
-  }
-
-  .profile-border-animate:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
   }
 
   /* Dropdown shadow enhancement */

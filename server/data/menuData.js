@@ -328,6 +328,17 @@ const rawMenu = [
     ],
   },
   {
+    name: "Health",
+    children: [
+      { name: "Right to Health" },
+      { name: "Global Health Indices" },
+      { name: "Health Budget" },
+      { name: "Health Infrastructure Norms" },
+      { name: "Health Infrastructure Provisions" },
+      { name: "Doctors Shortage" },
+    ],
+  },
+  {
     name: "Quick Estimate",
     children: [
       { name: "Execution Agencies Around" },
@@ -405,18 +416,6 @@ const rawMenu = [
       { name: "Top 100 Leaders & Performers" },
       { name: "Regional Performers" },
       { name: "Unit Performers" },
-    ],
-  },
-
-  {
-    name: "Health",
-    children: [
-      { name: "Right to Health" },
-      { name: "Global Health Indices" },
-      { name: "Health Budget" },
-      { name: "Health Infrastructure Norms" },
-      { name: "Health Infrastructure Provisions" },
-      { name: "Doctors Shortage" },
     ],
   },
 

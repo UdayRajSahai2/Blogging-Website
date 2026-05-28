@@ -1,10 +1,9 @@
 import express from "express";
-import menuData from "../data/menuData.js";
+
+import { getMenuController } from "../controllers/menu.controller.js";
 
 const router = express.Router();
 
-router.get("/", (req, res) => {
-  res.json(menuData);
-});
+router.get("/", getMenuController);
 
 export default router;

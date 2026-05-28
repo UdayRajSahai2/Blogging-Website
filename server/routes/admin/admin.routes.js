@@ -11,6 +11,7 @@ import {
   deleteBlogAdmin,
   deleteBlogPermanent,
   deleteUserPermanent,
+  getStudentEnrollments,
 } from "../../controllers/admin/admin.controller.js";
 import { verifyJWT } from "../../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../../middlewares/role.middleware.js";
@@ -47,5 +48,8 @@ router.patch("/blogs/:id/restore", restoreBlogAdmin);
 
 //  HARD DELETE
 router.delete("/blogs/:id/permanent", deleteBlogPermanent);
+
+//Student Enrollments
+router.get("/student-enrollments", getStudentEnrollments);
 
 export default router;

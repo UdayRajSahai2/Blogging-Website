@@ -7,8 +7,9 @@ import Donor from "../../models/Donor.js";
 import User from "../../models/user/User.js";
 import Role from "../../models/roles/Role.js";
 import UserRole from "../../models/roles/UserRole.js";
+import StudentEnrollment from "../../models/student/StudentEnrollment.js";
 import { Op } from "sequelize";
-
+import ProfessionalExperience from "../../models/user/ProfessionalExperience.js";
 /* =========================
    HELPERS
 ========================= */
@@ -36,7 +37,7 @@ export const getAdminStats = async (req, res) => {
       Comment.count(),
       Donation.count(),
 
-      // 🔥 ADD THESE
+      //  ADD THESE
       Role.count(),
       UserRole.count({ where: { status: "pending" } }),
       UserRole.count({ where: { status: "approved" } }),
@@ -50,7 +51,7 @@ export const getAdminStats = async (req, res) => {
         totalComments: comments,
         totalDonations: donations,
 
-        // 🔥 NEW
+        //  NEW
         totalRoles,
         pendingRoleRequests,
         assignedRoles,
@@ -96,11 +97,13 @@ export const getAllUsers = async (req, res) => {
 
     const { rows: users, count: total } = await User.findAndCountAll({
       where: whereClause,
+
       attributes: [
         "user_id",
         "customer_id",
         "fullname",
         "email",
+        "mobile_number",
 
         "country_code",
         "state_code",
@@ -112,6 +115,34 @@ export const getAllUsers = async (req, res) => {
         "createdAt",
         "is_deleted",
       ],
+
+      include: [
+        {
+          model: ProfessionalExperience,
+          as: "experiences",
+
+          attributes: [
+            "designation",
+            "employer_name",
+            "is_current",
+            "start_date",
+            "end_date",
+          ],
+
+          required: false,
+
+          separate: true,
+
+          limit: 1,
+
+          order: [
+            ["is_current", "DESC"],
+            ["start_date", "DESC"],
+            ["createdAt", "DESC"],
+          ],
+        },
+      ],
+
       order: [["createdAt", "DESC"]],
       limit: parsedLimit,
       offset,
@@ -199,13 +230,6 @@ export const deleteUser = async (req, res) => {
     user.is_deleted = true;
     await user.save();
 
-    console.log("ADMIN ACTION:", {
-      adminId: req.user.id,
-      action: "delete_user",
-      targetUserId: id,
-      timestamp: new Date(),
-    });
-
     return res.json({
       success: true,
       message: "User deleted successfully",
@@ -288,13 +312,6 @@ export const deleteUserPermanent = async (req, res) => {
     //  Finally delete user (CASCADE handles rest)
     await user.destroy();
 
-    console.log("ADMIN ACTION:", {
-      adminId: req.user.id,
-      action: "permanent_delete_user",
-      targetUserId: id,
-      timestamp: new Date(),
-    });
-
     return res.json({
       success: true,
       message: "User permanently deleted",
@@ -364,14 +381,6 @@ export const updateUserRole = async (req, res) => {
     user.system_role = system_role;
     await user.save();
 
-    console.log("ADMIN ACTION:", {
-      adminId: req.user.id,
-      action: "update_user_role",
-      targetUserId: id,
-      newRole: system_role,
-      timestamp: new Date(),
-    });
-
     return res.json({
       success: true,
       message: "User role updated",
@@ -401,7 +410,8 @@ export const getAllBlogs = async (req, res) => {
     const offset = (parsedPage - 1) * parsedLimit;
 
     const whereClause = {};
-
+    // HIDE DRAFT BLOGS FROM ADMIN LIST
+    whereClause.draft = false;
     if (deleted === "true") whereClause.is_deleted = true;
     if (deleted === "false") whereClause.is_deleted = false;
     //  STATUS FILTER
@@ -629,6 +639,85 @@ export const restoreBlogAdmin = async (req, res) => {
     });
   } catch (err) {
     console.error("ADMIN restore blog error:", err);
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
+/* =========================
+   GET STUDENT ENROLLMENTS
+========================= */
+export const getStudentEnrollments = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search = "" } = req.query;
+
+    const parsedLimit = Math.min(parseInt(limit) || 20, 100);
+    const parsedPage = Math.max(parseInt(page) || 1, 1);
+
+    const offset = (parsedPage - 1) * parsedLimit;
+
+    const whereClause = {};
+
+    // SEARCH
+    if (search?.trim()) {
+      whereClause[Op.or] = [
+        {
+          referrer_first_name: {
+            [Op.like]: `%${search}%`,
+          },
+        },
+        {
+          referrer_last_name: {
+            [Op.like]: `%${search}%`,
+          },
+        },
+        {
+          referrer_mobile: {
+            [Op.like]: `%${search}%`,
+          },
+        },
+        {
+          referrer_district: {
+            [Op.like]: `%${search}%`,
+          },
+        },
+      ];
+    }
+
+    const { rows: enrollments, count: total } =
+      await StudentEnrollment.findAndCountAll({
+        where: whereClause,
+
+        include: [
+          {
+            model: User,
+            as: "user",
+            attributes: ["user_id", "fullname", "email", "mobile_number"],
+          },
+        ],
+
+        order: [["createdAt", "DESC"]],
+
+        limit: parsedLimit,
+        offset,
+      });
+
+    return res.json({
+      success: true,
+      data: enrollments,
+
+      pagination: {
+        total,
+        page: parsedPage,
+        limit: parsedLimit,
+        totalPages: Math.ceil(total / parsedLimit),
+      },
+    });
+  } catch (err) {
+    console.error("GET STUDENT ENROLLMENTS ERROR:", err);
+
     return res.status(500).json({
       success: false,
       error: err.message,

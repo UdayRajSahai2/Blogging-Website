@@ -11,7 +11,7 @@ import {
   Notification,
   UserDetails,
 } from "../models/associations.js";
-
+import BlogTaxonomy from "../models/blog/BlogTaxonomy.js";
 export const getUserBlogs = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -1021,5 +1021,33 @@ export const checkLikeStatus = async (req, res) => {
   } catch (err) {
     console.error("Check like error:", err);
     return res.status(500).json({ error: "Error checking like status" });
+  }
+};
+
+export const getBlogTaxonomy = async (req, res) => {
+  try {
+    const taxonomy = await BlogTaxonomy.findAll({
+      where: {
+        is_active: true,
+      },
+
+      order: [
+        ["category", "ASC"],
+        ["subcategory", "ASC"],
+        ["sub_subcategory", "ASC"],
+      ],
+    });
+
+    res.status(200).json({
+      success: true,
+      data: taxonomy,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch taxonomy",
+    });
   }
 };

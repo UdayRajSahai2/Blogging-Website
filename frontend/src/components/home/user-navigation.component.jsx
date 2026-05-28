@@ -6,17 +6,16 @@ import { logoutUser } from "../../api/auth.api";
 import { removeFromSession } from "../../common/session";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import {
-  PencilSquareIcon,
-  ShieldCheckIcon,
-  UserIcon,
-  DocumentTextIcon,
-  Cog6ToothIcon,
-  ArrowRightOnRectangleIcon,
-  CalendarDaysIcon,
-  ChatBubbleLeftRightIcon,
-  Squares2X2Icon,
-} from "@heroicons/react/24/outline";
+import UserAvatar from "../../common/UserAvatar";
+import PencilSquareIcon from "@heroicons/react/24/outline/PencilSquareIcon";
+import ShieldCheckIcon from "@heroicons/react/24/outline/ShieldCheckIcon";
+import UserIcon from "@heroicons/react/24/outline/UserIcon";
+import DocumentTextIcon from "@heroicons/react/24/outline/DocumentTextIcon";
+import Cog6ToothIcon from "@heroicons/react/24/outline/Cog6ToothIcon";
+import ArrowRightOnRectangleIcon from "@heroicons/react/24/outline/ArrowRightOnRectangleIcon";
+import CalendarDaysIcon from "@heroicons/react/24/outline/CalendarDaysIcon";
+import ChatBubbleLeftRightIcon from "@heroicons/react/24/outline/ChatBubbleLeftRightIcon";
+import Squares2X2Icon from "@heroicons/react/24/outline/Squares2X2Icon";
 const UserNavigationPanel = () => {
   const navigate = useNavigate();
   const { userAuth, setUserAuth } = useContext(UserContext);
@@ -68,15 +67,11 @@ const UserNavigationPanel = () => {
         {/* Compact User Header */}
         <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center space-x-3">
-            <img
+            <UserAvatar
               src={profile_img}
-              alt="Profile"
-              onError={(e) => {
-                e.target.src = "/default-avatar.png";
-              }}
+              name={fullname}
               className="w-10 h-10 rounded-full object-cover ring-2 ring-purple-300"
             />
-
             <div className="leading-tight">
               {/* Full Name */}
               <p className="font-semibold text-gray-800">{fullname}</p>

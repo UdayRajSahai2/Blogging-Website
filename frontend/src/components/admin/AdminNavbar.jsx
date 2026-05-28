@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { UserContext } from "../../App";
 import logo from "../../imgs/logo.png";
-
+import UserAvatar from "../../common/UserAvatar";
 const AdminNavbar = ({ onMenuClick }) => {
   const { userAuth, setUserAuth } = useContext(UserContext);
 
@@ -60,10 +60,11 @@ const AdminNavbar = ({ onMenuClick }) => {
             {/* PROFILE */}
             {access_token && (
               <div className="flex items-center gap-2">
-                <img
+                <UserAvatar
                   src={profile_img}
-                  alt="profile"
-                  className="w-9 h-9 rounded-full object-cover border"
+                  name={fullname}
+                  className="w-9 h-9"
+                  ringClassName="ring-gray-200"
                 />
 
                 <button

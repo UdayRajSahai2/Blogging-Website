@@ -20,7 +20,10 @@ import AdminRoute from "./routes/AdminRoute";
 import AdminBlogs from "./pages/admin/AdminBlogs";
 import AdminRoles from "./pages/admin/AdminRoles";
 import AdminRolePanel from "./components/admin/AdminRolePanel";
-
+import AdminStudentEnrollments from "./pages/admin/AdminStudentEnrollments";
+import AdminPagesList from "./pages/admin/dynamicPages/AdminPagesList";
+import CreatePage from "./pages/admin/dynamicPages/CreatePage";
+import EditPage from "./pages/admin/dynamicPages/EditPage";
 // Other pages
 import AcademicPage from "./pages/profile/AcademicPage";
 import AcademicForm from "./components/profile/academic/AcademicForm";
@@ -30,8 +33,6 @@ import DonorDashboard from "./components/donation/donor-dashboard.component";
 import OnboardingPage from "./pages/onboarding/OnboardingPage";
 import WelcomePage from "./pages/WelcomePage";
 import PageRenderer from "./pages/menubar/PageRenderer";
-
-// import Dashboard from "./pages/Dashboard"; //for multiple role profiles
 
 //Connections/Friends
 import FriendsPage from "./pages/connection/FriendsPage";
@@ -50,7 +51,7 @@ import MyBlogs from "./pages/manage-blogs.page";
 import ForgotPasswordPage from "./pages/forgot-password.page";
 import ResetPasswordPage from "./pages/reset-password.page";
 import PageNotFound from "./pages/404.page";
-
+// import Dashboard from "./pages/Dashboard"; //for multiple role profiles demo stage
 export const UserContext = createContext({
   userAuth: { access_token: null },
   setUserAuth: () => {},
@@ -104,11 +105,25 @@ const App = () => {
 
           <Route path="blogs" element={<AdminBlogs />} />
 
+          <Route path="pages">
+            <Route index element={<AdminPagesList />} />
+
+            <Route path="create" element={<CreatePage />} />
+
+            <Route path=":id" element={<EditPage />} />
+          </Route>
+
+          <Route path="finance" element={<AdminFinance />} />
+
           <Route path="finance" element={<AdminFinance />} />
 
           <Route path="finance/expenditures" element={<AdminExpenditures />} />
 
           <Route path="finance/balance" element={<AdminBalance />} />
+          <Route
+            path="student-enrollments"
+            element={<AdminStudentEnrollments />}
+          />
         </Route>
 
         {/* ================= USER APP ================= */}
@@ -139,7 +154,7 @@ const App = () => {
               />
             }
           />
-          {/* for multiple roles profiles  disabled */}
+          {/* for multiple roles profiles  demo stage */}
           {/* <Route path="dashboard-home" element={<Dashboard />} /> */}
           <Route
             path="/editor"
@@ -219,7 +234,7 @@ const App = () => {
             <Route path="change-password" element={<ChangePassword />} />
           </Route>
           {/*  PageRenderer pages */}
-          <Route path=":slug/*" element={<PageRenderer />} />
+          <Route path=":slug" element={<PageRenderer />} />
 
           {/*  404 fallback */}
           <Route path="*" element={<PageNotFound />} />

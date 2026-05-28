@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { MapPinIcon } from "@heroicons/react/24/solid";
+import UserAvatar from "../../../common/UserAvatar";
 const ProfileImageSection = ({
+  fullname,
+
   updatedProfileImg,
   profile_img,
   handleImagePreview,
@@ -31,13 +34,12 @@ const ProfileImageSection = ({
           htmlFor="uploadImg"
           className="relative group w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden bg-gray-100 cursor-pointer border"
         >
-          <img
-            src={preview || profile_img || "/default-avatar.png"}
-            onError={(e) => {
-              if (e.target.src.includes("default-avatar.png")) return;
-              e.target.src = "/default-avatar.png";
-            }}
-            className="w-full h-full object-cover"
+          <UserAvatar
+            src={preview || profile_img}
+            name={fullname}
+            className="w-full h-full"
+            roundedClassName="rounded-full"
+            textClassName="text-5xl font-bold tracking-tight"
           />
 
           <div className="absolute inset-0 hidden md:flex items-center justify-center bg-black/40 text-white text-xs opacity-0 group-hover:opacity-100 transition">
@@ -117,6 +119,14 @@ const ProfileImageSection = ({
           <button
             type="button"
             onClick={async () => {
+              // CHECK IMAGE FIRST
+              if (!updatedProfileImg) {
+                alert(
+                  "Please click on the profile image and select a photo first",
+                );
+                return;
+              }
+
               try {
                 setLoading(true);
                 await handleImageUpload();

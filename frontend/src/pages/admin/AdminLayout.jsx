@@ -9,6 +9,8 @@ import {
   WalletIcon,
   CreditCardIcon,
   ChartBarIcon,
+  AcademicCapIcon,
+  RectangleStackIcon,
 } from "@heroicons/react/24/outline";
 
 const AdminLayout = ({ open, closeSidebar }) => {
@@ -95,10 +97,36 @@ const AdminLayout = ({ open, closeSidebar }) => {
               Users
             </div>
           </NavLink>
+          {/* ENROLLMENTS */}
+          <p className="text-xs text-gray-400 mt-4 mb-1 px-2">EDUCATION</p>
 
+          <NavLink
+            to="/admin/student-enrollments"
+            className={getNavClass}
+            onClick={closeSidebar}
+          >
+            <div className="flex items-center gap-2">
+              <AcademicCapIcon className="w-4 h-4" />
+              Student Enrollments
+            </div>
+          </NavLink>
+          {/* WEBSITE PAGES */}
+          <p className="mt-4 mb-1 px-2 text-xs font-medium tracking-wide text-gray-400">
+            WEBSITE PAGES
+          </p>
+
+          <NavLink
+            to="/admin/pages"
+            className={getNavClass}
+            onClick={closeSidebar}
+          >
+            <div className="flex items-center gap-2">
+              <RectangleStackIcon className="h-4 w-4" />
+              Dynamic Pages
+            </div>
+          </NavLink>
           {/* CONTENT */}
           <p className="text-xs text-gray-400 mt-4 mb-1 px-2">CONTENT</p>
-
           {/* BLOGS */}
           <NavLink
             to="/admin/blogs"

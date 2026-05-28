@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import {
-  MapPinIcon,
-  CloudIcon,
-  FireIcon,
-  SunIcon,
-} from "@heroicons/react/24/solid";
+import MapPinIcon from "@heroicons/react/24/solid/MapPinIcon";
+import CloudIcon from "@heroicons/react/24/solid/CloudIcon";
+import FireIcon from "@heroicons/react/24/solid/FireIcon";
+import SunIcon from "@heroicons/react/24/solid/SunIcon";
 const TrendingCard = () => {
   const [weather, setWeather] = useState(null);
   const [news, setNews] = useState([]);

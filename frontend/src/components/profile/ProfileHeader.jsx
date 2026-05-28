@@ -6,32 +6,30 @@ import { getUserMeta } from "../../utils/userMeta";
 import ConnectionButton from "../connection/ConnectionButton";
 import ShareButton from "../../common/ShareButtonFirefox";
 import { createConversationAPI } from "../../api/chat.api";
-import {
-  MapPinIcon,
-  UserIcon,
-  HeartIcon,
-  CakeIcon,
-  ShareIcon,
-  BriefcaseIcon,
-  AcademicCapIcon,
-  SparklesIcon,
-} from "@heroicons/react/24/solid";
-import {
-  ClipboardDocumentIcon,
-  DocumentTextIcon,
-} from "@heroicons/react/24/outline";
+import UserAvatar from "../../common/UserAvatar";
+import MapPinIcon from "@heroicons/react/24/solid/MapPinIcon";
+import UserIcon from "@heroicons/react/24/solid/UserIcon";
+import HeartIcon from "@heroicons/react/24/solid/HeartIcon";
+import CakeIcon from "@heroicons/react/24/solid/CakeIcon";
+import ShareIcon from "@heroicons/react/24/solid/ShareIcon";
+import BriefcaseIcon from "@heroicons/react/24/solid/BriefcaseIcon";
+import AcademicCapIcon from "@heroicons/react/24/solid/AcademicCapIcon";
+import SparklesIcon from "@heroicons/react/24/solid/SparklesIcon";
+
+import ClipboardDocumentIcon from "@heroicons/react/24/outline/ClipboardDocumentIcon";
+import DocumentTextIcon from "@heroicons/react/24/outline/DocumentTextIcon";
 import toast from "react-hot-toast";
 import {
-  FaYoutube,
-  FaInstagram,
-  FaLinkedin,
-  FaFacebook,
-  FaTelegram,
-  FaTwitter,
-  FaGithub,
-  FaWhatsapp,
-  FaGlobe,
-} from "react-icons/fa";
+  YoutubeIcon,
+  InstagramIcon,
+  LinkedinIcon,
+  FacebookIcon,
+  TelegramIcon,
+  TwitterIcon,
+  GithubIcon,
+  WhatsappIcon,
+  WebsiteIcon,
+} from "../../common/icons/SocialIcons";
 
 const ProfileHeader = ({ profile }) => {
   const navigate = useNavigate();
@@ -50,13 +48,15 @@ const ProfileHeader = ({ profile }) => {
     telegram: `https://t.me/share/url?url=${encodedUrl}`,
   };
   const socialIcons = {
-    youtube: FaYoutube,
-    instagram: FaInstagram,
-    facebook: FaFacebook,
-    twitter: FaTwitter,
-    github: FaGithub,
-    website: FaGlobe,
-    whatsapp: FaWhatsapp,
+    youtube: YoutubeIcon,
+    instagram: InstagramIcon,
+    linkedin: LinkedinIcon,
+    facebook: FacebookIcon,
+    telegram: TelegramIcon,
+    twitter: TwitterIcon,
+    github: GithubIcon,
+    website: WebsiteIcon,
+    whatsapp: WhatsappIcon,
   };
   if (!profile) return null; // safety
 
@@ -256,8 +256,6 @@ const ProfileHeader = ({ profile }) => {
 
       toast.success("Profile link copied");
     } catch (err) {
-      console.log(err);
-
       toast.error("Failed to copy link");
     }
   };
@@ -274,9 +272,7 @@ const ProfileHeader = ({ profile }) => {
       try {
         await navigator.share(shareData);
         return;
-      } catch (err) {
-        console.log(err);
-      }
+      } catch (err) {}
     }
 
     // DESKTOP FALLBACK
@@ -308,9 +304,12 @@ const ProfileHeader = ({ profile }) => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           {/* ================= LEFT ================= */}
           <div className="flex items-start gap-2 min-w-0">
-            <img
-              src={profile_img || "/default-avatar.png"}
-              className="w-20 h-20 md:w-24 md:h-24 rounded-xl object-cover border"
+            <UserAvatar
+              src={profile_img}
+              name={fullname}
+              className="w-20 h-20 md:w-24 md:h-24"
+              roundedClassName="rounded-xl"
+              textClassName="text-5xl font-bold tracking-tight"
             />
 
             <div className="min-w-0">
@@ -367,7 +366,7 @@ const ProfileHeader = ({ profile }) => {
             </div>
             {/* Social Icons */}
             {socialPlatforms.some((key) => profile.details?.[key]) && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {socialPlatforms.map((key) => {
                   let link = profile.details?.[key];
 
@@ -384,9 +383,9 @@ const ProfileHeader = ({ profile }) => {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="text-gray-600 hover:text-indigo-600 text-sm"
+                      className="text-gray-600 hover:text-indigo-600"
                     >
-                      <Icon />
+                      <Icon className="h-3 w-3" />
                     </a>
                   ) : null;
                 })}

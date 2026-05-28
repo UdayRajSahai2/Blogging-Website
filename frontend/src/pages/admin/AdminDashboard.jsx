@@ -109,8 +109,8 @@ const AdminDashboard = () => {
         <Card title="Donations" value={stats.totalDonations ?? 0} />
       </div>
 
-      {/*  ROLE STATS */}
-      <h1 className="text-2xl font-bold  mb-6">Access Control</h1>
+      {/*  ROLE STATS DEMO stage*/}
+      {/* <h1 className="text-2xl font-bold  mb-6">Access Control</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <Card title="Total Roles" value={stats.totalRoles ?? 0} />
@@ -119,7 +119,7 @@ const AdminDashboard = () => {
           value={stats.pendingRoleRequests ?? 0}
         />
         <Card title="Assigned Roles" value={stats.assignedRoles ?? 0} />
-      </div>
+      </div> */}
     </div>
   );
 };

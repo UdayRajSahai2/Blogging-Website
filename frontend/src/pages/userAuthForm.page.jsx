@@ -24,9 +24,11 @@ import {
   PhoneIcon,
   EnvelopeIcon,
   KeyIcon,
+  MapPinIcon,
 } from "@heroicons/react/24/outline";
 import ReactCountryFlag from "react-country-flag";
-
+import { createStudentEnrollment } from "../api/studentEnrollment.api";
+import StudentEnrollmentFields from "../components/student/StudentEnrollmentFields";
 const UserAuthForm = ({ type }) => {
   const navigate = useNavigate();
   const { userAuth, setUserAuth } = useContext(UserContext);
@@ -42,7 +44,8 @@ const UserAuthForm = ({ type }) => {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
-
+  const [signupType, setSignupType] = useState("normal");
+  const [referrerMobile, setReferrerMobile] = useState("");
   const [loading, setLoading] = useState(false);
   const [geo, setGeo] = useState({ latitude: null, longitude: null });
   const [customerId, setCustomerId] = useState("");
@@ -169,8 +172,10 @@ const UserAuthForm = ({ type }) => {
             (position) =>
               userAuthThroughServer(serverRoute, {
                 ...formData,
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
+                latitude: geo.latitude,
+                longitude: geo.longitude,
+                type,
+                signup_type: signupType,
               }),
             () =>
               toast.error(
@@ -483,14 +488,36 @@ const UserAuthForm = ({ type }) => {
         email,
       });
 
+      // STUDENT ENROLLMENT
+      if (signupType === "student") {
+        await createStudentEnrollment({
+          user_id: data.user_id,
+
+          referrer_first_name:
+            formElement.current.referrer_first_name?.value?.trim() || "",
+
+          referrer_last_name:
+            formElement.current.referrer_last_name?.value?.trim() || "",
+
+          referrer_mobile:
+            formElement.current.referrer_mobile?.value?.trim() || "",
+
+          referrer_district:
+            formElement.current.referrer_district?.value?.trim() || "",
+        });
+      }
+
       storeInSession("user", data);
       storeInSession("onboarding", type === "sign-up");
+
       setUserAuth(data);
+
       if (type === "sign-up") {
         navigate("/welcome");
       } else {
         navigate("/");
       }
+
       const name = data.first_name || data.fullname || "User";
       const isNewUser = Boolean(data.isNewUser);
 
@@ -517,13 +544,15 @@ const UserAuthForm = ({ type }) => {
       <section className="w-full px-0 md:px-0 py-0 relative">
         {/* Loader Overlay */}
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/90">
             <Loader />
+
+            <p className="mt-2 text-sm text-gray-600">Please wait...</p>
           </div>
         )}
 
         <div className=" max-w-7xl ">
-          {/* 🔹 TOP GRID */}
+          {/* TOP GRID */}
           {/* LEFT = 220px 
           FORM = flexible (remaining space) 1fr
           RIGHT = 220px */}
@@ -543,7 +572,6 @@ const UserAuthForm = ({ type }) => {
                 <h1 className="text-2xl sm:text-3xl font-gelasio capitalize text-center mb-0">
                   {type === "sign-in" ? "Welcome" : "Join us today"}
                 </h1>
-
                 <div
                   className="mt-0 mb-0.5 text-center space-y-1"
                   role="region"
@@ -603,7 +631,6 @@ const UserAuthForm = ({ type }) => {
                     </>
                   )}
                 </div>
-
                 {/* SIGNUP FIELDS */}
                 {type !== "sign-in" && (
                   <>
@@ -702,7 +729,6 @@ const UserAuthForm = ({ type }) => {
                   onBlur={() => setIsFocused(false)}
                   required
                 />
-
                 {type !== "sign-in" &&
                   password.length > 0 &&
                   !isPasswordValid && (
@@ -760,9 +786,32 @@ const UserAuthForm = ({ type }) => {
                       </ul>
                     </>
                   )}
+                {type !== "sign-in" && (
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={signupType === "student"}
+                      onChange={(e) =>
+                        setSignupType(e.target.checked ? "student" : "normal")
+                      }
+                      className="w-4 h-4 accent-indigo-600 cursor-pointer"
+                    />
+
+                    <span className="text-blue-700 font-medium">
+                      Click here to enroll as a student
+                    </span>
+                  </label>
+                )}
+                {/* STUDENT ENROLLMENT */}
+                {signupType === "student" && (
+                  <StudentEnrollmentFields
+                    referrerMobile={referrerMobile}
+                    setReferrerMobile={setReferrerMobile}
+                  />
+                )}
                 {/* OTP FIELD */}
                 {type !== "sign-in" && otpSent && !otpVerified && (
-                  <div className="mt-4">
+                  <div className="mt-0.5">
                     <label className="block mb-2 text-sm font-medium text-center">
                       Enter OTP
                     </label>
@@ -775,12 +824,12 @@ const UserAuthForm = ({ type }) => {
                           inputMode="numeric"
                           maxLength={1}
                           className={`w-12 h-12 text-center border rounded-lg text-lg outline-none transition
-  ${
-    !otpSent
-      ? "bg-gray-50 text-gray-700 border-gray-300 cursor-not-allowed"
-      : "bg-white text-black border-gray-500 focus:ring-2 focus:ring-black"
-  }
-`}
+                            ${
+                              !otpSent
+                                ? "bg-gray-50 text-gray-700 border-gray-300 cursor-not-allowed"
+                                : "bg-white text-black border-gray-500 focus:ring-2 focus:ring-black"
+                            }
+                                          `}
                           value={otp[i] || ""}
                           onChange={(e) => {
                             const value = e.target.value;
@@ -815,17 +864,16 @@ const UserAuthForm = ({ type }) => {
                       Verify OTP
                     </button>
                   </div>
-                )}
-
+                )}{" "}
                 {/* DISCLAIMER */}
                 {type !== "sign-in" && (
-                  <div className="mt-4 flex items-start gap-3 text-xs text-gray-600 leading-relaxed">
+                  <div className="mt-2 flex items-start gap-3 text-xs text-gray-700 leading-relaxed">
                     <input
                       type="checkbox"
                       id="disclaimer"
                       checked={disclaimerAccepted}
                       onChange={(e) => setDisclaimerAccepted(e.target.checked)}
-                      className="mt-1 cursor-pointer accent-black"
+                      className="mt-1 w-4 h-4 cursor-pointer accent-indigo-600"
                     />
 
                     <label htmlFor="disclaimer" className="cursor-pointer">
@@ -836,7 +884,6 @@ const UserAuthForm = ({ type }) => {
                     </label>
                   </div>
                 )}
-
                 {/* ACTION BUTTON */}
                 {type === "sign-in" ? (
                   <button
@@ -868,7 +915,6 @@ const UserAuthForm = ({ type }) => {
                     Sign Up
                   </button>
                 ) : null}
-
                 {/* LINKS */}
                 <div className="mt-1 flex items-center justify-center gap-2 text-sm text-gray-600 flex-wrap">
                   {type !== "sign-in" && (
@@ -903,14 +949,12 @@ const UserAuthForm = ({ type }) => {
                     Skip to home
                   </Link>
                 </div>
-
                 {/* OR */}
                 <div className="flex items-center gap-3 my-0 text-xs uppercase text-gray-400 font-semibold">
                   <hr className="flex-1 border-gray-300" />
                   <p>or</p>
                   <hr className="flex-1 border-gray-300" />
                 </div>
-
                 {/* GOOGLE */}
                 <button
                   className="w-full border border-gray-300 rounded-lg py-2 flex items-center justify-center gap-3 hover:bg-gray-50"

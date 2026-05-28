@@ -8,24 +8,22 @@ import axios from "axios";
 import { NOTIFICATION_API } from "../../common/api";
 import NotificationPanel from "../notification/notification-panel.component";
 import NavbarMenu from "../menubar/NavbarMenu";
-
+import UserAvatar from "../../common/UserAvatar";
+import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
+import PencilSquareIcon from "@heroicons/react/24/outline/PencilSquareIcon";
+import ChatBubbleLeftIcon from "@heroicons/react/24/outline/ChatBubbleLeftIcon";
+import BellIcon from "@heroicons/react/24/outline/BellIcon";
+import HeartIcon from "@heroicons/react/24/outline/HeartIcon";
+import ShoppingCartIcon from "@heroicons/react/24/outline/ShoppingCartIcon";
 import {
-  MagnifyingGlassIcon,
-  PencilSquareIcon,
-  ChatBubbleLeftIcon,
-  BellIcon,
-  HeartIcon,
-  ShoppingCartIcon,
-} from "@heroicons/react/24/outline";
-import {
-  FaYoutube,
-  FaInstagram,
-  FaFacebookF,
-  FaTwitter,
-  FaGithub,
-  FaWhatsapp,
-  FaGlobe,
-} from "react-icons/fa";
+  YoutubeIcon,
+  InstagramIcon,
+  FacebookIcon,
+  TwitterIcon,
+  GithubIcon,
+  WhatsappIcon,
+  WebsiteIcon,
+} from "../../common/icons/SocialIcons";
 const Navbar = ({ onInterestClick, activeInterest, profile }) => {
   const [searchBoxVisibility, setSearchBoxVisibility] = useState(false);
   const [userNavPanel, setUserNavPanel] = useState(false);
@@ -43,13 +41,13 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
 
   const navigate = useNavigate();
   const socialIcons = {
-    youtube: FaYoutube,
-    instagram: FaInstagram,
-    facebook: FaFacebookF,
-    twitter: FaTwitter,
-    github: FaGithub,
-    website: FaGlobe,
-    whatsapp: FaWhatsapp,
+    youtube: YoutubeIcon,
+    instagram: InstagramIcon,
+    facebook: FacebookIcon,
+    twitter: TwitterIcon,
+    github: GithubIcon,
+    website: WebsiteIcon,
+    whatsapp: WhatsappIcon,
   };
   // 1. Unified Notification Logic
   // fetch function
@@ -168,7 +166,7 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
               )}
 
               {/* ================= SOCIAL ICONS ================= */}
-              <div className="flex items-center gap-[2px] shrink-0">
+              <div className="flex items-center gap-1 shrink-0">
                 {[
                   "youtube",
                   "instagram",
@@ -191,9 +189,9 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                       onClick={(e) => {
                         if (!link) e.preventDefault();
                       }}
-                      className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100 transition text-[11px]"
+                      className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100 transition text-[11px]"
                     >
-                      <Icon />
+                      <Icon className="h-3 w-3" />
                     </a>
                   );
                 })}
@@ -267,11 +265,12 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                       onClick={handleUserNavPanel}
                       onBlur={handleBlur}
                     >
-                      <button className="w-8 h-8 md:w-8 md:h-8 rounded-full overflow-hidden ring-2 ring-purple-400 ring-offset-2 ring-offset-white">
-                        <img
+                      <button className="w-8 h-8 md:w-8 md:h-8">
+                        <UserAvatar
                           src={profile_img}
-                          className="w-full h-full object-cover"
-                          alt="Profile"
+                          name={fullname}
+                          className="w-full h-full"
+                          ringClassName="ring-purple-400"
                         />
                       </button>
 

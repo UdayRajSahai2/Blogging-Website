@@ -4,7 +4,8 @@ import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { completeOnboarding } from "../../api/auth.api";
 import toast from "react-hot-toast";
 import { storeInSession } from "../../common/session";
-import { CheckCircleIcon, UserCircleIcon } from "@heroicons/react/24/solid";
+import CheckCircleIcon from "@heroicons/react/24/solid/CheckCircleIcon";
+import UserCircleIcon from "@heroicons/react/24/solid/UserCircleIcon";
 import { onboardingSteps } from "../onboarding/onboarding.config";
 import {
   getNextStep,

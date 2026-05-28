@@ -13,6 +13,7 @@ import {
   handleLike,
   checkLikeStatus,
   getUserBlogs,
+  getBlogTaxonomy,
   // deleteBlog,
 } from "../controllers/blog.controller.js";
 
@@ -24,7 +25,7 @@ router.post("/all-latest-blogs-count", getAllLatestBlogsCount);
 router.get("/trending-blogs", getTrendingBlogs);
 router.post("/search-blogs", getSearchBlogs);
 router.post("/search-blogs-count", getSearchBlogsCount);
-
+router.get("/taxonomy", getBlogTaxonomy);
 router.get("/user-blogs", verifyJWT, getUserBlogs);
 router.post("/create-blog", verifyJWT, createOrUpdateBlog);
 router.post("/get-blog", optionalAuth, getBlogById);

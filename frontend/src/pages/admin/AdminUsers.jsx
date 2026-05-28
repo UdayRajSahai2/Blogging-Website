@@ -358,6 +358,13 @@ const AdminUsers = () => {
                   </th>
                   <th className="px-2 py-1.5 text-left font-semibold">Email</th>
                   <th className="px-2 py-1.5 text-left font-semibold">
+                    Mobile
+                  </th>
+
+                  <th className="px-2 py-1.5 text-left font-semibold">
+                    Designation
+                  </th>
+                  <th className="px-2 py-1.5 text-left font-semibold">
                     System Role
                   </th>
                   <th className="px-2 py-1.5 text-left font-semibold">
@@ -401,7 +408,15 @@ const AdminUsers = () => {
                     <td className="px-2 py-1.5 text-gray-600 whitespace-nowrap">
                       {u.email}
                     </td>
+                    {/* MOBILE */}
+                    <td className="px-2 py-1.5 text-gray-600 whitespace-nowrap">
+                      {u.mobile_number || "-"}
+                    </td>
 
+                    {/* DESIGNATION */}
+                    <td className="px-2 py-1.5 text-gray-600 whitespace-nowrap">
+                      {u.experiences?.[0]?.designation || "-"}
+                    </td>
                     {/* ROLE */}
                     <td className="px-2 py-1.5">
                       <span

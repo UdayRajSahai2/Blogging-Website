@@ -69,6 +69,8 @@ import connectionRoutes from "./routes/connection.routes.js";
 import locationRoutes from "./routes/location.routes.js";
 import pageRoutes from "./routes/page.routes.js";
 import menuRoutes from "./routes/menu.routes.js";
+import studentEnrollmentRoutes from "./routes/studentEnrollment.routes.js";
+
 app.use("/api/auth", authRoutes);
 app.use("/api/blog", blogRoutes);
 app.use("/api/user", userRoutes);
@@ -92,7 +94,7 @@ app.use("/api/location", locationRoutes);
 app.use("/api/connections", connectionRoutes);
 app.use("/api/pages", pageRoutes);
 app.use("/api/menu", menuRoutes);
-
+app.use("/api/student-enrollment", studentEnrollmentRoutes);
 // ================= HEALTH CHECK =================
 
 app.get("/api/health", (req, res) => {

@@ -3,11 +3,9 @@ import { useContext } from "react";
 import { UserContext } from "../App";
 import { removeFromSession } from "../common/session";
 import { useEffect } from "react";
-import {
-  CheckBadgeIcon,
-  IdentificationIcon,
-  SparklesIcon,
-} from "@heroicons/react/24/solid";
+import CheckBadgeIcon from "@heroicons/react/24/solid/CheckBadgeIcon";
+import IdentificationIcon from "@heroicons/react/24/solid/IdentificationIcon";
+import SparklesIcon from "@heroicons/react/24/solid/SparklesIcon";
 const WelcomePage = () => {
   const navigate = useNavigate();
   const { userAuth, setUserAuth } = useContext(UserContext);

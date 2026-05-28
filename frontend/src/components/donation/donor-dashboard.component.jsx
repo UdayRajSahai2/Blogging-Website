@@ -7,11 +7,9 @@ import DonationForm from "./donation-form.component";
 import DonationAnalyticsCharts from "./donation-analytics-charts.component";
 import { DONATION_API, DONOR_API } from "../../common/api";
 import { useLocation } from "react-router-dom";
-import {
-  CurrencyRupeeIcon,
-  ChartBarIcon,
-  SparklesIcon,
-} from "@heroicons/react/24/outline";
+import CurrencyRupeeIcon from "@heroicons/react/24/outline/CurrencyRupeeIcon";
+import ChartBarIcon from "@heroicons/react/24/outline/ChartBarIcon";
+import SparklesIcon from "@heroicons/react/24/outline/SparklesIcon";
 
 const DonorDashboard = () => {
   const { userAuth } = useContext(UserContext);

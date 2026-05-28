@@ -1,22 +1,32 @@
 import React from "react";
-import { LinkIcon, GlobeAltIcon, PhoneIcon } from "@heroicons/react/24/outline";
+
+import { PhoneIcon, LinkIcon } from "@heroicons/react/24/outline";
+
 import {
-  FaYoutube,
-  FaInstagram,
-  FaFacebook,
-  FaXTwitter,
-  FaGithub,
-} from "react-icons/fa6";
+  YoutubeIcon,
+  InstagramIcon,
+  FacebookIcon,
+  TwitterIcon,
+  GithubIcon,
+  WhatsappIcon,
+  WebsiteIcon,
+} from "../../../common/icons/SocialIcons";
 
 const SocialLinksSection = ({ profile, setProfile }) => {
   const socialKeys = [
-    { key: "youtube", label: "YouTube", Icon: FaYoutube },
-    { key: "instagram", label: "Instagram", Icon: FaInstagram },
-    { key: "facebook", label: "Facebook", Icon: FaFacebook },
-    { key: "twitter", label: "Twitter", Icon: FaXTwitter },
-    { key: "github", label: "GitHub", Icon: FaGithub },
-    { key: "whatsapp", label: "WhatsApp", Icon: PhoneIcon },
-    { key: "website", label: "Website", Icon: GlobeAltIcon },
+    { key: "youtube", label: "YouTube", Icon: YoutubeIcon },
+
+    { key: "instagram", label: "Instagram", Icon: InstagramIcon },
+
+    { key: "facebook", label: "Facebook", Icon: FacebookIcon },
+
+    { key: "twitter", label: "Twitter / X", Icon: TwitterIcon },
+
+    { key: "github", label: "GitHub", Icon: GithubIcon },
+
+    { key: "whatsapp", label: "WhatsApp", Icon: WhatsappIcon },
+
+    { key: "website", label: "Website", Icon: WebsiteIcon },
   ];
 
   const placeholders = {

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useContext, useState } from "react";
 import { UserContext } from "../../App";
+import UserAvatar from "../../common/UserAvatar";
 import {
   UserIcon,
   HeartIcon,
@@ -82,10 +83,11 @@ const NearbyFlipCard = ({
       >
         {/* FRONT */}
         <div className=" absolute inset-0 bg-white border rounded-sm p-3 grid grid-cols-[64px,1fr] gap-3 [backface-visibility:hidden] shadow-sm">
-          <img
+          <UserAvatar
             src={profile_img}
-            alt={fullname}
-            className="w-16 h-16 rounded-full object-cover ring-2 ring-purple/20"
+            name={fullname}
+            className="w-16 h-16"
+            ringClassName="ring-purple/20"
           />
 
           <div className="flex flex-col justify-start">

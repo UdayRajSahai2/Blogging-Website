@@ -2,7 +2,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import logo from "../../imgs/logo.png";
 import AnimationWrapper from "../../common/page-animation";
 import defaultBanner from "../../imgs/blog-banner.png";
-import { uploadImage } from "../../common/aws";
+import { uploadImage, deleteImage } from "../../common/aws";
 import { useEffect, useRef, useContext, useState } from "react";
 import { toast } from "react-hot-toast";
 import { EditorContext } from "../../pages/editor.pages";
@@ -26,6 +26,111 @@ const BlogEditor = () => {
   const navigate = useNavigate();
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  // STATES
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [subSubCategories, setSubSubCategories] = useState([]);
+
+  // LOAD CATEGORIES FROM BACKEND
+  useEffect(() => {
+    const fetchTaxonomy = async () => {
+      try {
+        const res = await axios.get(`${BLOG_API}/taxonomy`);
+
+        const data = res.data.data || [];
+
+        // GROUP TAXONOMY
+        const grouped = [];
+
+        data.forEach((item) => {
+          let category = grouped.find((c) => c.category === item.category);
+
+          if (!category) {
+            category = {
+              category: item.category,
+              subcategories: [],
+            };
+
+            grouped.push(category);
+          }
+
+          let subcategory = category.subcategories.find(
+            (s) => s.name === item.subcategory,
+          );
+
+          if (!subcategory) {
+            subcategory = {
+              name: item.subcategory,
+              subSubCategories: [],
+            };
+
+            category.subcategories.push(subcategory);
+          }
+
+          if (
+            item.sub_subcategory &&
+            !subcategory.subSubCategories.includes(item.sub_subcategory)
+          ) {
+            subcategory.subSubCategories.push(item.sub_subcategory);
+          }
+        });
+
+        setCategories(grouped);
+      } catch (error) {
+        console.error(error);
+
+        toast.error("Failed to load blog taxonomy");
+      }
+    };
+
+    fetchTaxonomy();
+  }, []);
+  // RESTORE CATEGORY STATE FOR EDIT MODE
+  useEffect(() => {
+    if (!blog.category || !categories.length) return;
+
+    const foundCategory = categories.find(
+      (item) => item.category === blog.category,
+    );
+
+    if (foundCategory) {
+      setSubcategories(foundCategory.subcategories || []);
+
+      const foundSubcategory = foundCategory.subcategories.find(
+        (item) => item.name === blog.subcategory,
+      );
+
+      if (foundSubcategory) {
+        setSubSubCategories(foundSubcategory.subSubCategories || []);
+      }
+    }
+  }, [blog.category, blog.subcategory, categories]);
+  // CATEGORY CHANGE
+  const handleCategoryChange = (category) => {
+    setBlog({
+      ...blog,
+      category,
+      subcategory: "",
+      sub_subcategory: "",
+    });
+    const found = categories.find((item) => item.category === category);
+
+    setSubcategories(found?.subcategories || []);
+    setSubSubCategories([]);
+  };
+
+  // SUBCATEGORY CHANGE
+  const handleSubcategoryChange = (subcategory) => {
+    setBlog({
+      ...blog,
+      subcategory,
+      sub_subcategory: "",
+    });
+
+    const found = subcategories.find((item) => item.name === subcategory);
+
+    setSubSubCategories(found?.subSubCategories || []);
+  };
   // Initialize EditorJS once
   useEffect(() => {
     if (!textEditor?.instance) {
@@ -43,21 +148,33 @@ const BlogEditor = () => {
   // Handle banner upload
   const handleBannerUpload = async (e) => {
     const img = e.target.files?.[0];
+
     if (!img) return;
 
     const loadingToast = toast.loading("Uploading...");
 
     try {
-      // Upload image to S3 via presigned URL
-      const url = await uploadImage(img);
+      // DELETE OLD BANNER
+      if (blog.bannerKey) {
+        await deleteImage(blog.bannerKey);
+      }
 
-      // Update blog state with new banner URL
-      setBlog((prev) => ({ ...prev, banner: url }));
+      // UPLOAD NEW BANNER
+      const data = await uploadImage(img);
+
+      // UPDATE STATE
+      setBlog((prev) => ({
+        ...prev,
+        banner: data.fileURL,
+        bannerKey: data.key,
+      }));
 
       toast.dismiss(loadingToast);
+
       toast.success("Banner uploaded");
     } catch (err) {
       toast.dismiss(loadingToast);
+
       toast.error(err.message || "Failed to upload banner image");
     }
   };
@@ -88,6 +205,11 @@ const BlogEditor = () => {
     if (isPublishing) return;
     if (!blog.banner) return toast.error("Upload banner");
     if (!blog.title) return toast.error("Write title");
+    if (!blog.category || !blog.subcategory || !blog.sub_subcategory) {
+      return toast.error(
+        "Please complete blog category selection before publishing",
+      );
+    }
     if (blog.status === "pending") {
       return toast.error("Already submitted.");
     }
@@ -210,7 +332,10 @@ const BlogEditor = () => {
         });
     }
   };
-
+  // CAPITALIZE FIRST LETTERS
+  const capitalizeWords = (text = "") => {
+    return text.replace(/\b\w/g, (char) => char.toUpperCase());
+  };
   return (
     <>
       {/* Top Navbar */}
@@ -231,42 +356,6 @@ const BlogEditor = () => {
         <p className="text-gray-700 text-sm sm:text-base truncate flex-1 text-center sm:text-left">
           {blog.title?.trim() ? blog.title : "New Blog"}
         </p>
-
-        {/* Action buttons */}
-        <div className="flex gap-2 flex-wrap justify-end">
-          <button
-            onClick={handlePublishEvent}
-            disabled={isPublishing || blog.status === "pending"}
-            className={`bg-purple text-white px-4 py-2 rounded-full text-sm font-medium 
-  ${
-    isPublishing || blog.status === "pending"
-      ? "opacity-50 cursor-not-allowed"
-      : "hover:bg-purple/90"
-  }`}
-          >
-            {blog.status === "pending"
-              ? "Submitted"
-              : isPublishing
-                ? "Publishing..."
-                : "Publish Blog"}
-          </button>
-          <button
-            onClick={handleSaveDraft}
-            disabled={isSaving || blog.status === "pending"}
-            className={`bg-gray-200 text-gray-700 px-4 py-2 rounded-full text-sm font-medium 
-  ${
-    isSaving || blog.status === "pending"
-      ? "opacity-50 cursor-not-allowed"
-      : "hover:bg-gray-300"
-  }`}
-          >
-            {blog.status === "pending"
-              ? "Waiting for Approval"
-              : isSaving
-                ? "Saving..."
-                : "Save for later"}
-          </button>
-        </div>
       </nav>
 
       <AnimationWrapper>
@@ -287,10 +376,11 @@ const BlogEditor = () => {
                     onError={handleError}
                   />
 
-                  {/* Overlay (ALWAYS visible if no banner) */}
+                  {/* Overlay */}
                   {!blog.banner && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 translate-y-10">
-                      <div className="text-3xl mb-2">＋</div>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
+                      <div className="text-4xl mb-8">＋</div>
+
                       <p className="text-sm">Add a cover image to your post</p>
                     </div>
                   )}
@@ -304,6 +394,35 @@ const BlogEditor = () => {
                     onChange={handleBannerUpload}
                   />
                 </label>
+
+                {/* Remove Button */}
+                {blog.banner && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        // DELETE FROM S3
+                        if (blog.bannerKey) {
+                          await deleteImage(blog.bannerKey);
+                        }
+
+                        // CLEAR STATE
+                        setBlog((prev) => ({
+                          ...prev,
+                          banner: "",
+                          bannerKey: "",
+                        }));
+
+                        toast.success("Banner removed");
+                      } catch (err) {
+                        toast.error(err.message || "Failed to remove banner");
+                      }
+                    }}
+                    className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded-md shadow-md z-10"
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
             </div>
             {/* Blog Title */}
@@ -336,9 +455,95 @@ focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-1">
-              {/* LEFT → Description */}
-              <div className="relative">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mt-1">
+              {/* CATEGORY */}
+              <div className="lg:col-span-3">
+                <div
+                  className="
+      h-40 border border-gray-300 rounded-lg
+      bg-white p-3
+      focus-within:border-purple-500
+      focus-within:ring-1
+      focus-within:ring-purple-500
+      transition
+    "
+                >
+                  <p className="text-gray-700 text-sm font-medium mb-1">
+                    Blog category
+                  </p>
+
+                  <div className="grid gap-2">
+                    {/* Blog Taxonomy categories */}
+                    {/* Blog Taxonomy categories */}
+                    <select
+                      value={blog.category || ""}
+                      onChange={(e) => handleCategoryChange(e.target.value)}
+                      className="
+    px-3 py-2 text-sm border border-gray-300
+    rounded-md outline-none
+    focus:border-purple-500
+  "
+                    >
+                      <option value="">Select Category</option>
+
+                      {categories.map((item) => (
+                        <option key={item.category} value={item.category}>
+                          {capitalizeWords(item.category)}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* SUBCATEGORY */}
+                    <select
+                      value={blog.subcategory || ""}
+                      onChange={(e) => handleSubcategoryChange(e.target.value)}
+                      disabled={!blog.category}
+                      className="
+    px-3 py-2 text-sm border border-gray-300
+    rounded-md outline-none
+    focus:border-purple-500
+    disabled:bg-gray-100
+  "
+                    >
+                      <option value="">Select Subcategory</option>
+
+                      {subcategories.map((item) => (
+                        <option key={item.name} value={item.name}>
+                          {capitalizeWords(item.name)}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* SUB SUBCATEGORY */}
+                    <select
+                      value={blog.sub_subcategory || ""}
+                      onChange={(e) =>
+                        setBlog({
+                          ...blog,
+                          sub_subcategory: e.target.value,
+                        })
+                      }
+                      disabled={!blog.subcategory}
+                      className="
+    px-3 py-2 text-sm border border-gray-300
+    rounded-md outline-none
+    focus:border-purple-500
+    disabled:bg-gray-100
+  "
+                    >
+                      <option value="">Select SubSubCategory</option>
+
+                      {subSubCategories.map((item) => (
+                        <option key={item} value={item}>
+                          {capitalizeWords(item)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              {/* DESCRIPTION */}
+              <div className="lg:col-span-4 relative">
                 <p className="absolute left-4 top-2 text-gray-700 text-sm font-medium pointer-events-none">
                   Blog description
                 </p>
@@ -347,34 +552,53 @@ focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 
                   maxLength={200}
                   value={blog.des || ""}
                   placeholder="Write a short summary..."
-                  className="h-40 w-full resize-none leading-7 px-4 pt-7 pb-3 pr-16 border border-gray-300 rounded-lg bg-white outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition placeholder:text-gray-400"
-                  onChange={(e) => setBlog({ ...blog, des: e.target.value })}
+                  className="
+        h-40 w-full resize-none
+        leading-6 text-sm
+        px-4 pt-7 pb-3 pr-16
+        border border-gray-300 rounded-lg bg-white
+        outline-none
+        focus:border-purple-500
+        focus:ring-1 focus:ring-purple-500
+        transition placeholder:text-gray-400
+      "
+                  onChange={(e) =>
+                    setBlog({
+                      ...blog,
+                      des: e.target.value,
+                    })
+                  }
                 />
 
-                {/* Counter */}
                 <span className="absolute bottom-2 right-3 text-xs text-gray-400">
                   {blog.des?.length || 0} / 200
                 </span>
               </div>
 
-              {/* RIGHT → Tags */}
-              <div>
+              {/* TAGS */}
+              <div className="lg:col-span-5">
                 <div
-                  className="relative border border-gray-300 rounded-lg bg-white px-3 pt-3 pb-8 
-                            focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition"
+                  className="
+      relative h-40 border border-gray-300
+      rounded-lg bg-white px-3 pt-3 pb-8
+      focus-within:border-purple-500
+      focus-within:ring-1
+      focus-within:ring-purple-500
+      transition
+    "
                 >
                   <p className="text-gray-700 text-sm font-medium mb-2">
                     Add keywords (maximum 10)
                   </p>
-                  {/* Input */}
+
                   <input
                     type="text"
                     placeholder={
                       blog.tags.length >= 10
                         ? "Tag limit reached"
-                        : "Enter tags separated by comma or press Enter — e.g. Education, Politics, Social"
+                        : "Enter tags separated by comma — e.g. Education,Social,Politics"
                     }
-                    className="w-full outline-none text-sm mb-2 bg-transparent"
+                    className="w-full outline-none text-sm mb-3 bg-transparent"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === ",") {
                         e.preventDefault();
@@ -393,7 +617,10 @@ focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 
                             .map((t) => t.toLowerCase())
                             .includes(tag.toLowerCase())
                         ) {
-                          setBlog({ ...blog, tags: [...blog.tags, tag] });
+                          setBlog({
+                            ...blog,
+                            tags: [...blog.tags, tag],
+                          });
                         }
 
                         e.target.value = "";
@@ -401,12 +628,21 @@ focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 
                     }}
                   />
 
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-2">
+                  <div
+                    className="
+        flex flex-wrap gap-2
+        max-h-[75px]
+        overflow-y-auto
+        pr-1
+      "
+                  >
                     {blog.tags.map((tag, i) => (
                       <span
                         key={i}
-                        className="bg-gray-200 px-2 py-1 rounded text-sm cursor-pointer hover:bg-gray-300 transition"
+                        className="
+            bg-gray-200 px-2 py-1 rounded text-sm
+            cursor-pointer hover:bg-gray-300 transition
+          "
                         onClick={() =>
                           setBlog({
                             ...blog,
@@ -419,7 +655,6 @@ focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 
                     ))}
                   </div>
 
-                  {/* Counter inside */}
                   <span
                     className={`absolute bottom-2 right-3 text-xs ${
                       blog.tags.length >= 10 ? "text-red-500" : "text-gray-400"
@@ -429,6 +664,62 @@ focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+          {/* Action buttons */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1 pb-0.5 border-b border-gray-200">
+            {/* LEFT INFO */}
+            <div className="hidden md:block text-[12px] text-gray-500">
+              <span className="font-medium text-gray-700">Save Draft:</span>{" "}
+              Save your blog and continue later •{" "}
+              <span className="font-medium text-gray-700">Publish Blog:</span>{" "}
+              Submit for review and publishing
+            </div>
+
+            {/* RIGHT BUTTONS */}
+            <div className="flex justify-center sm:justify-end gap-3">
+              <button
+                onClick={handleSaveDraft}
+                disabled={isSaving || blog.status === "pending"}
+                className={`
+      px-4 py-2 rounded-md text-sm font-medium transition
+      border border-slate-300
+      bg-slate-100 text-slate-700
+
+      ${
+        isSaving || blog.status === "pending"
+          ? "opacity-50 cursor-not-allowed"
+          : "hover:bg-slate-200"
+      }
+    `}
+              >
+                {blog.status === "pending"
+                  ? "Waiting for Approval"
+                  : isSaving
+                    ? "Saving..."
+                    : "Save Draft"}
+              </button>
+
+              <button
+                onClick={handlePublishEvent}
+                disabled={isPublishing || blog.status === "pending"}
+                className={`
+      px-4 py-2 rounded-md text-sm font-medium transition
+      bg-indigo-600 text-white
+
+      ${
+        isPublishing || blog.status === "pending"
+          ? "opacity-50 cursor-not-allowed"
+          : "hover:bg-indigo-700"
+      }
+    `}
+              >
+                {blog.status === "pending"
+                  ? "Submitted"
+                  : isPublishing
+                    ? "Publishing..."
+                    : "Publish Blog"}
+              </button>
             </div>
           </div>
         </section>

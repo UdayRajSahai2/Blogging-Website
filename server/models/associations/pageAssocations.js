@@ -1,14 +1,21 @@
 import Page from "../Page.js";
 
 const setupPageAssociations = () => {
+  /* PARENT -> CHILDREN */
   Page.hasMany(Page, {
     as: "children",
+
     foreignKey: "parent_id",
+
     onDelete: "CASCADE",
+
+    hooks: true,
   });
 
+  /* CHILD -> PARENT */
   Page.belongsTo(Page, {
     as: "parent",
+
     foreignKey: "parent_id",
   });
 };

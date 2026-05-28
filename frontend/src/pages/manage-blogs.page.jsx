@@ -117,10 +117,27 @@ const MyBlogs = () => {
           <div className="relative w-32 sm:w-48 md:w-64 mr-3 sm:mr-4 mt-2 sm:mt-1">
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search blogs..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full border rounded-md pl-7 pr-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="
+    w-full
+    h-9
+    rounded-md
+    border
+    border-gray-300
+    bg-white
+    pl-9
+    pr-3
+    text-sm
+    text-gray-700
+    placeholder:text-gray-400
+    outline-none
+    transition-all
+    duration-150
+    focus:border-indigo-500
+    focus:shadow-[0_0_0_2px_rgba(99,102,241,0.25)]
+  "
             />
 
             <MagnifyingGlassIcon className="w-3.5 h-3.5 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2" />

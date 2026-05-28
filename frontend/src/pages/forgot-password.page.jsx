@@ -97,7 +97,7 @@ const ForgotPasswordPage = () => {
 
   return (
     <AnimationWrapper keyValue="forgot-password">
-      <section className="min-h-screen w-full flex justify-center px-4 pt-16 pb-8 relative">
+      <section className="min-h-screen  flex items-start justify-center px-4 pt-6 relative">
         {/* Loader */}
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
@@ -108,16 +108,29 @@ const ForgotPasswordPage = () => {
         <form
           ref={formRef}
           onSubmit={handleSubmit}
-          className="w-full max-w-md shadow-sm p-6 sm:p-8 flex flex-col"
+          className="
+          w-full max-w-md
+          bg-white
+          border border-gray-200
+          rounded-2xl
+          shadow-md
+          p-6 sm:p-8
+          flex flex-col
+        "
           style={loading ? { pointerEvents: "none", opacity: 0.6 } : {}}
         >
           {/* Header */}
-          <div className="text-center mb-6">
-            <h1 className="text-2xl sm:text-3xl font-gelasio">
+          <div className="text-center mb-7">
+            <div className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center mx-auto mb-4">
+              <EnvelopeIcon className="w-5 h-5" />
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
               Forgot Password
             </h1>
+
             <p className="text-sm text-gray-500 mt-2">
-              Enter your email to receive a verification OTP
+              Enter your email to receive an OTP
             </p>
           </div>
 
@@ -155,7 +168,15 @@ const ForgotPasswordPage = () => {
 
           {/* Button */}
           <button
-            className="btn-dark w-full mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="
+            w-full mt-6
+            bg-black text-white
+            py-3 rounded-xl
+            font-medium
+            transition hover:opacity-90
+            disabled:opacity-50
+            disabled:cursor-not-allowed
+          "
             type="submit"
             disabled={cooldown > 0 && !otpSent}
           >
@@ -169,7 +190,10 @@ const ForgotPasswordPage = () => {
           {/* Back to Login */}
           <p className="text-center text-sm text-gray-600 mt-6">
             Remember your password?
-            <Link to="/signin" className="ml-1 underline text-black">
+            <Link
+              to="/signin"
+              className="ml-1 text-black font-medium hover:underline"
+            >
               Sign in
             </Link>
           </p>
@@ -177,14 +201,14 @@ const ForgotPasswordPage = () => {
           {/* Support */}
           <p className="text-center text-sm text-gray-500 mt-3">
             Need help?
-            <Link to="/support" className="ml-1 underline">
+            <Link to="/" className="ml-1 underline hover:text-black">
               Contact support
             </Link>
           </p>
 
           {/* Security Notice */}
-          <p className="text-center text-xs text-gray-400 mt-4">
-            For security reasons, OTP expires in 5 minutes.
+          <p className="text-center text-xs text-gray-400 mt-5">
+            OTP expires in 10 minutes.
           </p>
         </form>
       </section>

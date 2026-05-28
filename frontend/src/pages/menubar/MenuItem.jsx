@@ -1,17 +1,19 @@
 // frontend/src/pages/menubar/MenuItem.jsx
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
+
 import { NavLink } from "react-router-dom";
-import { isRouteEnabled } from "../../config/enabledRoutes";
 
 const MenuItem = ({ item, level = 0 }) => {
   const [open, setOpen] = useState(false);
 
   const itemRef = useRef(null);
   const hasChildren = Array.isArray(item.children) && item.children.length > 0;
-
+  const isEnabled = item.status === "published";
   // Close dropdown when clicking outside
   useEffect(() => {
+    if (!open) return;
+
     const handleClickOutside = (e) => {
       if (itemRef.current && !itemRef.current.contains(e.target)) {
         setOpen(false);
@@ -23,11 +25,16 @@ const MenuItem = ({ item, level = 0 }) => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
-  const submenuClass =
-    window.innerWidth - itemRef.current?.getBoundingClientRect().right < 300
-      ? "right"
-      : "left";
+  }, [open]);
+  const [submenuClass, setSubmenuClass] = useState("left");
+
+  useEffect(() => {
+    if (open && itemRef.current) {
+      const rect = itemRef.current.getBoundingClientRect();
+
+      setSubmenuClass(window.innerWidth - rect.right < 300 ? "right" : "left");
+    }
+  }, [open]);
   return (
     <div
       ref={itemRef}
@@ -50,17 +57,18 @@ const MenuItem = ({ item, level = 0 }) => {
         }}
       >
         <NavLink
-          to={isRouteEnabled(item.path) ? item.path : "#"}
+          to={hasChildren ? "#" : item.path}
           className="flex-1"
           onClick={(e) => {
-            e.stopPropagation();
-
-            if (!isRouteEnabled(item.path)) {
+            if (!isEnabled) {
               e.preventDefault();
+              return;
             }
 
+            // HAS CHILDREN → DON'T NAVIGATE
+            // parent div onClick will open submenu
             if (hasChildren) {
-              setOpen((prev) => !prev);
+              e.preventDefault();
             }
           }}
         >
@@ -119,4 +127,4 @@ const MenuItem = ({ item, level = 0 }) => {
   );
 };
 
-export default MenuItem;
+export default React.memo(MenuItem);

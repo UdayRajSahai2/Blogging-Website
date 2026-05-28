@@ -1,14 +1,12 @@
 import AuthActionBox from "./AuthActionBox";
-import {
-  FireIcon,
-  BellIcon,
-  UserPlusIcon,
-  StarIcon,
-  UserGroupIcon,
-  GlobeAltIcon,
-  LightBulbIcon,
-  HeartIcon,
-} from "@heroicons/react/24/outline";
+import FireIcon from "@heroicons/react/24/outline/FireIcon";
+import BellIcon from "@heroicons/react/24/outline/BellIcon";
+import UserPlusIcon from "@heroicons/react/24/outline/UserPlusIcon";
+import StarIcon from "@heroicons/react/24/outline/StarIcon";
+import UserGroupIcon from "@heroicons/react/24/outline/UserGroupIcon";
+import GlobeAltIcon from "@heroicons/react/24/outline/GlobeAltIcon";
+import LightBulbIcon from "@heroicons/react/24/outline/LightBulbIcon";
+import HeartIcon from "@heroicons/react/24/outline/HeartIcon";
 
 const AuthBottomActions = ({ type }) => {
   return (

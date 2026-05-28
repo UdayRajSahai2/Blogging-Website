@@ -1,16 +1,14 @@
 import { useEffect, useState, useMemo } from "react";
 import { getMyAcademics, deleteAcademic } from "../../api/academic.api";
 import { Link } from "react-router-dom";
-import {
-  BookOpenIcon,
-  PlusIcon,
-  MagnifyingGlassIcon,
-  PencilSquareIcon,
-  TrashIcon,
-  StarIcon,
-  MapPinIcon,
-  CalendarIcon,
-} from "@heroicons/react/24/solid";
+import BookOpenIcon from "@heroicons/react/24/solid/BookOpenIcon";
+import PlusIcon from "@heroicons/react/24/solid/PlusIcon";
+import MagnifyingGlassIcon from "@heroicons/react/24/solid/MagnifyingGlassIcon";
+import PencilSquareIcon from "@heroicons/react/24/solid/PencilSquareIcon";
+import TrashIcon from "@heroicons/react/24/solid/TrashIcon";
+import StarIcon from "@heroicons/react/24/solid/StarIcon";
+import MapPinIcon from "@heroicons/react/24/solid/MapPinIcon";
+import CalendarIcon from "@heroicons/react/24/solid/CalendarIcon";
 export default function AcademicPage() {
   const [academics, setAcademics] = useState([]);
   const [loading, setLoading] = useState(true);

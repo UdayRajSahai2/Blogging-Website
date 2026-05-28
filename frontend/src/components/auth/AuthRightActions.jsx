@@ -1,9 +1,7 @@
 import AuthActionBox from "./AuthActionBox";
-import {
-  ChatBubbleLeftRightIcon,
-  LightBulbIcon,
-  UserGroupIcon,
-} from "@heroicons/react/24/outline";
+import ChatBubbleLeftRightIcon from "@heroicons/react/24/outline/ChatBubbleLeftRightIcon";
+import LightBulbIcon from "@heroicons/react/24/outline/LightBulbIcon";
+import UserGroupIcon from "@heroicons/react/24/outline/UserGroupIcon";
 
 const AuthRightActions = ({ type }) => {
   return (

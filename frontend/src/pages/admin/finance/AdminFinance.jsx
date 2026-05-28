@@ -1,20 +1,16 @@
 import { useEffect, useState, useContext } from "react";
 import axios from "axios";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Legend,
-} from "recharts";
+import { lazy, Suspense } from "react";
 import { UserContext } from "../../../App";
 import { ADMIN_FINANCE_API } from "../../../common/api";
 import Loader from "../../../components/loader.component";
+const FinanceBarChart = lazy(
+  () => import("../../../components/admin/finance/FinanceBarChart"),
+);
 
+const FinancePieChart = lazy(
+  () => import("../../../components/admin/finance/FinancePieChart"),
+);
 const AdminFinance = () => {
   const { userAuth } = useContext(UserContext);
   const token = userAuth?.access_token;
@@ -110,14 +106,9 @@ const AdminFinance = () => {
       <div className="bg-white border rounded-xl p-5">
         <h2 className="font-semibold mb-4">Donations vs Expenditures</h2>
 
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={overviewData}>
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="amount" />
-          </BarChart>
-        </ResponsiveContainer>
+        <Suspense fallback={<Loader />}>
+          <FinanceBarChart data={overviewData} />
+        </Suspense>
       </div>
 
       {/* ================= PIE CHARTS ================= */}
@@ -164,20 +155,9 @@ const PieBlock = ({ title, data }) => {
   return (
     <div className="bg-white border rounded-xl p-5">
       <h2 className="font-semibold mb-4">{title}</h2>
-
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={data}
-            dataKey="value"
-            nameKey="name"
-            outerRadius={100}
-            label
-          />
-          <Tooltip />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
+      <Suspense fallback={<Loader />}>
+        <FinancePieChart data={data} />
+      </Suspense>
     </div>
   );
 };

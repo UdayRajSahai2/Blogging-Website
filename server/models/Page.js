@@ -26,20 +26,20 @@ const Page = sequelize.define(
       unique: true,
     },
 
+    parent_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+
     sections: {
       type: DataTypes.JSON,
       allowNull: true,
       defaultValue: [],
     },
 
-    parent_id: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-
-    is_published: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
+    status: {
+      type: DataTypes.ENUM("draft", "published"),
+      defaultValue: "draft",
     },
 
     meta_title: {

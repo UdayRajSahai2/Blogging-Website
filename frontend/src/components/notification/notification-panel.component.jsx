@@ -1,11 +1,9 @@
 import { Link } from "react-router-dom";
 
-import {
-  HeartIcon,
-  ChatBubbleLeftIcon,
-  ArrowUturnLeftIcon,
-  BellIcon,
-} from "@heroicons/react/24/solid";
+import HeartIcon from "@heroicons/react/24/solid/HeartIcon";
+import ChatBubbleLeftIcon from "@heroicons/react/24/solid/ChatBubbleLeftIcon";
+import ArrowUturnLeftIcon from "@heroicons/react/24/solid/ArrowUturnLeftIcon";
+import BellIcon from "@heroicons/react/24/solid/BellIcon";
 
 const getIcon = (type) => {
   switch (type) {

@@ -2,7 +2,7 @@ import { useContext, useState } from "react";
 import { UserContext } from "../../App";
 import { toast } from "react-hot-toast";
 import axios from "axios";
-import { BlogContext } from "../../pages/blog.page";
+import { BlogContext } from "../../context/blog.context";
 import { COMMENT_API } from "../../common/api";
 
 const CommentField = ({ action, replyingTo, onCommentAdded }) => {

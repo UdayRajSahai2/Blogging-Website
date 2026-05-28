@@ -25,6 +25,8 @@ import setupRoleAssociations from "./roles/roleAssociations.js";
 import setupUserInterestsAssociations from "./associations/userInterestsAssociations.js";
 import setupUserConnectionAssociations from "./associations/userConnectionAssociations.js";
 import setupPageAssociations from "./associations/pageAssocations.js";
+import setupStudentEnrollmentAssociations from "./associations/studentEnrollmentAssociations.js";
+import setupBlogTaxonomyAssociations from "./associations/blogTaxonomyAssociations.js";
 // Function to set up all associations
 
 const setupAssociations = () => {
@@ -36,7 +38,9 @@ const setupAssociations = () => {
   //  NEW ( modular system)
   setupRoleAssociations();
   setupPageAssociations();
+  setupStudentEnrollmentAssociations();
 
+  setupBlogTaxonomyAssociations();
   console.log(" All associations initialized");
   const models = {
     User,
@@ -371,7 +375,7 @@ const setupAssociations = () => {
     onUpdate: "CASCADE",
   });
 
-  console.log("✅ All associations set up successfully!");
+  console.log(" All associations set up successfully!");
   return models;
 };
 

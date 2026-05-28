@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import { BLOG_API } from "../../common/api";
 
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
+import ChevronLeftIcon from "@heroicons/react/24/solid/ChevronLeftIcon";
+import ChevronRightIcon from "@heroicons/react/24/solid/ChevronRightIcon";
 /* -------------------- MAIN CAROUSEL -------------------- */
 
 const BlogCarousel = ({ pageState }) => {

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { getDay } from "../../common/date";
 import { Link } from "react-router-dom";
-import { FiHeart } from "react-icons/fi";
+import { HeartIcon } from "@heroicons/react/24/outline";
 
 const BlogPostCard = ({ content, author, openProfile }) => {
   const {
@@ -85,7 +85,7 @@ const BlogPostCard = ({ content, author, openProfile }) => {
 
           {/* Likes */}
           <span className="ml-auto flex items-center gap-1 text-gray-600 shrink-0">
-            <FiHeart size={14} />
+            <HeartIcon className="h-4 w-4" />
             {total_likes || 0}
           </span>
         </div>

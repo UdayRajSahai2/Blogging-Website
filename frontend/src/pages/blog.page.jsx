@@ -1,7 +1,7 @@
 // frontend/src/pages/blog.page.jsx
 import { Link, useParams } from "react-router-dom";
 import axios from "axios";
-import { createContext, useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useRef } from "react";
 import { UserContext } from "../App";
 import AnimationWrapper from "../common/page-animation";
 import Loader from "../components/loader.component";
@@ -12,23 +12,8 @@ import BlogContent from "../components/blog/blog-content.component";
 import CommentsContainer from "../components/comment/comments.component";
 import { BLOG_API } from "../common/api";
 import SimilarBlogCard from "../components/blog/SimilarBlogCard";
-import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
-import { useRef } from "react";
-
-export const blogStructure = {
-  title: "",
-  des: "",
-  content: { time: 0, blocks: [], version: "" },
-  tags: [],
-  blogAuthor: {},
-  banner: "",
-  publishedAt: "",
-  status: "",
-  is_deleted: false,
-  review_note: "",
-};
-
-export const BlogContext = createContext({});
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { BlogContext, blogStructure } from "../context/blog.context";
 
 const BlogPage = () => {
   const { blog_id } = useParams();
@@ -183,7 +168,30 @@ const BlogPage = () => {
     blogAuthor: { fullname, username: author_username, profile_img } = {},
     publishedAt,
   } = blog;
+  const arrowBtnClass = `
+  hidden md:flex
+  items-center justify-center
 
+  absolute
+  top-[45px]
+  z-20
+
+  h-8 w-8
+  rounded-full
+
+  border border-white/30
+  bg-white/40
+  backdrop-blur-md
+
+  text-gray-700
+  shadow-md
+
+  opacity-0
+  transition-all duration-200
+
+  group-hover:opacity-100
+  hover:bg-white/60
+`;
   return (
     <AnimationWrapper>
       {loading ? (
@@ -297,7 +305,7 @@ const BlogPage = () => {
               )}
             </article>
 
-            {/* INTERACTION AGAIN */}
+            {/* INTERACTION */}
             <div className="sticky top-20 z-10 bg-white">
               <BlogInteraction />
             </div>
@@ -317,69 +325,17 @@ const BlogPage = () => {
                       {/* Left Arrow */}
                       <button
                         onClick={() => scroll("left")}
-                        className="
-    hidden md:flex
-    items-center justify-center
-
-    absolute
-    left-2
-    top-[45px]
-    z-20
-
-    w-8 h-8
-    rounded-full
-
-    bg-white/40
-    backdrop-blur-md
-    border border-white/30
-
-    text-gray-700
-    shadow-md
-
-    opacity-0
-    group-hover:opacity-100
-
-    hover:bg-white/60
-
-    transition-all
-    duration-200
-  "
+                        className={`${arrowBtnClass} left-2`}
                       >
-                        <FiChevronLeft size={16} />
+                        <ChevronLeftIcon className="h-4 w-4" />
                       </button>
 
                       {/* Right Arrow */}
                       <button
                         onClick={() => scroll("right")}
-                        className="
-    hidden md:flex
-    items-center justify-center
-
-    absolute
-    right-2
-    top-[45px]
-    z-20
-
-    w-8 h-8
-    rounded-full
-
-    bg-white/40
-    backdrop-blur-md
-    border border-white/30
-
-    text-gray-700
-    shadow-md
-
-    opacity-0
-    group-hover:opacity-100
-
-    hover:bg-white/60
-
-    transition-all
-    duration-200
-  "
+                        className={`${arrowBtnClass} right-2`}
                       >
-                        <FiChevronRight size={16} />
+                        <ChevronRightIcon className="h-4 w-4" />
                       </button>
                     </>
                   )}
@@ -388,24 +344,24 @@ const BlogPage = () => {
                   <div
                     ref={scrollRef}
                     className="
-    flex
-    gap-[6px]
-    overflow-x-auto
-    scroll-smooth
-    scrollbar-hide
-    snap-x
-    snap-mandatory
-    pb-1
-  "
+                                flex
+                                gap-[6px]
+                                overflow-x-auto
+                                scroll-smooth
+                                scrollbar-hide
+                                snap-x
+                                snap-mandatory
+                                pb-1
+                                 "
                   >
                     {similarBlogs.map((blogItem, i) => (
                       <div
                         key={blogItem.blog_id || i}
                         className="
-              min-w-[220px]
-              max-w-[220px]
-              flex-shrink-0
-            "
+                                 min-w-[220px]
+                                 max-w-[220px]
+                                 flex-shrink-0
+                                    "
                       >
                         <AnimationWrapper
                           transition={{

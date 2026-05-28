@@ -109,9 +109,10 @@ const ResetPasswordPage = () => {
   /** Form JSX */
   return (
     <AnimationWrapper keyValue="reset-password">
-      <section className="layout-section h-auto flex items-center justify-center relative">
+      <section className="bg-gray-50 min-h-full flex items-start justify-center px-4 pt-2 relative">
+        {/* Loader */}
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 z-20">
+          <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
             <Loader />
           </div>
         )}
@@ -119,12 +120,33 @@ const ResetPasswordPage = () => {
         <form
           ref={formRef}
           onSubmit={handleSubmit}
-          className="w-[80%] max-w-[400px]"
+          className="
+          w-full max-w-md
+          bg-white
+          border border-gray-200
+          rounded-2xl
+          shadow-md
+          p-6 sm:p-8
+          flex flex-col
+        "
           style={loading ? { pointerEvents: "none", opacity: 0.6 } : {}}
         >
-          <h1 className="text-4xl font-gelasio text-center mb-20">
-            Reset Password
-          </h1>
+          {/* Header */}
+          <div className="text-center mb-7">
+            <div className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center mx-auto mb-4">
+              <KeyIcon className="w-5 h-5" />
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
+              Reset Password
+            </h1>
+
+            <p className="text-sm text-gray-500 mt-2">
+              Enter your new password below
+            </p>
+          </div>
+
+          {/* Password */}
           <InputBox
             name="password"
             type="password"
@@ -133,21 +155,38 @@ const ResetPasswordPage = () => {
             required
           />
 
-          <InputBox
-            name="confirm_password"
-            type="password"
-            placeholder="Confirm Password"
-            icon={<KeyIcon className="w-4 h-4" />}
-            required
-          />
+          {/* Confirm Password */}
+          <div className="mt-4">
+            <InputBox
+              name="confirm_password"
+              type="password"
+              placeholder="Confirm Password"
+              icon={<KeyIcon className="w-4 h-4" />}
+              required
+            />
+          </div>
 
+          {/* Submit Button */}
           <button
-            className="btn-dark center mt-14"
+            className="
+            w-full mt-6
+            bg-black text-white
+            py-3 rounded-xl
+            font-medium
+            transition hover:opacity-90
+            disabled:opacity-50
+            disabled:cursor-not-allowed
+          "
             type="submit"
             disabled={loading}
           >
             {loading ? "Resetting..." : "Reset Password"}
           </button>
+
+          {/* Footer */}
+          <p className="text-center text-xs text-gray-400 mt-5">
+            Choose a strong password for better security.
+          </p>
         </form>
       </section>
     </AnimationWrapper>

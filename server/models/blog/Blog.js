@@ -68,6 +68,10 @@ const Blog = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    taxonomy_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     timestamps: true,

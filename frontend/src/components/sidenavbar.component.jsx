@@ -2,21 +2,19 @@ import { useContext, useState, useRef, useEffect } from "react";
 import { Navigate, NavLink, Outlet, useLocation } from "react-router-dom";
 import { UserContext } from "../App";
 
-import {
-  DocumentTextIcon,
-  BellIcon,
-  PencilSquareIcon,
-  UserCircleIcon,
-  LockClosedIcon,
-  BriefcaseIcon,
-  AcademicCapIcon,
-  UserIcon,
-  FolderIcon,
-  ChatBubbleLeftRightIcon,
-  HomeIcon,
-  HeartIcon,
-  Bars3Icon,
-} from "@heroicons/react/24/solid";
+import DocumentTextIcon from "@heroicons/react/24/solid/DocumentTextIcon";
+import BellIcon from "@heroicons/react/24/solid/BellIcon";
+import PencilSquareIcon from "@heroicons/react/24/solid/PencilSquareIcon";
+import UserCircleIcon from "@heroicons/react/24/solid/UserCircleIcon";
+import LockClosedIcon from "@heroicons/react/24/solid/LockClosedIcon";
+import BriefcaseIcon from "@heroicons/react/24/solid/BriefcaseIcon";
+import AcademicCapIcon from "@heroicons/react/24/solid/AcademicCapIcon";
+import UserIcon from "@heroicons/react/24/solid/UserIcon";
+import FolderIcon from "@heroicons/react/24/solid/FolderIcon";
+import ChatBubbleLeftRightIcon from "@heroicons/react/24/solid/ChatBubbleLeftRightIcon";
+import HomeIcon from "@heroicons/react/24/solid/HomeIcon";
+import HeartIcon from "@heroicons/react/24/solid/HeartIcon";
+import Bars3Icon from "@heroicons/react/24/solid/Bars3Icon";
 const SideNav = () => {
   const location = useLocation();
   const {

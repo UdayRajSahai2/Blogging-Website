@@ -1,6 +1,7 @@
 //frontend\src\components\input.component.jsx
 import { useState } from "react";
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
+import EyeSlashIcon from "@heroicons/react/24/outline/EyeSlashIcon";
 const InputBox = ({
   name,
   type = "text",
@@ -31,14 +32,11 @@ const InputBox = ({
     <div className="relative w-full mb-2 sm:mb-3">
       <div
         className={`
-    flex items-center h-10 rounded-xl border border-gray-500
-    bg-white/70 backdrop-blur-sm
-    shadow-sm transition-all duration-200
+    flex items-center h-10 rounded-lg border border-gray-400
+    bg-white overflow-hidden
+    transition
 
-    ${
-      !disabled &&
-      "hover:shadow-md focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:shadow-md focus-within:bg-white"
-    }
+  ${!disabled && "focus-within:border-blue-700 hover:border-gray-400"}
 
     ${disabledClass}
   `}
@@ -62,8 +60,8 @@ const InputBox = ({
           inputMode={rest.inputMode || "text"}
           {...rest}
           className={`
-    flex-1 h-full bg-transparent outline-none
-    text-[13px] placeholder:text-gray-500
+   flex-1 h-full bg-white outline-none
+    text-[12px] text-gray-800 placeholder:text-gray-400
     ${prefix ? "pl-2 pr-3" : paddingClass}
     ${disabled ? "text-gray-600 cursor-not-allowed" : ""}
   `}

@@ -1,9 +1,7 @@
 import AuthActionBox from "./AuthActionBox";
-import {
-  BoltIcon,
-  UserGroupIcon,
-  GlobeAltIcon,
-} from "@heroicons/react/24/outline";
+import BoltIcon from "@heroicons/react/24/outline/BoltIcon";
+import UserGroupIcon from "@heroicons/react/24/outline/UserGroupIcon";
+import GlobeAltIcon from "@heroicons/react/24/outline/GlobeAltIcon";
 
 const AuthLeftActions = ({ type }) => {
   return (

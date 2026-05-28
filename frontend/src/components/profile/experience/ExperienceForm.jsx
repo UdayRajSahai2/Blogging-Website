@@ -1,5 +1,5 @@
 import ProfessionSelector from "../experience/ProfessionSelector";
-
+import InputBox from "../../input.component";
 const ExperienceForm = ({
   form,
   setForm,
@@ -67,8 +67,8 @@ const ExperienceForm = ({
           <label className="text-xs text-gray-800 mb-1 block">
             Designation
           </label>
-          <input
-            placeholder="e.g. Engineer, Cricketer"
+          <InputBox
+            placeholder="e.g. Hardware Designer, Athlete"
             value={form.designation}
             maxLength={50} //  limit to 50 chars
             onChange={(e) => setForm({ ...form, designation: e.target.value })}
@@ -80,8 +80,8 @@ const ExperienceForm = ({
           <label className="text-xs text-gray-800 mb-1 block">
             Organization / Team
           </label>
-          <input
-            placeholder="e.g. Self, TCS, Freelance"
+          <InputBox
+            placeholder="e.g. Startup, Infosys"
             value={form.employer_name}
             maxLength={50} // limit to 50 chars
             onChange={(e) =>
@@ -96,8 +96,8 @@ const ExperienceForm = ({
         {/* INDUSTRY */}
         <div>
           <label className="text-xs text-gray-800 mb-1 block">Industry</label>
-          <input
-            placeholder="e.g. Software Development, IT Services"
+          <InputBox
+            placeholder="e.g. Electronics, Embedded Systems"
             value={form.industry}
             maxLength={50}
             onChange={(e) => setForm({ ...form, industry: e.target.value })}
@@ -115,7 +115,20 @@ const ExperienceForm = ({
             onChange={(e) =>
               setForm({ ...form, employment_type: e.target.value })
             }
-            className="border px-2 py-1.5 rounded w-full"
+            className="
+    w-full
+    rounded
+    border
+    border-gray-300
+    bg-gray-50
+    px-2
+    py-2.5
+    text-sm
+    text-gray-800
+    outline-none
+    focus:border-gray-500
+    focus:bg-white
+  "
           >
             <option value="">Select type</option>
             <option value="Full-time">Full-time</option>
@@ -132,8 +145,8 @@ const ExperienceForm = ({
         <div className="grid grid-cols-3 gap-3">
           {/* CITY */}
           <div>
-            <input
-              placeholder="City (e.g. Lucknow)"
+            <InputBox
+              placeholder="City"
               value={form.city}
               maxLength={20}
               onChange={(e) => setForm({ ...form, city: e.target.value })}
@@ -143,8 +156,8 @@ const ExperienceForm = ({
 
           {/* STATE */}
           <div>
-            <input
-              placeholder="State (e.g. Uttar Pradesh)"
+            <InputBox
+              placeholder="State"
               value={form.state}
               maxLength={50}
               onChange={(e) => setForm({ ...form, state: e.target.value })}
@@ -154,8 +167,8 @@ const ExperienceForm = ({
 
           {/* COUNTRY */}
           <div>
-            <input
-              placeholder="Country (e.g. India)"
+            <InputBox
+              placeholder="Country"
               value={form.country}
               maxLength={20}
               onChange={(e) => setForm({ ...form, country: e.target.value })}
@@ -226,7 +239,7 @@ const ExperienceForm = ({
               What did you do?
             </label>
             <textarea
-              placeholder="e.g. Built React apps, developed APIs, handled client requirements"
+              placeholder="e.g. Circuit design, PCB testing, embedded systems"
               value={form.roles_responsibilities}
               onChange={(e) =>
                 setForm({ ...form, roles_responsibilities: e.target.value })
@@ -241,7 +254,7 @@ const ExperienceForm = ({
               Achievements / Impact
             </label>
             <textarea
-              placeholder="e.g. Improved performance by 40%, reduced bugs, led team of 3"
+              placeholder="e.g. Reduced faults, improved efficiency"
               value={form.achievements}
               onChange={(e) =>
                 setForm({ ...form, achievements: e.target.value })

@@ -1,12 +1,12 @@
-// frontend\src\common\ShareButtonFirefox.jsx
+// frontend/src/common/ShareButtonFirefox.jsx
 
 import {
-  FaWhatsapp,
-  FaTwitter,
-  FaLinkedin,
-  FaFacebook,
-  FaTelegram,
-} from "react-icons/fa";
+  FacebookIcon,
+  LinkedinIcon,
+  TelegramIcon,
+  TwitterIcon,
+  WhatsappIcon,
+} from "../common/icons/SocialIcons";
 
 import { ClipboardDocumentIcon } from "@heroicons/react/24/outline";
 
@@ -14,14 +14,14 @@ export default function ShareButton({ show, shareLinks, copyLink }) {
   if (!show) return null;
 
   return (
-    <div className="absolute right-0 mt-2 w-52 rounded-xl border border-gray-200 bg-white shadow-xl p-1 z-50">
+    <div className="absolute right-0 z-50 mt-2 w-52 rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
       <a
         href={shareLinks.whatsapp}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition"
+        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-gray-100"
       >
-        <FaWhatsapp className="text-green-500 text-lg" />
+        <WhatsappIcon className="h-4 w-4 text-green-500" />
         WhatsApp
       </a>
 
@@ -29,9 +29,9 @@ export default function ShareButton({ show, shareLinks, copyLink }) {
         href={shareLinks.twitter}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition"
+        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-gray-100"
       >
-        <FaTwitter className="text-lg" />
+        <TwitterIcon className="h-4 w-4" />
         Twitter / X
       </a>
 
@@ -39,9 +39,9 @@ export default function ShareButton({ show, shareLinks, copyLink }) {
         href={shareLinks.linkedin}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition"
+        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-gray-100"
       >
-        <FaLinkedin className="text-lg text-blue-600" />
+        <LinkedinIcon className="h-4 w-4 text-blue-600" />
         LinkedIn
       </a>
 
@@ -49,9 +49,9 @@ export default function ShareButton({ show, shareLinks, copyLink }) {
         href={shareLinks.facebook}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition"
+        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-gray-100"
       >
-        <FaFacebook className="text-lg text-blue-500" />
+        <FacebookIcon className="h-4 w-4 text-blue-500" />
         Facebook
       </a>
 
@@ -59,17 +59,17 @@ export default function ShareButton({ show, shareLinks, copyLink }) {
         href={shareLinks.telegram}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition"
+        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-gray-100"
       >
-        <FaTelegram className="text-lg text-sky-500" />
+        <TelegramIcon className="h-4 w-4 text-sky-500" />
         Telegram
       </a>
 
       <button
         onClick={copyLink}
-        className="w-full flex items-center gap-3 text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition"
+        className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-gray-100"
       >
-        <ClipboardDocumentIcon className="w-4 h-4" />
+        <ClipboardDocumentIcon className="h-4 w-4" />
         Copy Link
       </button>
     </div>

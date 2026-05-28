@@ -1,26 +1,19 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { BlogContext } from "../../pages/blog.page";
+import { BlogContext } from "../../context/blog.context";
 import { Link } from "react-router-dom";
 import { UserContext } from "../../App";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import { BLOG_API } from "../../common/api";
-import {
-  PencilIcon,
-  EyeIcon,
-  ChatBubbleLeftRightIcon,
-  ShareIcon,
-  ClipboardDocumentIcon,
-  HeartIcon as HeartOutline,
-} from "@heroicons/react/24/outline";
-import { HeartIcon as HeartSolid } from "@heroicons/react/24/solid";
-import {
-  FaWhatsapp,
-  FaTwitter,
-  FaLinkedin,
-  FaFacebook,
-  FaTelegram,
-} from "react-icons/fa";
+import PencilIcon from "@heroicons/react/24/outline/PencilIcon";
+import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
+import ChatBubbleLeftRightIcon from "@heroicons/react/24/outline/ChatBubbleLeftRightIcon";
+import ShareIcon from "@heroicons/react/24/outline/ShareIcon";
+import ClipboardDocumentIcon from "@heroicons/react/24/outline/ClipboardDocumentIcon";
+import HeartOutline from "@heroicons/react/24/outline/HeartIcon";
+
+import HeartSolid from "@heroicons/react/24/solid/HeartIcon";
+
 import ShareButton from "../../common/ShareButtonFirefox";
 const BlogInteraction = () => {
   const {

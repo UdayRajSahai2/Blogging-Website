@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { FiHeart } from "react-icons/fi";
+import { HeartIcon } from "@heroicons/react/24/outline";
 import { getDay } from "../../common/date";
 import { useMemo } from "react";
 const SimilarBlogCard = ({ content, author, openProfile }) => {
@@ -106,9 +106,10 @@ const SimilarBlogCard = ({ content, author, openProfile }) => {
         </div>
 
         {/* Likes Count */}
-        <div className="flex items-center gap-0.5 shrink-0">
-          <FiHeart size={9} />
-          {total_likes || 0}
+        <div className="flex shrink-0 items-center gap-1 text-[10px] leading-none">
+          <HeartIcon className="h-3 w-3 shrink-0" />
+
+          <span className="leading-none">{total_likes || 0}</span>
         </div>
       </div>
       {/* ------------------------------------------------ */}

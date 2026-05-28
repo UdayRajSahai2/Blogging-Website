@@ -561,6 +561,7 @@ const EditProfile = ({ onNext, isOnboarding }) => {
           <ProfileImageSection
             updatedProfileImg={updatedProfileImg}
             profile_img={profile_img}
+            fullname={fullname}
             handleImagePreview={handleImagePreview}
             handleImageUpload={handleImageUpload}
             setUpdatedProfileImg={setUpdatedProfileImg}
