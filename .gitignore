@@ -1,18 +1,28 @@
-.env
+# Dependencies
 node_modules/
 frontend/node_modules/
+server/node_modules/
+
+# Environment files
+.env
 frontend/.env
+server/.env
+
+# Build output
+dist/
+frontend/dist/
+server/dist/
+
+# Firebase / secrets
 frontend/src/common/firebase.jsx
 
-
-server/.env
-server/node_modules/
-server/*.json
-# Large data file (over GitHub 100MB limit) - keep locally only
-server/data/village-lgd-codes.json
-
-# Firebase/Google credentials - never commit
+server/env.txt
 server/data/*firebase*.json
 server/data/*-firebase-adminsdk-*.json
-server/env.txt
 server/config/reachfoundationngo-firebase-adminsdk-fbsvc-40b436aefc.json
+
+# Large local-only data
+server/data/village-lgd-codes.json
+
+# Avoid committing random JSON files
+server/*.json
