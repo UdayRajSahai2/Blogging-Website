@@ -1,7 +1,7 @@
 // services/admin/admin.page.service.js
 
 import Page from "../../models/Page.js";
-import { logger } from "../../utils/logger.js";
+
 /* GET ALL */
 export const getAllPagesService = async () => {
   return await Page.findAll({
@@ -53,35 +53,23 @@ export const updatePageService = async (id, data) => {
     throw new Error("Page not found");
   }
 
-  logger.info(
-    {
-      pageId: id,
-      updatedAt: new Date().toISOString(),
-      contentLength: JSON.stringify(data.sections).length,
-    },
-    "Updating page",
-  );
-
   await page.update({
     title: data.title,
+
     slug: data.slug,
+
     path: data.path,
+
     parent_id: data.parent_id ?? page.parent_id,
+
     sections: data.sections || [],
+
     status: data.status || page.status,
+
     meta_title: data.meta_title || null,
+
     meta_description: data.meta_description || null,
   });
-
-  await page.reload();
-
-  logger.info(
-    {
-      pageId: id,
-      sections: page.sections,
-    },
-    "Page updated successfully",
-  );
 
   return page;
 };
