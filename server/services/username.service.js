@@ -1,4 +1,4 @@
-import { User } from "../models/associations.js";
+import User from "../models/user/User.js";
 import { nanoid } from "nanoid";
 
 export const generateUsername = async (email) => {

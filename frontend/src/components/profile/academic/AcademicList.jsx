@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const AcademicCard = ({ item, isOwner }) => {
+const AcademicCard = ({ item, isOwner, printMode = false }) => {
   const [expanded, setExpanded] = useState(false);
   const showInstitute =
     item.institute_name &&
@@ -106,57 +106,60 @@ const AcademicCard = ({ item, isOwner }) => {
     item.university_name &&
     item.university_name.toLowerCase() !== item.institute_name?.toLowerCase();
   return (
-    <div className="rounded-lg px-3 py-2 bg-white border-l-4 border-indigo-500">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-600">
+    <div className="rounded-lg px-3 py-2 bg-white border-l-4 border-indigo-600">
+      <div className="text-[14px] text-gray-600 leading-relaxed break-words">
         {/* TITLE */}
-        <span className="font-semibold text-gray-800">
+        <span className="font-semibold text-gray-700">
           {formatText(item.title)}
         </span>
 
         {showInstitute && (
           <>
-            <span className="text-gray-400">•</span>
+            <span className="text-gray-400 mx-1">•</span>
             <span>{formatText(item.institute_name)}</span>
           </>
         )}
 
         {showUniversity && (
           <>
-            <span className="text-gray-400">•</span>
+            <span className="text-gray-400 mx-1">•</span>
             <span>{formatText(item.university_name)}</span>
           </>
         )}
+
         {location && (
           <>
-            <span className="text-gray-400">•</span>
+            <span className="text-gray-400 mx-1">•</span>
             <span>{location}</span>
           </>
         )}
 
         {duration && (
           <>
-            <span className="text-gray-400">•</span>
+            <span className="text-gray-400 mx-1">•</span>
             <span>{duration}</span>
           </>
         )}
 
         {isOwner && grade && (
           <>
-            <span className="text-gray-400">•</span>
+            <span className="text-gray-400 mx-1">•</span>
             <span>Grade: {grade}</span>
           </>
         )}
       </div>
 
-      {/*  DESCRIPTION WITH TOGGLE */}
+      {/* DESCRIPTION */}
       {item.description && (
         <div className="mt-1 text-gray-500 text-xs">
-          {shortText(item.description)}
+          {printMode || expanded
+            ? item.description
+            : shortText(item.description)}
 
-          {item.description.length > 120 && (
+          {!printMode && item.description.length > 120 && (
             <button
               onClick={() => setExpanded(!expanded)}
-              className="ml-1 text-indigo-600 hover:underline"
+              className="ml-1 text-indigo-600 hover:text-indigo-800 hover:underline"
             >
               {expanded ? "Show less" : "Show more"}
             </button>
@@ -168,7 +171,7 @@ const AcademicCard = ({ item, isOwner }) => {
 };
 
 // 2️ AcademicList (UPDATED)
-const AcademicList = ({ academics = [], isOwner }) => {
+const AcademicList = ({ academics = [], isOwner, printMode = false }) => {
   if (!academics.length) {
     return (
       <div className="text-xs text-gray-400 text-center py-4 border rounded">
@@ -183,7 +186,8 @@ const AcademicList = ({ academics = [], isOwner }) => {
         <AcademicCard
           key={item.academic_id}
           item={item}
-          isOwner={isOwner} //  important
+          isOwner={isOwner}
+          printMode={printMode}
         />
       ))}
     </div>

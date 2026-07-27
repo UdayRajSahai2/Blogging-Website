@@ -6,7 +6,7 @@ import { LOCATION_API } from "../common/api";
 /* Wrapper */
 export const InputWrapper = ({ children }) => (
   <div className="relative w-full mb-2">
-    <div className="flex items-center h-10 rounded-xl border border-gray-500 bg-white shadow-sm focus-within:border-indigo-500">
+    <div className="flex items-center h-10 rounded-xl border border-gray-500 bg-white shadow-sm focus-within:border-indigo-500 relative">
       {children}
     </div>
   </div>
@@ -95,28 +95,35 @@ const LocationDropdown = ({ type, value = {}, onChange, labels }) => {
   };
 
   const handleDistrict = (code) => {
-    const selected = districts.find((d) => d.district_code === code);
+    const selected = districts.find(
+      (d) => String(d.district_code) === String(code),
+    );
 
     onChange(type, {
       district_code: code,
       district: selected?.district_name || "",
-
       city: selected?.district_name || "",
     });
   };
 
   /* ================= UI ================= */
 
+  const selectClass =
+    "w-full px-2 pr-8 bg-transparent outline-none appearance-none [&::-ms-expand]:hidden";
+
+  const iconClass =
+    "w-4 h-4 absolute right-3 pointer-events-none text-gray-500";
+
   return (
     <>
       {/* COUNTRY */}
       <div className="flex flex-col">
-        <label className="text-xs mb-1">{current.country}</label>
+        <label className="text-xs mb-1 text-gray-500">{current.country}</label>
         <InputWrapper>
           <select
             value={value.country_code || ""}
             onChange={(e) => handleCountry(e.target.value)}
-            className="w-full px-2 bg-transparent outline-none appearance-none"
+            className={selectClass}
           >
             <option value="">Select Country</option>
             {countries.map((c) => (
@@ -125,18 +132,18 @@ const LocationDropdown = ({ type, value = {}, onChange, labels }) => {
               </option>
             ))}
           </select>
-          <ChevronDownIcon className="w-4 h-4 absolute right-2" />
+          <ChevronDownIcon className={iconClass} />
         </InputWrapper>
       </div>
 
       {/* STATE */}
       <div className="flex flex-col">
-        <label className="text-xs mb-1">{current.state}</label>
+        <label className="text-xs mb-1 text-gray-500">{current.state}</label>
         <InputWrapper>
           <select
             value={value.state_code || ""}
             onChange={(e) => handleState(e.target.value)}
-            className="w-full px-2 bg-transparent outline-none"
+            className={selectClass}
           >
             <option value="">Select State</option>
             {states.map((s) => (
@@ -145,18 +152,18 @@ const LocationDropdown = ({ type, value = {}, onChange, labels }) => {
               </option>
             ))}
           </select>
-          <ChevronDownIcon className="w-4 h-4 absolute right-2" />
+          <ChevronDownIcon className={iconClass} />
         </InputWrapper>
       </div>
 
       {/* CITY */}
       <div className="flex flex-col">
-        <label className="text-xs mb-1">{current.city}</label>
+        <label className="text-xs mb-1 text-gray-500">{current.city}</label>
         <InputWrapper>
           <select
             value={value.district_code || ""}
             onChange={(e) => handleDistrict(e.target.value)}
-            className="w-full px-2 bg-transparent outline-none"
+            className={selectClass}
           >
             <option value="">Select City</option>
             {districts.map((d) => (
@@ -165,7 +172,7 @@ const LocationDropdown = ({ type, value = {}, onChange, labels }) => {
               </option>
             ))}
           </select>
-          <ChevronDownIcon className="w-4 h-4 absolute right-2" />
+          <ChevronDownIcon className={iconClass} />
         </InputWrapper>
       </div>
     </>

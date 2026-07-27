@@ -110,7 +110,7 @@ const HomeTopSection = ({ pageState }) => {
 
   // ---------------- UI ----------------
   return (
-    <section className="grid grid-cols-1 lg:grid-cols-3 gap-y-2 lg:gap-y-0 gap-x-[2px] items-stretch max-w-[1530px] mx-auto px-[1px]">
+    <section className="grid grid-cols-1 lg:grid-cols-3 gap-y-2 lg:gap-y-0 gap-x-[2px] items-stretch w-full px-[1px]">
       {/* Blog carousel */}
       <div className="lg:col-span-2 bg-white shadow-sm min-h-[240px] lg:min-h-[360px] flex flex-col">
         <div className="flex-1 w-full">
@@ -132,15 +132,9 @@ const HomeTopSection = ({ pageState }) => {
           </div>
 
           {/* Map */}
-          {loadingLocation ? (
-            <p className="text-center text-gray-500 text-sm py-2 animate-pulse">
-              Detecting your location...
-            </p>
-          ) : (
-            <div className="min-h-[160px] overflow-hidden border border-grey/40">
-              <NearbyMap users={nearbyUsers} userLocation={userLocation} />
-            </div>
-          )}
+          <div className="min-h-[160px] overflow-hidden border border-grey/40 relative isolate">
+            <NearbyMap users={nearbyUsers} userLocation={userLocation} />
+          </div>
         </div>
       </aside>
     </section>

@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import apiClient from "../../services/apiClient";
-import { PROFESSIONAL_PROFILE_API } from "../../common/api";
+import { getProfessionalProfile } from "../../api/professionalProfile.api";
 
 import ExperienceSection from "../../components/profile/experience/ExperienceSection";
 
@@ -23,7 +22,7 @@ export default function ProfessionalProfilePage({ onNext, isOnboarding }) {
   const fetchProfile = async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get(PROFESSIONAL_PROFILE_API);
+      const res = await getProfessionalProfile();
       const data = res.data.data || {};
 
       setProfession(data.profession || null);
@@ -44,6 +43,7 @@ export default function ProfessionalProfilePage({ onNext, isOnboarding }) {
       setSkipExperience(false);
     }
   }, [experiences]);
+
   /* ---------------- LOADING ---------------- */
   if (loading) {
     return (
@@ -57,30 +57,32 @@ export default function ProfessionalProfilePage({ onNext, isOnboarding }) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* CONTAINER */}
-      <div className="w-full min-w-0 px-1 sm:px-1 sm:py-1">
+      <div className="w-full min-w-0 px-0 sm:px-1 sm:py-0">
         {/* HEADER */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-base sm:text-xl font-semibold text-gray-800">
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
             Professional Profile
           </h1>
         </div>
 
         {/* EXPERIENCE CARD */}
-        <section className=" border border-gray-100 rounded-md p-3 sm:p-4 shadow-sm">
+        <section className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4 shadow-sm">
           {showExperienceForm && (
-            <ExperienceSection
-              experiences={experiences}
-              setExperiences={setExperiences}
-              api={PROFESSIONAL_PROFILE_API}
-              sanitize={sanitize}
-            />
+            <div className="mb-3">
+              <ExperienceSection
+                experiences={experiences}
+                setExperiences={setExperiences}
+                sanitize={sanitize}
+              />
+            </div>
           )}
 
           {!skipExperience && experiences.length === 0 && (
-            <p className="text-xs text-gray-400 mt-2 text-center">
+            <p className="text-xs text-gray-400 mt-2 text-center py-3">
               No experience added yet
             </p>
           )}
+
           {isOnboarding && experiences.length === 0 && (
             <div className="mt-5 bg-blue-50 border border-blue-100 rounded-lg p-4 text-center">
               <p className="text-sm text-gray-700 font-medium">
@@ -108,6 +110,7 @@ export default function ProfessionalProfilePage({ onNext, isOnboarding }) {
               </label>
             </div>
           )}
+
           {isOnboarding && (
             <div className="mt-8 flex flex-col items-center gap-4">
               {/* Trust / Disclaimer Card */}

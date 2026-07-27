@@ -1,9 +1,10 @@
+//server\controllers\auth.controller.js
 import axios from "axios";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { Op } from "sequelize";
-import Role from "../models/roles/Role.js";
-import { User, UserIPHistory } from "../models/associations.js";
+import User from "../models/user/User.js";
+import UserIPHistory from "../models/user/UserIPHistory.js";
 import { generateAuthResponse } from "../services/auth-token.service.js";
 import { getClientIp } from "../utils/network.js";
 import { assignCustomerLocation } from "../services/locationService.js";
@@ -19,6 +20,13 @@ import {
   mobileRegex,
 } from "../utils/validation.regex.js";
 import { getAuth } from "firebase-admin/auth";
+import {
+  sendPendingApprovalEmail,
+  sendApprovalEmail,
+  sendRejectionEmail,
+  sendAdminSignupNotification,
+} from "../services/email.service.js";
+import { createEnrollment } from "../services/userService.js";
 
 // In-memory store for pending signups (for demo; use Redis in production)
 const pendingSignups = {};
@@ -33,46 +41,33 @@ export const signin = async (req, res) => {
   try {
     let user = await User.findOne({
       where: { email },
-      include: [
-        {
-          model: Role,
-          attributes: ["role_name"],
-          through: {
-            attributes: ["is_primary"],
-          },
-        },
-      ],
     });
 
-    // ------------------------------------------------
     // USER NOT FOUND
-    // ------------------------------------------------
     if (!user) {
       return res.status(403).json({ error: " Email not found" });
     }
 
-    // ------------------------------------------------
-    // GOOGLE ACCOUNT CHECK
-    // ------------------------------------------------
-    if (user.google_auth) {
-      return res.status(403).json({
-        error: " Account was created using Google. Please login with Google.",
-      });
-    }
-
-    // ------------------------------------------------
     // PASSWORD CHECK
-    // ------------------------------------------------
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
       return res.status(403).json({ error: " Incorrect password" });
     }
+    if (user.approval_status === "pending") {
+      return res.status(403).json({
+        code: "ACCOUNT_PENDING",
+        error: "Your account is waiting for admin approval.",
+      });
+    }
 
-    // ------------------------------------------------
+    if (user.approval_status === "rejected") {
+      return res.status(403).json({
+        code: "ACCOUNT_REJECTED",
+        error: "Your account has been rejected. Please contact support.",
+      });
+    }
     // CUSTOMER ID + LOCATION LOGIC (via service)
-    // ------------------------------------------------
-
     try {
       user = await assignCustomerLocation(user, latitude, longitude);
     } catch (err) {
@@ -80,10 +75,7 @@ export const signin = async (req, res) => {
       // do NOT block login
     }
 
-    // ------------------------------------------------
     // IP TRACKING
-    // ------------------------------------------------
-
     try {
       const ip_address = getClientIp(req);
 
@@ -93,20 +85,12 @@ export const signin = async (req, res) => {
           ip_address,
           created_at: new Date(),
         });
-
-        console.log("📡 IP tracked:", ip_address);
       }
     } catch (err) {
       console.error("IP tracking failed:", err);
     }
 
-    // ------------------------------------------------
     // FINAL RESPONSE
-    // ------------------------------------------------
-
-    console.log(" Login successful:", user.user_id);
-    console.log("Customer ID:", user.customer_id);
-
     return res.json(generateAuthResponse(user));
   } catch (err) {
     console.error("Signin error:", err);
@@ -126,12 +110,14 @@ export const signup = async (req, res) => {
     mobile_number,
     latitude,
     longitude,
+    referrer_name,
+    referrer_email,
+    referrer_mobile,
+    referrer_district,
+    isStudent,
   } = req.body;
 
-  // ------------------------------------------------
   // VALIDATION
-  // ------------------------------------------------
-
   if (!first_name || first_name.length < 1) {
     return res.status(403).json({ error: " First name is required" });
   }
@@ -155,56 +141,48 @@ export const signup = async (req, res) => {
     return res.status(403).json({ error: " Mobile number is invalid" });
   }
 
-  if (latitude == null || longitude == null) {
-    return res.status(400).json({
-      error: " Location (latitude and longitude) is required for signup",
-    });
-  }
-
+  console.log({
+    email,
+    mobile_number,
+  });
   try {
-    console.log("Signup request:", email);
-
-    // ------------------------------------------------
     // CHECK IF USER ALREADY EXISTS
-    // ------------------------------------------------
-
     const existingUser = await User.findOne({
       where: { [Op.or]: [{ email }, { mobile_number }] },
     });
 
     if (existingUser) {
+      console.log("Existing user found:", {
+        dbEmail: existingUser.email,
+        dbMobile: existingUser.mobile_number,
+        reqEmail: email,
+        reqMobile: mobile_number,
+      });
+
       if (existingUser.email === email) {
-        return res.status(400).json({ error: " Email already exists" });
+        return res.status(400).json({
+          error: "Email already exists",
+        });
       }
 
       if (existingUser.mobile_number === mobile_number) {
-        return res.status(400).json({ error: " Mobile number already exists" });
+        return res.status(400).json({
+          error: "Mobile number already exists",
+        });
       }
     }
 
-    // ------------------------------------------------
     // HASH PASSWORD
-    // ------------------------------------------------
-
     const hashed_password = await bcrypt.hash(password, 10);
 
-    // ------------------------------------------------
     // GENERATE USERNAME
-    // ------------------------------------------------
-
     const username = await generateUsername(email);
 
-    // ------------------------------------------------
     // GENERATE OTP
-    // ------------------------------------------------
-
     const otp = generateOTP();
     const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
 
-    // ------------------------------------------------
     // STORE PENDING SIGNUP
-    // ------------------------------------------------
-
     pendingSignups[email] = {
       first_name,
       last_name,
@@ -215,19 +193,20 @@ export const signup = async (req, res) => {
       google_auth: false,
       latitude,
       longitude,
+
+      referrer_name,
+      referrer_email,
+      referrer_mobile,
+      referrer_district,
+
       otp,
       otpExpires,
       otpVerified: false,
 
-      // ADD THIS
-      roles: [], // no default roles
+      isStudent,
     };
 
-    console.log(" Pending signup stored:", email);
-
-    // ------------------------------------------------
     // SEND OTP
-    // ------------------------------------------------
 
     await sendEmailOTP(email, otp);
 
@@ -244,7 +223,7 @@ export const signup = async (req, res) => {
     console.error("Signup error:", error);
 
     return res.status(500).json({
-      error: " Server error during signup",
+      error: "Unable to send OTP. Please try again.",
     });
   }
 };
@@ -252,24 +231,20 @@ export const signup = async (req, res) => {
 export const googleAuth = async (req, res) => {
   const { access_token, latitude, longitude } = req.body;
 
-  console.log("====================================");
-  console.log(" GOOGLE AUTH REQUEST");
-  console.log("====================================");
-
   if (!access_token) {
-    return res.status(400).json({ error: "Access token missing" });
+    return res.status(400).json({
+      error: "Access token missing",
+    });
   }
 
   try {
-    // ------------------------------------------------
-    // VERIFY FIREBASE TOKEN
-    // ------------------------------------------------
-
+    // Verify Firebase token
     const decodedUser = await getAuth().verifyIdToken(access_token);
 
     if (!decodedUser) {
-      console.log(" Token verification failed");
-      return res.status(401).json({ error: "Failed to verify token" });
+      return res.status(401).json({
+        error: "Failed to verify token",
+      });
     }
 
     let { email, name, picture } = decodedUser;
@@ -280,87 +255,79 @@ export const googleAuth = async (req, res) => {
       });
     }
 
-    // Improve profile picture quality
+    // Better quality profile image
     if (picture) {
       picture = picture.replace("s96-c", "s384-c");
     }
 
-    // ------------------------------------------------
-    // FIND OR CREATE USER
-    // ------------------------------------------------
-
+    // Find existing user
     let user = await User.findOne({
       where: { email },
-      include: [
-        {
-          model: Role,
-          attributes: ["role_name"],
-          through: {
-            attributes: ["is_primary"],
-          },
-        },
-      ],
     });
 
-    if (user) {
-      if (!user.google_auth) {
-        return res.status(403).json({
-          error:
-            " This email was registered with password login. Please sign in normally.",
-        });
-      }
-
-      // update profile image if changed
-      if (picture && user.profile_img !== picture) {
-        await user.update({ profile_img: picture });
-        user = await User.findByPk(user.user_id);
-      }
-    } else {
-      const username = await generateUsername(email);
-
-      user = await User.create({
-        fullname: name,
-        first_name: name.split(" ")[0] || "",
-        last_name: name.split(" ").slice(1).join(" ") || "",
-        email,
-        profile_img: picture || "",
-        username,
-        google_auth: true,
-        password: null,
+    // User not found -> Google signup disabled
+    if (!user) {
+      return res.status(404).json({
+        error: "No account found. Please use the registration page.",
       });
     }
 
-    // ------------------------------------------------
-    // ASSIGN LOCATION + GENERATE CUSTOMER ID
-    // ------------------------------------------------
+    // Account exists but was created using email/password
+    if (!user.google_auth) {
+      await user.update({
+        google_auth: true,
+        profile_img: picture || user.profile_img,
+      });
 
-    try {
-      console.log("📍 Assigning location...");
-
-      user = await assignCustomerLocation(user, latitude, longitude);
-
-      console.log("Customer ID:", user.customer_id);
-    } catch (err) {
-      console.error("Location assignment failed:", err);
-      // do NOT block login
+      user = await User.findByPk(user.user_id);
     }
 
-    // ------------------------------------------------
-    // FINAL RESPONSE
-    // ------------------------------------------------
+    // Update profile image if changed
+    if (picture && user.profile_img !== picture) {
+      await user.update({
+        profile_img: picture,
+      });
 
-    const responseData = generateAuthResponse(user);
+      user = await User.findByPk(user.user_id);
+    }
 
-    return res.status(200).json(responseData);
+    // Update location (don't block login)
+    try {
+      user = await assignCustomerLocation(user, latitude, longitude);
+    } catch (err) {
+      console.error("Location assignment failed:", err);
+    }
+
+    // Approval checks
+    if (user.approval_status === "pending") {
+      return res.status(403).json({
+        code: "ACCOUNT_PENDING",
+        error: "Your account is waiting for admin approval.",
+      });
+    }
+
+    if (user.approval_status === "rejected") {
+      return res.status(403).json({
+        code: "ACCOUNT_REJECTED",
+        error: "Your account has been rejected.",
+      });
+    }
+
+    // Successful login
+    return res.status(200).json(generateAuthResponse(user));
   } catch (err) {
     console.error(err);
 
     if (err.code === "auth/id-token-expired") {
-      return res.status(401).json({ error: "Token expired" });
+      return res.status(401).json({
+        error: "Token expired",
+      });
     }
 
     if (err.code === "auth/invalid-id-token") {
-      return res.status(401).json({ error: "Invalid token" });
+      return res.status(401).json({
+        error: "Invalid token",
+      });
     }
 
     return res.status(500).json({
@@ -383,10 +350,7 @@ export const completeSignup = async (req, res) => {
   }
 
   try {
-    // ------------------------------------------------
     // DOUBLE-CHECK EMAIL / MOBILE UNIQUENESS
-    // ------------------------------------------------
-
     const existingUser = await User.findOne({
       where: {
         [Op.or]: [
@@ -406,10 +370,7 @@ export const completeSignup = async (req, res) => {
       }
     }
 
-    // ------------------------------------------------
     // CREATE USER
-    // ------------------------------------------------
-
     let user = await User.create({
       first_name: pending.first_name,
       last_name: pending.last_name,
@@ -418,12 +379,35 @@ export const completeSignup = async (req, res) => {
       username: pending.username,
       mobile_number: pending.mobile_number,
       google_auth: false,
+      approval_status: "pending",
     });
+    const enrollment = await createEnrollment({
+      user_id: user.user_id,
 
-    // ------------------------------------------------
+      enrollment_type:
+        pending.isStudent === true || pending.isStudent === "true"
+          ? "student"
+          : "referrer",
+
+      referrer_name: pending.referrer_name,
+
+      referrer_email: pending.referrer_email,
+
+      referrer_mobile: pending.referrer_mobile,
+
+      referrer_district: pending.referrer_district,
+    });
+    try {
+      await sendPendingApprovalEmail(
+        user.email,
+        user.first_name || user.fullname,
+      );
+
+      await sendAdminSignupNotification(user, enrollment);
+    } catch (err) {
+      console.error("Failed to send signup emails:", err);
+    }
     // ASSIGN LOCATION + GENERATE CUSTOMER ID
-    // ------------------------------------------------
-
     try {
       user = await assignCustomerLocation(
         user,
@@ -435,10 +419,7 @@ export const completeSignup = async (req, res) => {
       // do not block signup
     }
 
-    // ------------------------------------------------
     // TRACK IP ADDRESS
-    // ------------------------------------------------
-
     try {
       const ip_address = getClientIp(req);
 
@@ -453,19 +434,21 @@ export const completeSignup = async (req, res) => {
       console.error("IP tracking failed:", err);
     }
 
-    // ------------------------------------------------
     // CLEANUP PENDING SIGNUP
-    // ------------------------------------------------
-
     delete pendingSignups[email];
 
-    // ------------------------------------------------
     // FINAL RESPONSE
-    // ------------------------------------------------
-
-    const responseData = generateAuthResponse(user);
-
-    return res.status(200).json(responseData);
+    return res.status(200).json({
+      success: true,
+      user: {
+        user_id: user.user_id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+      },
+      approval_status: "pending",
+      message: "Your account is awaiting admin approval.",
+    });
   } catch (error) {
     console.error("Complete signup error:", error);
 
@@ -478,14 +461,30 @@ export const completeSignup = async (req, res) => {
 export const verifyEmailOtp = async (req, res) => {
   const { email, otp } = req.body;
   const pending = pendingSignups[email];
-  if (!pending)
-    return res.status(404).json({ error: "Signup not found or expired" });
-  if (pending.otp === otp && pending.otpExpires > new Date()) {
-    pending.otpVerified = true;
-    return res.json({ success: true });
-  } else {
-    return res.status(400).json({ error: "Invalid or expired OTP" });
+
+  if (!pending) {
+    return res.status(404).json({
+      error: "Signup not found or expired",
+    });
   }
+
+  if (pending.otpExpires < new Date()) {
+    return res.status(400).json({
+      error: "OTP expired",
+    });
+  }
+
+  if (pending.otp !== otp) {
+    return res.status(400).json({
+      error: "Invalid OTP",
+    });
+  }
+
+  pending.otpVerified = true;
+
+  return res.json({
+    success: true,
+  });
 };
 /**
  * Change user password

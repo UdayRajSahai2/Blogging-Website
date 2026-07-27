@@ -16,19 +16,15 @@ import {
   verifyEmailOtp,
   completeSignup,
 } from "../api/auth.api";
+import { emailRegex, passwordRegex, mobileRegex } from "../utils/validators";
 import AuthLeftActions from "../components/auth/AuthLeftActions";
 import AuthRightActions from "../components/auth/AuthRightActions";
 import AuthBottomActions from "../components/auth/AuthBottomActions";
-import {
-  UserIcon,
-  PhoneIcon,
-  EnvelopeIcon,
-  KeyIcon,
-  MapPinIcon,
-} from "@heroicons/react/24/outline";
+import { UserIcon, EnvelopeIcon, KeyIcon } from "@heroicons/react/24/outline";
+import { AcademicCapIcon, CheckCircleIcon } from "@heroicons/react/24/solid";
 import ReactCountryFlag from "react-country-flag";
-import { createStudentEnrollment } from "../api/studentEnrollment.api";
-import StudentEnrollmentFields from "../components/student/StudentEnrollmentFields";
+import EnrollmentFields from "../components/EnrollmentFields";
+
 const UserAuthForm = ({ type }) => {
   const navigate = useNavigate();
   const { userAuth, setUserAuth } = useContext(UserContext);
@@ -45,22 +41,17 @@ const UserAuthForm = ({ type }) => {
   const [otpVerified, setOtpVerified] = useState(false);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [signupType, setSignupType] = useState("normal");
+  const [isStudent, setIsStudent] = useState(false);
   const [referrerMobile, setReferrerMobile] = useState("");
   const [loading, setLoading] = useState(false);
   const [geo, setGeo] = useState({ latitude: null, longitude: null });
   const [customerId, setCustomerId] = useState("");
   const [abbr, setAbbr] = useState("");
-
+  const [step, setStep] = useState(1);
   const [isFocused, setIsFocused] = useState(false);
   const [isEmailFocused, setIsEmailFocused] = useState(false);
-  const [isMobileFocused, setIsMobileFocused] = useState(false);
 
   const serverRoute = type === "sign-in" ? "/signin" : "/signup";
-
-  const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-  const passwordRegex =
-    /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{12,}$/;
-  const mobileRegex = /^(?:\+91|91)?[6-9]\d{9}$/;
 
   const emailChecks = {
     valid: emailRegex.test(email),
@@ -76,6 +67,26 @@ const UserAuthForm = ({ type }) => {
     special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
   };
   const isPasswordValid = Object.values(passwordChecks).every(Boolean);
+
+  const showWelcomeMessage = (data) => {
+    const name = data.first_name || data.fullname || "User";
+    const isNewUser = Boolean(data.isNewUser);
+    if (data.isNewUser && data.customer_id) {
+      setCustomerId(data.customer_id);
+      setAbbr(data.abbr || "");
+      toast.success(`Welcome ${name}! Customer ID: ${data.customer_id}`);
+    } else {
+      toast.success(`Welcome back ${name}!`);
+    }
+  };
+  const saveUserSession = (data) => {
+    storeInSession("user", data);
+    storeInSession("onboarding", type === "sign-up");
+    setUserAuth(data);
+  };
+  const redirectUser = () => {
+    navigate(type === "sign-up" ? "/welcome" : "/");
+  };
   useEffect(() => {
     // reset form fields
     setFirstName("");
@@ -103,18 +114,19 @@ const UserAuthForm = ({ type }) => {
           }),
         () =>
           type !== "sign-in" &&
-          toast.error("Location access is required for signup."),
+          toast.error("Location permission is required to create an account."),
       );
     } else if (type !== "sign-in") {
       toast.error("Geolocation not supported by your browser.");
     }
+    setStep(1);
   }, [type]);
 
   /** ---------------- Signin / Signup ---------------- */
   const userAuthThroughServer = async (serverRoute, formData) => {
     if (loading) return; //  prevent double submit
 
-    const loadingToast = toast.loading("Authenticating...");
+    const loadingToast = toast.loading("Please wait...");
     setLoading(true);
 
     try {
@@ -124,29 +136,18 @@ const UserAuthForm = ({ type }) => {
 
       toast.dismiss(loadingToast);
 
-      storeInSession("user", data);
-      storeInSession("onboarding", type === "sign-up");
-      setUserAuth(data);
-      if (type === "sign-up") {
-        //FORCE onboarding (signup)
-        navigate("/welcome");
+      if (type === "sign-in") {
+        saveUserSession(data);
+        showWelcomeMessage(data);
+        redirectUser();
       } else {
-        navigate("/");
-      }
-
-      const name = data.first_name || data.fullname || "User";
-      const isNewUser = Boolean(data.isNewUser);
-
-      //  New user
-      if (isNewUser && data.customer_id) {
-        setCustomerId(data.customer_id);
-        setAbbr(data.abbr || "");
-        toast.success(`Welcome ${name}! Customer ID: ${data.customer_id}`);
-      } else {
-        toast.success(`Welcome back ${name}!`);
+        toast.success(data.message);
+        navigate("/approval-pending");
       }
     } catch (err) {
       toast.dismiss(loadingToast);
+
+      const errorCode = err.response?.data?.code;
 
       const errorMsg =
         err.response?.data?.error ||
@@ -154,7 +155,7 @@ const UserAuthForm = ({ type }) => {
           ? "Request timed out. Please try again."
           : "Authentication failed");
 
-      // 📍 Smart location retry (ONLY once)
+      //  Smart location retry (ONLY once)
       const needsLocation =
         typeof errorMsg === "string" &&
         errorMsg.toLowerCase().includes("location") &&
@@ -172,8 +173,8 @@ const UserAuthForm = ({ type }) => {
             (position) =>
               userAuthThroughServer(serverRoute, {
                 ...formData,
-                latitude: geo.latitude,
-                longitude: geo.longitude,
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
                 type,
                 signup_type: signupType,
               }),
@@ -187,6 +188,16 @@ const UserAuthForm = ({ type }) => {
           toast.error("Geolocation not supported by your browser.");
         }
       } else {
+        if (errorCode === "ACCOUNT_PENDING") {
+          navigate("/approval-pending");
+          return;
+        }
+
+        if (errorCode === "ACCOUNT_REJECTED") {
+          toast.error(errorMsg);
+          return;
+        }
+
         toast.error(errorMsg);
       }
     } finally {
@@ -207,7 +218,7 @@ const UserAuthForm = ({ type }) => {
       return toast.error("Form error. Please refresh.");
     }
 
-    // 🔹 collect + trim form data
+    //  collect + trim form data
     const form = new FormData(formElement.current);
     const rawData = Object.fromEntries(form.entries());
 
@@ -217,15 +228,22 @@ const UserAuthForm = ({ type }) => {
 
     const { first_name, last_name, email, password, mobile_number } = formData;
 
-    //  email validation (always first)
-    if (!email || !emailRegex.test(email)) {
-      return toast.error("Valid email required");
-    }
-
-    //  signup validations
+    // signup validations
     if (type !== "sign-in") {
       if (!first_name) return toast.error("First name required");
       if (!last_name) return toast.error("Last name required");
+
+      if (!mobile_number) {
+        return toast.error("Mobile number required");
+      }
+
+      if (!mobileRegex.test(mobile_number)) {
+        return toast.error("Mobile number invalid");
+      }
+      //  email validation (always first)
+      if (!email || !emailRegex.test(email)) {
+        return toast.error("Valid email required");
+      }
 
       if (!password) return toast.error("Password required");
 
@@ -235,21 +253,41 @@ const UserAuthForm = ({ type }) => {
         );
       }
 
-      if (mobile_number && !mobileRegex.test(mobile_number)) {
-        return toast.error("Mobile number invalid");
-      }
-
       if (!geo.latitude || !geo.longitude) {
         return toast.error("Location required for signup");
       }
+
+      // Enrollment validations
+      const {
+        referrer_name,
+        referrer_email,
+        referrer_mobile,
+        referrer_district,
+      } = formData;
+
+      if (!referrer_name) {
+        return toast.error("Referrer name is required");
+      }
+
+      if (!referrer_email || !emailRegex.test(referrer_email)) {
+        return toast.error("Please enter a valid referrer email");
+      }
+
+      if (!referrer_mobile || !mobileRegex.test(referrer_mobile)) {
+        return toast.error("Please enter a valid referrer mobile number");
+      }
+
+      if (!referrer_district) {
+        return toast.error("Referrer district is required");
+      }
     } else {
-      // 🔹 sign-in validations
+      // sign-in validations
       if (!password) return toast.error("Password required");
     }
-
     // call server
     userAuthThroughServer(serverRoute, {
       ...formData,
+      signup_type: signupType,
       latitude: geo.latitude,
       longitude: geo.longitude,
       type,
@@ -307,28 +345,14 @@ const UserAuthForm = ({ type }) => {
 
       toast.dismiss(loadingToast);
 
-      storeInSession("user", data);
-      storeInSession("onboarding", type === "sign-up");
-      setUserAuth(data);
-      if (type === "sign-up") {
-        navigate("/welcome");
-      } else {
-        navigate("/");
-      }
-      const name = data.first_name || data.fullname || "User";
-      const isNewUser = Boolean(data.isNewUser);
-
-      if (isNewUser && data.customer_id) {
-        setCustomerId(data.customer_id);
-        setAbbr(data.abbr || "");
-        toast.success(`Welcome ${name}! Customer ID: ${data.customer_id}`);
-      } else {
-        toast.success(`Welcome back ${name}!`);
-      }
+      saveUserSession(data);
+      showWelcomeMessage(data);
+      redirectUser();
     } catch (err) {
       toast.dismiss(loadingToast);
 
       const firebaseCode = err.code || "";
+      const errorCode = err.response?.data?.code;
       const backendMsg = err.response?.data?.error;
 
       if (firebaseCode === "auth/popup-closed-by-user") {
@@ -336,6 +360,16 @@ const UserAuthForm = ({ type }) => {
       } else if (firebaseCode === "auth/network-request-failed") {
         toast.error("Network error. Please check your connection.");
       } else {
+        if (errorCode === "ACCOUNT_PENDING") {
+          navigate("/approval-pending");
+          return;
+        }
+
+        if (errorCode === "ACCOUNT_REJECTED") {
+          toast.error(backendMsg);
+          return;
+        }
+
         toast.error(backendMsg || "Google sign-in failed");
       }
     } finally {
@@ -364,25 +398,99 @@ const UserAuthForm = ({ type }) => {
     const form = new FormData(formElement.current);
     const rawData = Object.fromEntries(form.entries());
 
-    // 🔹 trim all fields
+    //  trim all fields
     const formData = Object.fromEntries(
       Object.entries(rawData).map(([k, v]) => [k, v?.toString().trim()]),
     );
 
-    const { email, mobile_number } = formData;
+    //  validations (important before hitting server)
+    const {
+      first_name,
+      last_name,
+      email,
+      password,
+      mobile_number,
+      referrer_name,
+      referrer_email,
+      referrer_mobile,
+      referrer_district,
+    } = formData;
 
-    // 🔹 validations (important before hitting server)
+    // Personal details
+    if (!first_name) return toast.error("First name required");
+
+    if (!last_name) return toast.error("Last name required");
+
+    if (!mobile_number) {
+      return toast.error("Mobile number required");
+    }
+
+    if (!mobileRegex.test(mobile_number)) {
+      return toast.error("Mobile number invalid");
+    }
+
     if (!email || !emailRegex.test(email)) {
       return toast.error("Valid email required");
     }
 
-    if (mobile_number && !mobileRegex.test(mobile_number)) {
-      return toast.error("Invalid mobile number");
+    if (!password) {
+      return toast.error("Password required");
     }
 
-    // 🔹 geo required for signup
+    if (!passwordRegex.test(password)) {
+      return toast.error(
+        "Password must have 12+ chars, uppercase, lowercase, number & symbol",
+      );
+    }
+    // Location
     if (!geo.latitude || !geo.longitude) {
-      return toast.error("Location required for signup");
+      toast.loading("Getting your location...");
+
+      try {
+        const position = await new Promise((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0,
+          }),
+        );
+
+        setGeo({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+
+        // continue signup using these coordinates
+      } catch (err) {
+        toast.dismiss();
+
+        return toast.error(
+          "We couldn't access your location. Please allow location permission and try again.",
+        );
+      }
+
+      toast.dismiss();
+    }
+
+    // Referrer details
+    if (!referrer_name) {
+      return toast.error("Referrer name is required");
+    }
+
+    if (!referrer_email || !emailRegex.test(referrer_email)) {
+      return toast.error("Please enter a valid referrer email");
+    }
+
+    if (!referrer_mobile) {
+      return toast.error("Referrer mobile number is required");
+    }
+
+    if (!mobileRegex.test(referrer_mobile)) {
+      return toast.error("Please enter a valid referrer mobile number");
+    }
+
+    if (!referrer_district) {
+      return toast.error("Referrer district is required");
     }
 
     setLoading(true);
@@ -390,18 +498,22 @@ const UserAuthForm = ({ type }) => {
     try {
       await signUp({
         ...formData,
+        isStudent,
         latitude: geo.latitude,
         longitude: geo.longitude,
       });
 
       setOtpSent(true);
+      setStep(2);
       toast.success("OTP sent to your email/mobile");
     } catch (err) {
       const msg = err.response?.data?.error || "Failed to send OTP";
 
       //  backend message handling
-      if (msg.toLowerCase().includes("already exists")) {
-        toast.error("User already registered. Please sign in.");
+      if (msg === "Email already exists") {
+        toast.error("Email already registered. Please sign in.");
+      } else if (msg === "Mobile number already exists") {
+        toast.error("This mobile number is already registered.");
       } else if (msg.toLowerCase().includes("rate")) {
         toast.error("Too many requests. Please wait and try again.");
       } else {
@@ -453,6 +565,7 @@ const UserAuthForm = ({ type }) => {
 
       if (data?.success) {
         setOtpVerified(true);
+        setStep(3);
         toast.success("OTP verified successfully");
       } else {
         toast.error("Invalid OTP");
@@ -488,47 +601,8 @@ const UserAuthForm = ({ type }) => {
         email,
       });
 
-      // STUDENT ENROLLMENT
-      if (signupType === "student") {
-        await createStudentEnrollment({
-          user_id: data.user_id,
-
-          referrer_first_name:
-            formElement.current.referrer_first_name?.value?.trim() || "",
-
-          referrer_last_name:
-            formElement.current.referrer_last_name?.value?.trim() || "",
-
-          referrer_mobile:
-            formElement.current.referrer_mobile?.value?.trim() || "",
-
-          referrer_district:
-            formElement.current.referrer_district?.value?.trim() || "",
-        });
-      }
-
-      storeInSession("user", data);
-      storeInSession("onboarding", type === "sign-up");
-
-      setUserAuth(data);
-
-      if (type === "sign-up") {
-        navigate("/welcome");
-      } else {
-        navigate("/");
-      }
-
-      const name = data.first_name || data.fullname || "User";
-      const isNewUser = Boolean(data.isNewUser);
-
-      if (isNewUser && data.customer_id) {
-        setCustomerId(data.customer_id);
-        setAbbr(data.abbr || "");
-
-        toast.success(`Welcome ${name}! Customer ID: ${data.customer_id}`);
-      } else {
-        toast.success(`Welcome back ${name}!`);
-      }
+      toast.success(data.message);
+      navigate("/approval-pending");
     } catch (err) {
       toast.error(err.response?.data?.error || "Signup failed");
     } finally {
@@ -632,11 +706,12 @@ const UserAuthForm = ({ type }) => {
                   )}
                 </div>
                 {/* SIGNUP FIELDS */}
-                {type !== "sign-in" && (
+                {type !== "sign-in" && step === 1 && (
                   <>
                     <div className="grid grid-cols-2 gap-3">
                       <InputBox
                         name="first_name"
+                        disabled={otpSent}
                         type="text"
                         placeholder="First name"
                         icon={<UserIcon className="w-4 h-4" />}
@@ -647,6 +722,7 @@ const UserAuthForm = ({ type }) => {
 
                       <InputBox
                         name="last_name"
+                        disabled={otpSent}
                         type="text"
                         placeholder="Last name"
                         icon={<UserIcon className="w-4 h-4" />}
@@ -657,6 +733,7 @@ const UserAuthForm = ({ type }) => {
                     </div>
                     <InputBox
                       name="mobile_number"
+                      disabled={otpSent}
                       type="tel"
                       placeholder="Enter mobile number"
                       value={mobileNumber}
@@ -690,6 +767,7 @@ const UserAuthForm = ({ type }) => {
                 )}
                 <InputBox
                   name="email"
+                  disabled={otpSent}
                   type="email"
                   placeholder="Email"
                   icon={<EnvelopeIcon className="w-4 h-4" />}
@@ -720,6 +798,7 @@ const UserAuthForm = ({ type }) => {
                 )}
                 <InputBox
                   name="password"
+                  disabled={otpSent}
                   type="password"
                   placeholder="Password"
                   icon={<KeyIcon className="w-4 h-4" />}
@@ -733,89 +812,108 @@ const UserAuthForm = ({ type }) => {
                   password.length > 0 &&
                   !isPasswordValid && (
                     <>
-                      <p className="text-xs text-gray-400">
-                        Your password should:
-                      </p>
-
-                      <ul className="text-xs mt-2 space-y-1">
-                        <li
+                      <div className="flex flex-wrap gap-x-2 text-[12px] mt-1 bg-slate-100">
+                        <span
                           className={
                             passwordChecks.length
-                              ? "text-green-500"
+                              ? "text-green-600"
                               : "text-gray-500"
                           }
                         >
-                          Use at least 12 characters
-                        </li>
-                        <li
-                          className={
-                            passwordChecks.upper
-                              ? "text-green-500"
-                              : "text-gray-500"
-                          }
-                        >
-                          Include an uppercase letter (A–Z)
-                        </li>
-                        <li
-                          className={
-                            passwordChecks.lower
-                              ? "text-green-500"
-                              : "text-gray-500"
-                          }
-                        >
-                          Include a lowercase letter (a–z)
-                        </li>
-                        <li
+                          Password must include: Minimum 12+ characters
+                        </span>
+                        <span className="text-gray-400">|</span>
+                        <span
                           className={
                             passwordChecks.number
-                              ? "text-green-500"
+                              ? "text-green-600"
                               : "text-gray-500"
                           }
                         >
-                          Add at least one number (0–9)
-                        </li>
-                        <li
+                          Number
+                        </span>
+                        <span className="text-gray-400">|</span>
+                        <span
+                          className={
+                            passwordChecks.upper
+                              ? "text-green-600"
+                              : "text-gray-500"
+                          }
+                        >
+                          Uppercase
+                        </span>
+                        <span className="text-gray-400">|</span>
+
+                        <span
+                          className={
+                            passwordChecks.lower
+                              ? "text-green-600"
+                              : "text-gray-500"
+                          }
+                        >
+                          Lowercase
+                        </span>
+                        <span className="text-gray-400">|</span>
+
+                        <span
                           className={
                             passwordChecks.special
-                              ? "text-green-500"
+                              ? "text-green-600"
                               : "text-gray-500"
                           }
                         >
-                          Add a special character (e.g. @, #, !)
-                        </li>
-                      </ul>
+                          Special character
+                        </span>
+                      </div>
                     </>
                   )}
                 {type !== "sign-in" && (
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={signupType === "student"}
-                      onChange={(e) =>
-                        setSignupType(e.target.checked ? "student" : "normal")
-                      }
-                      className="w-4 h-4 accent-indigo-600 cursor-pointer"
-                    />
+                  <div className="mb-2 rounded-lg border border-gray-300 bg-gray-50 px-4 py-3">
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="font-medium text-gray-700">
+                        Select Type:
+                      </span>
 
-                    <span className="text-blue-700 font-medium">
-                      Click here to enroll as a student
-                    </span>
-                  </label>
+                      <label className="flex cursor-pointer items-center gap-1.5">
+                        <input
+                          type="radio"
+                          name="userType"
+                          checked={!isStudent}
+                          onChange={() => setIsStudent(false)}
+                          className="h-4 w-4 accent-indigo-600"
+                        />
+                        <UserIcon className="h-4 w-4 text-gray-600" />
+                        <span>Others</span>
+                      </label>
+
+                      <label className="flex cursor-pointer items-center gap-1.5">
+                        <input
+                          type="radio"
+                          name="userType"
+                          checked={isStudent}
+                          onChange={() => setIsStudent(true)}
+                          className="h-4 w-4 accent-indigo-600"
+                        />
+                        <AcademicCapIcon className="h-4 w-4 text-indigo-600" />
+                        <span>Enroll as Student</span>
+                      </label>
+                    </div>
+                  </div>
                 )}
-                {/* STUDENT ENROLLMENT */}
-                {signupType === "student" && (
-                  <StudentEnrollmentFields
+                {/* ENROLLMENT */}
+                {type === "sign-up" && (
+                  <EnrollmentFields
                     referrerMobile={referrerMobile}
                     setReferrerMobile={setReferrerMobile}
+                    disabled={otpSent}
                   />
                 )}
                 {/* OTP FIELD */}
-                {type !== "sign-in" && otpSent && !otpVerified && (
+                {type !== "sign-in" && step === 2 && (
                   <div className="mt-0.5">
                     <label className="block mb-2 text-sm font-medium text-center">
                       Enter OTP
                     </label>
-
                     <div className="flex justify-between gap-2">
                       {[...Array(6)].map((_, i) => (
                         <input
@@ -865,11 +963,37 @@ const UserAuthForm = ({ type }) => {
                     </button>
                   </div>
                 )}{" "}
+                {type !== "sign-in" && step === 3 && (
+                  <div className="mt-0 rounded-md border border-green-200 bg-green-50 p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100">
+                        <CheckCircleIcon className="h-5 w-5 text-emerald-600" />
+                      </div>
+
+                      <div>
+                        <h4 className="text-sm font-medium text-emerald-800">
+                          OTP verified successfully. Click{" "}
+                          <strong>Confirm Sign-up</strong>.
+                        </h4>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleCompleteSignup}
+                      disabled={loading}
+                      className="mt-4 w-full rounded-full bg-emerald-600 px-6 py-3 text-xl  text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                    >
+                      {loading ? "Confirming..." : "Confirm Sign-up"}
+                    </button>
+                  </div>
+                )}
                 {/* DISCLAIMER */}
-                {type !== "sign-in" && (
-                  <div className="mt-2 flex items-start gap-3 text-xs text-gray-700 leading-relaxed">
+                {type !== "sign-in" && step === 1 && (
+                  <div className="mt-0 flex items-start gap-3 text-xs text-gray-700 leading-relaxed">
                     <input
                       type="checkbox"
+                      disabled={otpSent}
                       id="disclaimer"
                       checked={disclaimerAccepted}
                       onChange={(e) => setDisclaimerAccepted(e.target.checked)}
@@ -894,9 +1018,9 @@ const UserAuthForm = ({ type }) => {
                   >
                     Login
                   </button>
-                ) : !otpSent ? (
+                ) : step === 1 ? (
                   <button
-                    className={`btn-dark w-full mt-0 ${
+                    className={`btn-dark w-full mt-1 ${
                       !disclaimerAccepted ? "opacity-50 cursor-not-allowed" : ""
                     }`}
                     type="button"
@@ -904,15 +1028,6 @@ const UserAuthForm = ({ type }) => {
                     disabled={loading || !disclaimerAccepted}
                   >
                     Send OTP & Continue
-                  </button>
-                ) : otpVerified ? (
-                  <button
-                    className="btn-dark w-full mt-0"
-                    type="button"
-                    onClick={handleCompleteSignup}
-                    disabled={loading || !disclaimerAccepted}
-                  >
-                    Sign Up
                   </button>
                 ) : null}
                 {/* LINKS */}
@@ -946,24 +1061,32 @@ const UserAuthForm = ({ type }) => {
                   )}
 
                   <Link to="/" className="text-black underline">
-                    Skip to home
+                    Go to Homepage
                   </Link>
                 </div>
                 {/* OR */}
-                <div className="flex items-center gap-3 my-0 text-xs uppercase text-gray-400 font-semibold">
-                  <hr className="flex-1 border-gray-300" />
-                  <p>or</p>
-                  <hr className="flex-1 border-gray-300" />
-                </div>
-                {/* GOOGLE */}
-                <button
-                  className="w-full border border-gray-300 rounded-lg py-2 flex items-center justify-center gap-3 hover:bg-gray-50"
-                  onClick={handleGoogleAuth}
-                  type="button"
-                >
-                  <img src={googleIcon} className="w-5" alt="Google" />
-                  Continue with Google
-                </button>
+                {type === "sign-in" && (
+                  <>
+                    <div className="flex items-center gap-3 my-0 text-xs uppercase text-gray-400 font-semibold">
+                      <hr className="flex-1 border-gray-300" />
+                      <p>or</p>
+                      <hr className="flex-1 border-gray-300" />
+                    </div>
+
+                    <button
+                      className="w-full border border-gray-300 rounded-lg py-2 flex items-center justify-center gap-3 hover:bg-gray-50"
+                      onClick={handleGoogleAuth}
+                      type="button"
+                    >
+                      <img src={googleIcon} className="w-5" alt="Google" />
+                      Continue with Google
+                    </button>
+
+                    <p className="mt-2 text-center text-xs text-gray-500">
+                      Google Sign-In is available only for registered accounts.
+                    </p>
+                  </>
+                )}
               </form>
             </div>
 
@@ -972,23 +1095,10 @@ const UserAuthForm = ({ type }) => {
               <AuthRightActions />
             </div>
           </div>
-          {/* 🔹 BOTTOM */}
+          {/* BOTTOM */}
           <div className="mt-auto ">
             <AuthBottomActions type={type} />
           </div>
-          {/* CUSTOMER ID */}
-          {customerId && (
-            <div className="mt-6 w-full max-w-md mx-auto p-4 bg-green-50 border border-green-400 rounded-lg text-green-800 text-center shadow-sm">
-              <p className="text-sm font-medium">Your Customer ID</p>
-              <p className="text-lg font-semibold mt-1">{customerId}</p>
-
-              {abbr && (
-                <p className="text-sm mt-2 text-green-700">
-                  Abbreviation: <span className="font-medium">{abbr}</span>
-                </p>
-              )}
-            </div>
-          )}
         </div>
       </section>
     </AnimationWrapper>

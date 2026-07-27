@@ -9,6 +9,8 @@ import {
   searchUsers,
   sendMobileUpdateOtp,
   verifyMobileUpdateOtp,
+  createEnrollmentController,
+  getEnrollmentByUserController,
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 const router = express.Router();
@@ -24,5 +26,9 @@ router.post("/find-nearby-users", findNearbyUsers);
 //  MOBILE UPDATE (OTP FLOW)
 router.post("/mobile/send-otp", verifyJWT, sendMobileUpdateOtp);
 router.post("/mobile/verify-otp", verifyJWT, verifyMobileUpdateOtp);
+
+//Enrollments
+router.post("/create", createEnrollmentController);
+router.get("/user/:user_id", getEnrollmentByUserController);
 
 export default router;

@@ -1,5 +1,6 @@
+//frontend\src\components\profile\edit-profile\ProfileImageSection.jsx
 import { useEffect, useState } from "react";
-import { MapPinIcon } from "@heroicons/react/24/solid";
+import { MapPinIcon, CameraIcon } from "@heroicons/react/24/solid";
 import UserAvatar from "../../../common/UserAvatar";
 const ProfileImageSection = ({
   fullname,
@@ -14,6 +15,7 @@ const ProfileImageSection = ({
 }) => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     if (!updatedProfileImg) {
       setPreview(null); // FIX: reset when removed
@@ -28,28 +30,77 @@ const ProfileImageSection = ({
 
   return (
     <div className="px-3 md:p-3 flex flex-row items-start gap-4 w-full">
-      {/* IMAGE (LEFT) */}
+      {/* PROFILE IMAGE */}
       <div className="flex flex-col items-center shrink-0">
-        <label
-          htmlFor="uploadImg"
-          className="relative group w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden bg-gray-100 cursor-pointer border"
-        >
-          <UserAvatar
-            src={preview || profile_img}
-            name={fullname}
-            className="w-full h-full"
-            roundedClassName="rounded-full"
-            textClassName="text-5xl font-bold tracking-tight"
-          />
+        <div className="relative group">
+          <label htmlFor="uploadImg" className="relative block cursor-pointer">
+            <UserAvatar
+              src={preview || profile_img}
+              name={fullname}
+              className="w-28 h-28 md:w-32 md:h-32 "
+              roundedClassName="rounded-full"
+              textClassName="text-5xl font-bold"
+            />
 
-          <div className="absolute inset-0 hidden md:flex items-center justify-center bg-black/40 text-white text-xs opacity-0 group-hover:opacity-100 transition">
-            Change Photo
+            {/* Hover Overlay */}
+            <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+              <span className="text-white text-sm font-medium">
+                Change photo
+              </span>
+            </div>
+
+            {/* Loading Overlay */}
+            {loading && (
+              <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
+                <div className="h-6 w-6 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              </div>
+            )}
+
+            {/* Camera Button */}
+            <div className="absolute bottom-1 right-1 h-7 w-7 rounded-full bg-blue-600 text-white border-2 border-white shadow-lg flex items-center justify-center group-hover:scale-110 transition">
+              <CameraIcon className="w-4 h-4" />
+            </div>
+          </label>
+        </div>
+
+        <input
+          type="file"
+          id="uploadImg"
+          hidden
+          accept=".jpeg,.jpg,.png"
+          onChange={handleImagePreview}
+        />
+
+        {updatedProfileImg && (
+          <div className="flex gap-2 mt-4">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!updatedProfileImg) return;
+
+                try {
+                  setLoading(true);
+                  await handleImageUpload();
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition disabled:bg-gray-400"
+            >
+              {loading ? "Uploading..." : "Save"}
+            </button>
+
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => setUpdatedProfileImg(null)}
+              className="px-4 py-2 rounded-lg border text-sm hover:bg-gray-100"
+            >
+              Cancel
+            </button>
           </div>
-        </label>
-
-        <p className="text-[11px] text-gray-500 mt-1 text-center">
-          Click image to change
-        </p>
+        )}
       </div>
 
       {/* RIGHT SIDE (FULL WIDTH) */}
@@ -112,48 +163,6 @@ const ProfileImageSection = ({
               }`}
             />
           </button>
-        </div>
-
-        {/* ACTIONS */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={async () => {
-              // CHECK IMAGE FIRST
-              if (!updatedProfileImg) {
-                alert(
-                  "Please click on the profile image and select a photo first",
-                );
-                return;
-              }
-
-              try {
-                setLoading(true);
-                await handleImageUpload();
-              } finally {
-                setLoading(false);
-              }
-            }}
-            disabled={loading}
-            className={`text-xs px-4 py-1.5 rounded-full text-white transition ${
-              loading
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          >
-            {loading ? "Uploading..." : "Save Photo"}
-          </button>
-
-          {updatedProfileImg && (
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => setUpdatedProfileImg(null)}
-              className="text-xs px-3 py-1.5 rounded border hover:bg-gray-50 disabled:opacity-50"
-            >
-              Remove
-            </button>
-          )}
         </div>
       </div>
     </div>

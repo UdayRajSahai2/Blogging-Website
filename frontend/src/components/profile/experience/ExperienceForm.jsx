@@ -1,5 +1,6 @@
 import ProfessionSelector from "../experience/ProfessionSelector";
 import InputBox from "../../input.component";
+import LocationDropdown from "../../../common/LocationDropdown";
 const ExperienceForm = ({
   form,
   setForm,
@@ -64,7 +65,7 @@ const ExperienceForm = ({
       {/* DESIGNATION + COMPANY */}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-xs text-gray-800 mb-1 block">
+          <label className="text-base text-gray-800 font-medium mb-1 block">
             Designation
           </label>
           <InputBox
@@ -77,11 +78,11 @@ const ExperienceForm = ({
         </div>
 
         <div>
-          <label className="text-xs text-gray-800 mb-1 block">
-            Organization / Team
+          <label className="text-base text-gray-800 font-medium mb-1 block">
+            Organization
           </label>
           <InputBox
-            placeholder="e.g. Startup, Infosys"
+            placeholder="e.g.Infosys"
             value={form.employer_name}
             maxLength={50} // limit to 50 chars
             onChange={(e) =>
@@ -95,9 +96,11 @@ const ExperienceForm = ({
       <div className="grid grid-cols-2 gap-3">
         {/* INDUSTRY */}
         <div>
-          <label className="text-xs text-gray-800 mb-1 block">Industry</label>
+          <label className="text-base text-gray-800 font-medium mb-1 block">
+            Industry
+          </label>
           <InputBox
-            placeholder="e.g. Electronics, Embedded Systems"
+            placeholder="e.g. Electronics, Education"
             value={form.industry}
             maxLength={50}
             onChange={(e) => setForm({ ...form, industry: e.target.value })}
@@ -107,7 +110,7 @@ const ExperienceForm = ({
 
         {/* EMPLOYMENT TYPE */}
         <div>
-          <label className="text-xs text-gray-800 mb-1 block">
+          <label className="text-base text-gray-800 font-medium mb-1 block">
             Employment Type
           </label>
           <select
@@ -140,51 +143,40 @@ const ExperienceForm = ({
       </div>
       {/* LOCATION */}
       <div>
-        <label className="text-xs text-gray-800 mb-2 block">Location</label>
+        <label className="text-base text-gray-800 font-medium mb-1 block">
+          Work Location
+        </label>
 
-        <div className="grid grid-cols-3 gap-3">
-          {/* CITY */}
-          <div>
-            <InputBox
-              placeholder="City"
-              value={form.city}
-              maxLength={20}
-              onChange={(e) => setForm({ ...form, city: e.target.value })}
-              className="border px-2 py-1.5 rounded w-full"
-            />
-          </div>
-
-          {/* STATE */}
-          <div>
-            <InputBox
-              placeholder="State"
-              value={form.state}
-              maxLength={50}
-              onChange={(e) => setForm({ ...form, state: e.target.value })}
-              className="border px-2 py-1.5 rounded w-full"
-            />
-          </div>
-
-          {/* COUNTRY */}
-          <div>
-            <InputBox
-              placeholder="Country"
-              value={form.country}
-              maxLength={20}
-              onChange={(e) => setForm({ ...form, country: e.target.value })}
-              className="border px-2 py-1.5 rounded w-full"
-            />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <LocationDropdown
+            type="experience"
+            value={form}
+            onChange={(type, fields) => {
+              setForm((prev) => ({
+                ...prev,
+                ...fields,
+              }));
+            }}
+            labels={{
+              experience: {
+                country: "Country",
+                state: "State",
+                city: "City",
+              },
+            }}
+          />
         </div>
       </div>
       {/* DATES */}
       <div>
-        <label className="text-xs text-gray-800 mb-2 block">Duration</label>
+        <label className="text-base text-gray-800 font-medium mb-1 block">
+          Work Duration
+        </label>
 
         <div className="grid grid-cols-3 gap-3 items-end">
           {/* START DATE */}
           <div>
-            <label className="text-[11px] text-gray-500 mb-1 block">
+            <label className="text-xs text-gray-500 mb-1 block">
               Start Date
             </label>
             <input
@@ -197,9 +189,7 @@ const ExperienceForm = ({
 
           {/* END DATE */}
           <div>
-            <label className="text-[11px] text-gray-500 mb-1 block">
-              End Date
-            </label>
+            <label className="text-xs text-gray-500 mb-1 block">End Date</label>
             <input
               type="date"
               value={form.end_date}
@@ -220,7 +210,7 @@ const ExperienceForm = ({
                 setForm({ ...form, is_current: e.target.checked })
               }
             />
-            <span className="text-xs text-gray-800">
+            <span className="text-xs text-gray-800 font-medium">
               Currently working here
             </span>
           </div>
@@ -228,39 +218,47 @@ const ExperienceForm = ({
       </div>
 
       {/* TEXT AREAS SIDE BY SIDE */}
-      {/* DESCRIPTION */}
       <div>
-        <label className="text-xs text-gray-800 mb-2 block">Work Details</label>
+        <label className="text-base text-gray-800 font-medium mb-1 block">
+          Experience Details
+        </label>
 
         <div className="grid grid-cols-2 gap-3">
           {/* WHAT YOU DID */}
           <div>
-            <label className="text-[11px] text-gray-500 mb-1 block">
-              What did you do?
+            <label className="text-xs text-gray-500 mb-1 block">
+              Roles & Responsibilities
             </label>
             <textarea
-              placeholder="e.g. Circuit design, PCB testing, embedded systems"
+              placeholder="Describe your main responsibilities and daily work"
+              maxLength={3000}
               value={form.roles_responsibilities}
               onChange={(e) =>
                 setForm({ ...form, roles_responsibilities: e.target.value })
               }
               className="border px-2 py-1.5 rounded min-h-[80px] w-full"
             />
+            <p className="text-[10px] text-gray-400 mt-1">
+              {form.roles_responsibilities?.length || 0}/3000
+            </p>
           </div>
 
-          {/* ACHIEVEMENTS */}
           <div>
-            <label className="text-[11px] text-gray-500 mb-1 block">
-              Achievements / Impact
+            <label className="text-xs text-gray-500 mb-1 block">
+              Achievements
             </label>
             <textarea
-              placeholder="e.g. Reduced faults, improved efficiency"
+              placeholder="Describe your achievements, contributions"
+              maxLength={2000}
               value={form.achievements}
               onChange={(e) =>
                 setForm({ ...form, achievements: e.target.value })
               }
               className="border px-2 py-1.5 rounded min-h-[80px] w-full"
             />
+            <p className="text-[10px] text-gray-400 mt-1">
+              {form.achievements?.length || 0}/2000
+            </p>
           </div>
         </div>
       </div>
@@ -272,11 +270,11 @@ const ExperienceForm = ({
           onClick={onSave}
           disabled={loading}
           className={`
-      flex-1 py-2 rounded-lg text-sm font-medium
-      text-white bg-indigo-600 hover:bg-indigo-700
-      transition disabled:opacity-50 disabled:cursor-not-allowed
-      flex items-center justify-center gap-2
-    `}
+               flex-1 py-2 rounded-lg text-sm font-medium
+               text-white bg-indigo-600 hover:bg-indigo-700
+               transition disabled:opacity-50 disabled:cursor-not-allowed
+               flex items-center justify-center gap-2
+                   `}
         >
           {loading && (
             <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />

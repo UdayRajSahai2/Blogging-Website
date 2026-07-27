@@ -46,7 +46,6 @@ const MyBlogs = () => {
         setLoading(false);
       })
       .catch((err) => {
-        console.log(err.response?.status, err.response?.data);
         setLoading(false);
       });
   }, [access_token]);

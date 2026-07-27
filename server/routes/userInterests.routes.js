@@ -1,35 +1,35 @@
 import express from "express";
 import * as ctrl from "../controllers/userInterests.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { authorizeRoles } from "../middlewares/role.middleware.js";
+import { authorizeSystemRoles } from "../middlewares/role.middleware.js";
 
 const router = express.Router();
 
 // =========================
-// 🔐 ADMIN
+//  ADMIN
 // =========================
 router.post(
   "/",
   verifyJWT,
-  authorizeRoles("admin", "super_admin"),
+  authorizeSystemRoles("admin", "super_admin"),
   ctrl.createInterest,
 );
 
 router.delete(
   "/:interest_id",
   verifyJWT,
-  authorizeRoles("admin", "super_admin"),
+  authorizeSystemRoles("admin", "super_admin"),
   ctrl.deleteInterest,
 );
 
 // =========================
-// 🌳 INTERESTS
+//  INTERESTS
 // =========================
 router.get("/tree", verifyJWT, ctrl.getInterestTree);
 router.get("/", verifyJWT, ctrl.getAllInterests);
 
 // =========================
-// 👤 USER INTERESTS
+//  USER INTERESTS
 // =========================
 router.get("/user", verifyJWT, ctrl.getUserInterests);
 router.post("/user", verifyJWT, ctrl.addUserInterests);

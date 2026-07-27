@@ -10,26 +10,23 @@ import {
   GithubIcon,
   WhatsappIcon,
   WebsiteIcon,
+  LinkedinIcon, // Imported LinkedinIcon
 } from "../../../common/icons/SocialIcons";
 
 const SocialLinksSection = ({ profile, setProfile }) => {
   const socialKeys = [
+    { key: "linkedin", label: "LinkedIn", Icon: LinkedinIcon },
     { key: "youtube", label: "YouTube", Icon: YoutubeIcon },
-
     { key: "instagram", label: "Instagram", Icon: InstagramIcon },
-
     { key: "facebook", label: "Facebook", Icon: FacebookIcon },
-
     { key: "twitter", label: "Twitter / X", Icon: TwitterIcon },
-
     { key: "github", label: "GitHub", Icon: GithubIcon },
-
     { key: "whatsapp", label: "WhatsApp", Icon: WhatsappIcon },
-
     { key: "website", label: "Website", Icon: WebsiteIcon },
   ];
 
   const placeholders = {
+    linkedin: "linkedin.com/in/username",
     youtube: "youtube.com/@channel",
     instagram: "instagram.com/username",
     facebook: "facebook.com/username",
@@ -40,6 +37,7 @@ const SocialLinksSection = ({ profile, setProfile }) => {
   };
 
   const baseUrls = {
+    linkedin: "https://linkedin.com/in/",
     youtube: "https://youtube.com/",
     instagram: "https://instagram.com/",
     facebook: "https://facebook.com/",

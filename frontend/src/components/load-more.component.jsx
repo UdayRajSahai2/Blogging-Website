@@ -1,6 +1,7 @@
 const LoadMoreDataBtn = ({
   state,
   fetchDataFun,
+  userId,
   additionalParam = {},
   loading,
 }) => {
@@ -18,8 +19,9 @@ const LoadMoreDataBtn = ({
         disabled={loading}
         onClick={() =>
           fetchDataFun({
+            page: state.page + 1,
+            user_id: userId,
             ...additionalParam,
-            page: page + 1,
           })
         }
         className="inline-flex items-center gap-1 px-2 py-[2px] text-xs text-dark-grey hover:bg-grey/30 rounded-md leading-none disabled:opacity-50"

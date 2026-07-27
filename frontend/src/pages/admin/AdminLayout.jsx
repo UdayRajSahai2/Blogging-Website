@@ -11,68 +11,37 @@ import {
   ChartBarIcon,
   AcademicCapIcon,
   RectangleStackIcon,
+  ClipboardDocumentCheckIcon,
 } from "@heroicons/react/24/outline";
 
 const AdminLayout = ({ open, closeSidebar }) => {
-  const [pendingCount, setPendingCount] = useState(0);
-
-  const baseClass = "block px-4 py-2 rounded-lg transition-colors text-sm";
+  const baseClass = "block px-4 py-2 rounded transition-colors text-sm";
 
   const getNavClass = ({ isActive }) =>
     `${baseClass} ${
       isActive ? "bg-black text-white" : "hover:bg-gray-100 text-gray-700"
     }`;
-
-  const fetchPendingCount = async () => {
-    try {
-      const res = await apiClient.get("/api/admin/roles/role-requests/count");
-
-      setPendingCount(res.data.count || 0);
-    } catch (err) {
-      console.error("COUNT ERROR:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchPendingCount();
-  }, []);
-
   return (
-    <div className="flex min-h-[calc(100vh-56px)]">
-      {/* OVERLAY */}
+    <div className="min-h-[calc(100vh-56px)]">
       {open && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
           onClick={closeSidebar}
         />
       )}
 
-      {/* SIDEBAR */}
+      {/* Sidebar */}
       <aside
         className={`
-          fixed md:sticky
-          top-14
-          left-0
-          z-40
-          w-64
-          h-[calc(100vh-56px)]
-          bg-white
-          border-r
-          border-gray-200
-          shadow-sm
-          p-4
-          overflow-y-auto
-          transition-transform
-          duration-300
-
-          ${open ? "translate-x-0" : "-translate-x-full"}
-
-          md:translate-x-0
-        `}
+        fixed top-14 left-0 z-50
+        w-64 h-[calc(100vh-56px)]
+        bg-white border-r border-gray-200 shadow-sm
+        p-4 overflow-y-auto transition-transform duration-300
+        ${open ? "translate-x-0" : "-translate-x-full"}
+        md:translate-x-0
+      `}
       >
-        <p className="text-xs text-gray-400 mb-4 px-2">ADMIN</p>
-
-        <nav className="space-y-2">
+        <nav className="space-y-1">
           {/* DASHBOARD */}
           <NavLink
             to="/admin"
@@ -83,6 +52,17 @@ const AdminLayout = ({ open, closeSidebar }) => {
             <div className="flex items-center gap-2">
               <HomeIcon className="w-4 h-4" />
               Dashboard
+            </div>
+          </NavLink>
+
+          <NavLink
+            to="/admin/approvals"
+            className={getNavClass}
+            onClick={closeSidebar}
+          >
+            <div className="flex items-center gap-2">
+              <ClipboardDocumentCheckIcon className="w-4 h-4" />
+              User Approvals
             </div>
           </NavLink>
 
@@ -97,17 +77,28 @@ const AdminLayout = ({ open, closeSidebar }) => {
               Users
             </div>
           </NavLink>
-          {/* ENROLLMENTS */}
-          <p className="text-xs text-gray-400 mt-4 mb-1 px-2">EDUCATION</p>
+
+          {/* disabled in production */}
+          {/* ROLE REQUESTS */}
+          {/* <NavLink
+            to="/admin/role-requests"
+            className={getNavClass}
+            onClick={closeSidebar}
+          >
+            <div className="flex items-center gap-2">
+              <ClipboardDocumentCheckIcon className="w-4 h-4" />
+              Role Access Requests
+            </div>
+          </NavLink> */}
 
           <NavLink
-            to="/admin/student-enrollments"
+            to="/admin/enrollments"
             className={getNavClass}
             onClick={closeSidebar}
           >
             <div className="flex items-center gap-2">
               <AcademicCapIcon className="w-4 h-4" />
-              Student Enrollments
+              Enrollments
             </div>
           </NavLink>
           {/* WEBSITE PAGES */}
@@ -182,8 +173,10 @@ const AdminLayout = ({ open, closeSidebar }) => {
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 p-4 overflow-x-hidden">
-        <Outlet />
+      <main className="flex-1 md:ml-64 overflow-x-auto bg-gray-50">
+        <div className="mx-auto max-w-7xl p-3">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

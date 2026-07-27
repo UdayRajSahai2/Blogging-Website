@@ -40,7 +40,7 @@ const InterestsSection = ({
   }, []);
 
   // =========================
-  // ➕ ADD FINAL SELECTION
+  // ADD FINAL SELECTION
   // =========================
   const handleAdd = () => {
     if (!level3) return;
@@ -75,14 +75,14 @@ const InterestsSection = ({
   return (
     <div
       data-error={error ? "true" : undefined}
-      className="bg-white border border-gray-200 rounded-xl p-4 space-y-4"
+      className="bg-white border border-gray-200 rounded-xl p-4 space-y-2"
     >
       {/* HEADER */}
       <div className="flex items-center gap-2">
         <SparklesIcon className="w-5 h-5 text-indigo-500" />
         <div>
-          <p className="text-sm font-semibold text-gray-800">Add Interests</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-base font-semibold text-gray-600">Add Interests</p>
+          <p className="text-[11px] text-gray-500">
             Select what you’re interested in to personalize your profile
           </p>
         </div>
@@ -91,98 +91,103 @@ const InterestsSection = ({
       {/* =========================
         STEP 1: CATEGORY
     ========================= */}
-      <div>
-        <label className="text-xs text-gray-500 mb-1 block">Category</label>
-        <select
-          className="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-200 outline-none"
-          value={level1?.interest_id || ""}
-          onChange={(e) => {
-            const id = Number(e.target.value);
-            const selected = tree.find((i) => i.interest_id === id);
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
+        <div>
+          <label className="text-xs text-gray-500 mb-1 block">Category</label>
+          <select
+            className="w-full h-9 rounded-lg border border-gray-200 bg-gray-50 px-2 text-[13px] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+            value={level1?.interest_id || ""}
+            onChange={(e) => {
+              const id = Number(e.target.value);
+              const selected = tree.find((i) => i.interest_id === id);
 
-            setLevel1(selected);
-            setLevel2(null);
-            setLevel3(null);
-          }}
-        >
-          <option value="">Choose a category</option>
-          {tree.map((item) => (
-            <option key={item.interest_id} value={item.interest_id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
-      </div>
+              setLevel1(selected);
+              setLevel2(null);
+              setLevel3(null);
+            }}
+          >
+            <option value="">Choose a category</option>
+            {tree.map((item) => (
+              <option key={item.interest_id} value={item.interest_id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      {/* =========================
+        {/* =========================
         STEP 2: SUBCATEGORY
     ========================= */}
-      <div>
-        <label className="text-xs text-gray-500 mb-1 block">Subcategory</label>
-        <select
-          disabled={!level1}
-          className="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-200 outline-none disabled:bg-gray-100"
-          value={level2?.interest_id || ""}
-          onChange={(e) => {
-            const id = Number(e.target.value);
+        <div>
+          <label className="text-xs text-gray-500 mb-1 block">
+            Subcategory
+          </label>
+          <select
+            disabled={!level1}
+            className="w-full h-9 rounded-lg border border-gray-200 bg-gray-50 px-2 text-[13px] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+            value={level2?.interest_id || ""}
+            onChange={(e) => {
+              const id = Number(e.target.value);
 
-            const selected = (level1?.children || []).find(
-              (i) => i.interest_id === id,
-            );
+              const selected = (level1?.children || []).find(
+                (i) => i.interest_id === id,
+              );
 
-            setLevel2(selected);
-            setLevel3(null);
-          }}
-        >
-          <option value="">
-            {level1 ? "Choose a subcategory" : "Select category first"}
-          </option>
-          {level1?.children?.map((item) => (
-            <option key={item.interest_id} value={item.interest_id}>
-              {item.name}
+              setLevel2(selected);
+              setLevel3(null);
+            }}
+          >
+            <option value="">
+              {level1 ? "Choose a subcategory" : "Select category first"}
             </option>
-          ))}
-        </select>
-      </div>
+            {level1?.children?.map((item) => (
+              <option key={item.interest_id} value={item.interest_id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      {/* =========================
+        {/* =========================
         STEP 3: SPECIFIC INTEREST
     ========================= */}
-      <div>
-        <label className="text-xs text-gray-500 mb-1 block">
-          Specific Interest (Sub-Sub Category)
-        </label>
-        <select
-          disabled={!level2}
-          className="w-full border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-200 outline-none disabled:bg-gray-100"
-          value={level3?.interest_id || ""}
-          onChange={(e) => {
-            const id = Number(e.target.value);
+        <div>
+          <label className="text-xs text-gray-500 mb-1 block">
+            Specific Interest (Sub-Sub Category)
+          </label>
+          <select
+            disabled={!level2}
+            className="w-full h-9 rounded-lg border border-gray-200 bg-gray-50 px-2 text-[13px] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+            value={level3?.interest_id || ""}
+            onChange={(e) => {
+              const id = Number(e.target.value);
 
-            const selected = (level2?.children || []).find(
-              (i) => i.interest_id === id,
-            );
+              const selected = (level2?.children || []).find(
+                (i) => i.interest_id === id,
+              );
 
-            setLevel3(selected);
-          }}
-        >
-          <option value="">
-            {level2 ? "Choose a specific interest" : "Select subcategory first"}
-          </option>
-          {level2?.children?.map((item) => (
-            <option
-              key={item.interest_id}
-              value={item.interest_id}
-              disabled={interests.some(
-                (i) => i.interest_id === item.interest_id,
-              )}
-            >
-              {item.name}
+              setLevel3(selected);
+            }}
+          >
+            <option value="">
+              {level2
+                ? "Choose a specific interest"
+                : "Select subcategory first"}
             </option>
-          ))}
-        </select>
+            {level2?.children?.map((item) => (
+              <option
+                key={item.interest_id}
+                value={item.interest_id}
+                disabled={interests.some(
+                  (i) => i.interest_id === item.interest_id,
+                )}
+              >
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-
       {/* ADD BUTTON */}
       <button
         type="button"

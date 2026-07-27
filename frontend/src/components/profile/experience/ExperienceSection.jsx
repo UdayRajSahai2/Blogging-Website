@@ -1,8 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import apiClient from "../../../services/apiClient";
 import { PROFESSIONS_API } from "../../../common/api";
+import {
+  addExperience,
+  updateExperience,
+  deleteExperience,
+  getExperienceById,
+} from "../../../api/professionalProfile.api";
 import ExperienceList from "./ExperienceList";
 import ExperienceForm from "./ExperienceForm";
+import { PlusIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { toast } from "react-hot-toast";
 
 /* ---------------- EMPTY STATE ---------------- */
 
@@ -12,8 +20,6 @@ const emptyExperience = {
   industry: "",
   employer_type: "",
   employment_type: "",
-  experience_type: "employment",
-  location_type: "",
 
   city: "",
   state: "",
@@ -25,8 +31,6 @@ const emptyExperience = {
 
   roles_responsibilities: "",
   achievements: "",
-
-  experience_document_url: "",
 
   profession_id: null, // keep null (not input field)
   custom_profession: "",
@@ -63,16 +67,54 @@ export default function ExperienceSection({
   /* ---------------- SAVE ---------------- */
   const save = async () => {
     try {
-      setLoading(true);
-
-      if (!form.designation) return alert("Designation required");
-      if (!form.employer_name) return alert("Employer required");
-      if (!form.employment_type) return alert("Employment type required");
-      if (!form.start_date) return alert("Start date required");
+      // ================= VALIDATION FIRST =================
 
       if (!form.profession_id && !form.custom_profession) {
-        return alert("Select or enter a profession");
+        return toast.error("Select or enter a Professional Domain");
       }
+
+      if (!form.designation?.trim()) {
+        return toast.error("Designation required");
+      }
+
+      if (!form.employer_name?.trim()) {
+        return toast.error("Organization required");
+      }
+
+      if (!form.industry?.trim()) {
+        return toast.error("Industry required");
+      }
+
+      if (!form.employment_type?.trim()) {
+        return toast.error("Employment type required");
+      }
+      const missingLocation = [];
+      if (!form.city) missingLocation.push("City");
+      if (!form.state) missingLocation.push("State");
+      if (!form.country) missingLocation.push("Country");
+
+      if (missingLocation.length > 0) {
+        return toast.error(`Location required: ${missingLocation.join(", ")}`);
+      }
+      const isCurrent = Boolean(form.is_current);
+
+      if (!form.start_date) {
+        return toast.error("Start date required");
+      }
+
+      if (!form.end_date && !isCurrent) {
+        return toast.error("Please provide End Date or mark as Current");
+      }
+      if (!form.roles_responsibilities?.trim()) {
+        return toast.error("Roles and responsibilities required");
+      }
+
+      if (!form.achievements?.trim()) {
+        return toast.error("Achievements required");
+      }
+
+      // ================= ONLY NOW START LOADING =================
+      setLoading(true);
 
       const payload = sanitize({
         ...form,
@@ -82,20 +124,25 @@ export default function ExperienceSection({
       let res;
 
       if (editingId) {
-        res = await apiClient.put(`${api}/experience/${editingId}`, payload);
+        res = await updateExperience(editingId, payload);
 
         setExperiences((prev) =>
           prev.map((e) => (e.id === editingId ? res.data.data : e)),
         );
+
+        toast.success("Experience updated successfully");
       } else {
-        res = await apiClient.post(`${api}/experience`, payload);
-        setExperiences((prev) => [res.data.data, ...prev]); // latest on top
+        res = await addExperience(payload);
+
+        setExperiences((prev) => [res.data.data, ...prev]);
+
+        toast.success("Experience added successfully");
       }
 
       resetForm();
     } catch (err) {
       console.error(err);
-      alert("Something went wrong");
+      toast.error("Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -103,44 +150,71 @@ export default function ExperienceSection({
 
   /* ---------------- EDIT ---------------- */
   const edit = async (exp) => {
-    setEditingId(exp.id);
-    setShowForm(true);
+    try {
+      setShowForm(true);
+      setEditingId(exp.id);
 
-    setForm({
-      ...emptyExperience,
-      ...exp,
-      start_date: exp.start_date || "",
-      end_date: exp.end_date || "",
-      is_current: exp.is_current || false,
-    });
+      const res = await getExperienceById(exp.id);
+      const data = res.data.data;
 
-    if (exp.profession_id) {
-      try {
-        const res = await apiClient.get(
-          `${PROFESSIONS_API}/profession/${exp.profession_id}`,
+      setForm({
+        ...emptyExperience,
+
+        ...data,
+
+        city: data.city || "",
+        state: data.state || "",
+        country: data.country || "India",
+
+        country_code: data.country_code || "",
+        state_code: data.state_code || "",
+        district_code: data.district_code || "",
+
+        start_date: data.start_date || "",
+        end_date: data.end_date || "",
+        is_current: data.is_current || false,
+      });
+
+      if (data.profession_id) {
+        const profession = await apiClient.get(
+          `${PROFESSIONS_API}/profession/${data.profession_id}`,
         );
 
-        const { domain_id, field_id, specialty_id } = res.data.data;
+        const { domain_id, field_id, specialty_id } = profession.data.data;
 
         setSelectedDomain(domain_id);
         setSelectedField(field_id);
         setSelectedSpecialty(specialty_id);
-      } catch (err) {
-        console.error(err);
+      } else if (data.custom_profession) {
+        setSelectedDomain("other");
+        setSelectedSpecialty(`other:${data.custom_profession}`);
       }
-    } else if (exp.custom_profession) {
-      setSelectedDomain("other");
-      setSelectedSpecialty(`other:${exp.custom_profession}`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load experience");
     }
   };
 
   /* ---------------- DELETE ---------------- */
   const remove = async (id) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this experience?",
+    );
+    if (!confirmDelete) return;
+
     try {
-      await apiClient.delete(`${api}/experience/${id}`);
+      setLoading(true);
+
+      await deleteExperience(id);
+
       setExperiences((prev) => prev.filter((e) => e.id !== id));
+
+      toast.success("Experience deleted successfully");
     } catch (err) {
-      alert("Delete failed");
+      console.error(err);
+      toast.error("Delete failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -149,17 +223,48 @@ export default function ExperienceSection({
   return (
     <div className="w-full min-w-0">
       {/* HEADER */}
-      <div className="flex items-center justify-between">
-        <h4 className="text-base font-semibold text-gray-800">Experience</h4>
+      <div className="flex justify-between items-center mb-2">
+        <div>
+          <h1 className="text-sm sm:text-sm font-semibold text-gray-900">
+            Experience
+          </h1>
 
-        {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="text-sm bg-blue-600 text-white px-1 py-1 mb-2 rounded-full hover:bg-blue-700"
-          >
-            + Add Experience
-          </button>
-        )}
+          <p className="text-xs sm:text-sm text-gray-500">
+            Manage your professional experience
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {!showForm ? (
+            <button
+              onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm hover:bg-blue-700 transition"
+            >
+              <PlusIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Experience</span>
+            </button>
+          ) : (
+            !editingId && (
+              <button
+                onClick={() => setShowForm(false)}
+                className="
+    inline-flex items-center gap-1.5
+    px-3 py-1.5
+    rounded-full
+    bg-red-50
+    text-red-600
+    hover:bg-red-100 hover:text-red-700
+    text-xs sm:text-sm
+    font-medium
+    transition
+  "
+              >
+                <XMarkIcon className="w-4 h-4" />
+                Cancel
+              </button>
+            )
+          )}
+        </div>
       </div>
 
       {/* FORM (ONLY WHEN NEEDED) */}
@@ -183,17 +288,19 @@ export default function ExperienceSection({
       )}
 
       {/* LIST */}
-      <div className="space-y-3">
-        {experiences.length === 0 ? (
-          <div></div>
-        ) : (
-          <ExperienceList
-            experiences={experiences}
-            onEdit={edit}
-            onDelete={remove}
-          />
-        )}
-      </div>
+      {!showForm && (
+        <div className="space-y-3">
+          {experiences.length === 0 ? (
+            <div></div>
+          ) : (
+            <ExperienceList
+              experiences={experiences}
+              onEdit={edit}
+              onDelete={remove}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

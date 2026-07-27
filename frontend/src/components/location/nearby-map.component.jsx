@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useContext } from "react";
 import { Link } from "react-router-dom";
+import { UserContext } from "../../App";
+
 import {
   MapContainer,
   TileLayer,
@@ -15,6 +17,7 @@ import {
   UserIcon,
   AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/outline";
+import { MapPinIcon } from "@heroicons/react/24/solid";
 /* -------------------------------------------------------
    Leaflet marker fix
 ------------------------------------------------------- */
@@ -123,6 +126,9 @@ const MapZoomControls = () => {
 ------------------------------------------------------- */
 
 const NearbyMap = ({ users = [], userLocation = null }) => {
+  const { userAuth = {} } = useContext(UserContext) || {};
+  const DEFAULT_CENTER = [28.6139, 77.209];
+  const DEFAULT_ZOOM = 8;
   const maxRadiusKm = 40;
 
   /* Filter users within radius */
@@ -177,31 +183,38 @@ const NearbyMap = ({ users = [], userLocation = null }) => {
     });
   }, [filteredUsers, userLocation]);
 
-  /* Loading */
-  if (!userLocation) {
-    return (
-      <div className="flex items-center justify-center py-2">
-        <p className="text-gray-500 text-sm">Loading your location…</p>
-      </div>
-    );
-  }
-
   /* Render */
   return (
     <div className="space-y-2">
-      <div className="relative w-full h-64 rounded-sm overflow-hidden">
-        <div className="flex justify-center ">
-          <div className="flex items-center gap-2 px-4 py-0.5 text-xs sm:text-sm bg-white/80 backdrop-blur text-gray-700">
-            <UserIcon className="h-4 w-4 text-purple-500" />
-            <span className="font-semibold">{filteredUsers.length}</span> people
-            nearby • within{" "}
+      {/* TOP INFO (ABOVE MAP) */}
+      <div className="flex justify-center">
+        <div className="flex items-center gap-2 px-4 py-0.5 text-xs sm:text-sm bg-white/80 backdrop-blur text-gray-700 rounded-full">
+          <UserIcon className="h-4 w-4 text-purple-500" />
+          <span className="font-semibold">{filteredUsers.length}</span>
+          <span>
+            people nearby • within{" "}
             <span className="font-semibold">{maxRadiusKm} km</span>
-          </div>
+          </span>
         </div>
+      </div>
+
+      {/* MAP CONTAINER */}
+      <div className="relative w-full h-64 rounded-sm ">
+        {!userLocation && (
+          <div className="absolute top-2 sm:top-3 left-1/2 -translate-x-1/2 z-[1000] px-2 w-full flex justify-center">
+            <div className="flex items-center gap-2 bg-white/75 backdrop-blur-md px-2 sm:px-3 py-1 rounded-full shadow-sm text-[12px] sm:text-[12px] font-medium text-gray-600 max-w-[90%]">
+              <MapPinIcon className="h-4 w-4 text-blue-500 shrink-0" />
+              <span className="truncate">Finding people near you...</span>
+            </div>
+          </div>
+        )}
         <MapContainer
-          preferCanvas
-          center={[userLocation.latitude, userLocation.longitude]}
-          zoom={10}
+          center={
+            userLocation
+              ? [userLocation.latitude, userLocation.longitude]
+              : DEFAULT_CENTER
+          }
+          zoom={userLocation ? 10 : DEFAULT_ZOOM}
           zoomControl={false}
           zoomSnap={0.5}
           zoomDelta={0.5}
@@ -210,67 +223,69 @@ const NearbyMap = ({ users = [], userLocation = null }) => {
           dragging={true}
           tap={false} // important for mobilescrollWheelZoom
         >
-          <FitToRadius
-            center={[userLocation.latitude, userLocation.longitude]}
-            radius={40000}
-          />
-
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="&copy; OpenStreetMap contributors"
           />
+          {userLocation && (
+            <>
+              <FitToRadius
+                center={[userLocation.latitude, userLocation.longitude]}
+                radius={40000}
+              />
 
-          {/* User location */}
-          <Circle
-            center={[userLocation.latitude, userLocation.longitude]}
-            radius={120}
-            pathOptions={{
-              color: "#2563eb",
-              fillColor: "#3b82f6",
-              fillOpacity: 1,
-              weight: 2,
-            }}
-          >
-            <Popup>Your Location</Popup>
-          </Circle>
+              {/* User location */}
+              <Circle
+                center={[userLocation.latitude, userLocation.longitude]}
+                radius={120}
+                pathOptions={{
+                  color: "#2563eb",
+                  fillColor: "#3b82f6",
+                  fillOpacity: 1,
+                  weight: 2,
+                }}
+              >
+                <Popup>Your Location</Popup>
+              </Circle>
 
-          {/* Distance circles */}
-          <Circle
-            center={[userLocation.latitude, userLocation.longitude]}
-            radius={10000}
-            pathOptions={{
-              color: "#22c55e",
-              fillColor: "#3cd7f0",
-              fillOpacity: 0.4,
-              dashArray: "8,6",
-              weight: 2,
-            }}
-          />
+              {/* Distance circles */}
+              <Circle
+                center={[userLocation.latitude, userLocation.longitude]}
+                radius={10000}
+                pathOptions={{
+                  color: "#22c55e",
+                  fillColor: "#3cd7f0",
+                  fillOpacity: 0.4,
+                  dashArray: "8,6",
+                  weight: 2,
+                }}
+              />
 
-          <Circle
-            center={[userLocation.latitude, userLocation.longitude]}
-            radius={20000}
-            pathOptions={{
-              color: "#f59e0b",
-              fillColor: "#f59e0b",
-              fillOpacity: 0.08,
-              dashArray: "8,6",
-              weight: 2,
-            }}
-          />
+              <Circle
+                center={[userLocation.latitude, userLocation.longitude]}
+                radius={20000}
+                pathOptions={{
+                  color: "#f59e0b",
+                  fillColor: "#f59e0b",
+                  fillOpacity: 0.08,
+                  dashArray: "8,6",
+                  weight: 2,
+                }}
+              />
 
-          <Circle
-            center={[userLocation.latitude, userLocation.longitude]}
-            radius={40000}
-            pathOptions={{
-              color: "#ef4444",
-
-              fillColor: "#ef4444",
-              fillOpacity: 0.08,
-              dashArray: "8,6",
-              weight: 2,
-            }}
-          />
+              <Circle
+                center={[userLocation.latitude, userLocation.longitude]}
+                radius={40000}
+                pathOptions={{
+                  color: "#ef4444",
+                  fillColor: "#ef4444",
+                  fillOpacity: 0.08,
+                  dashArray: "8,6",
+                  weight: 2,
+                }}
+              />
+            </>
+          )}
 
           <MapZoomControls />
 
@@ -282,23 +297,27 @@ const NearbyMap = ({ users = [], userLocation = null }) => {
               icon={icons.get(user.username)}
             >
               <Popup autoClose={false} closeButton={false}>
-                <div className="text-center min-w-[150px]">
+                <div className="text-center">
                   <img
                     src={user.profile_img}
                     alt={user.fullname}
-                    className="w-12 h-12 rounded-full mx-auto mb-2 object-cover"
+                    className="w-12 h-12 rounded-sm mx-auto mb-2 object-cover"
                   />
 
                   <div className="font-semibold">{user.fullname}</div>
                   <div className="text-sm text-gray-600">@{user.username}</div>
 
-                  <div className="text-sm text-purple-600">
+                  <div className="text-sm text-gray-600">
                     {user.distance?.toFixed(1)} km away
                   </div>
 
                   <Link
-                    to={`/user/${user.username}`}
-                    className="inline-block mt-2 px-3 py-1 bg-purple-500 text-white text-xs rounded-full hover:bg-purple-600"
+                    to={`${
+                      userAuth?.access_token ? "/dashboard/user" : "/user"
+                    }/${user.username}`}
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-semibold text-purple bg-purple/10 hover:bg-purple/20 transition-colors"
                   >
                     View Profile
                   </Link>

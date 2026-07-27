@@ -1,4 +1,4 @@
-import { Country } from "../models/associations.js";
+import Country from "../models/locations/Country.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -37,9 +37,9 @@ const importCountries = async () => {
         },
       });
     }
-    console.log("✅ Countries imported successfully!");
+    console.log(" Countries imported successfully!");
   } catch (error) {
-    console.error("❌ Error importing countries:", error);
+    console.error("Error importing countries:", error);
   }
 };
 

@@ -1,9 +1,9 @@
-import { useContext, useEffect, useState, useRef } from "react";
+import { useContext, useEffect, useState, useRef, useMemo } from "react";
 import { UserContext } from "../../App";
 import axios from "axios";
 import { profileDataStructure } from "./profile.page";
 import AnimationWrapper from "../../common/page-animation";
-import { getUserTypeFromOccupation } from "../../common/userType.utils";
+import { getUserTypeBadge } from "../../utils/userBadge";
 import { toast } from "react-hot-toast";
 
 import { storeInSession } from "../../common/session";
@@ -23,6 +23,8 @@ import PersonalDetailsSection from "../../components/profile/edit-profile/Person
 import AddressSection from "../../components/profile/edit-profile/AddressSection";
 import SocialLinksSection from "../../components/profile/edit-profile/SocialLinks";
 
+import { CheckCircleIcon, ArrowRightIcon } from "@heroicons/react/24/solid";
+
 const EditProfile = ({ onNext, isOnboarding }) => {
   const bioLimit = 3000;
   const {
@@ -39,6 +41,7 @@ const EditProfile = ({ onNext, isOnboarding }) => {
   const [charactersLeft, setCharactersLeft] = useState(bioLimit);
   const [updatedProfileImg, setUpdatedProfileImg] = useState(null);
   const uploadButtonRef = useRef(null);
+  const continueBannerRef = useRef(null);
   const [isPublic, setIsPublic] = useState(false);
   // Profession selection state
   const [selectedDomain, setSelectedDomain] = useState("");
@@ -77,6 +80,37 @@ const EditProfile = ({ onNext, isOnboarding }) => {
   const { facebook, instagram, twitter, youtube, github, website, whatsapp } =
     profile.details || {};
   const [skipAutoSave, setSkipAutoSave] = useState(false);
+
+  const employment = profile?.details?.employment_status;
+  const education = profile?.details?.education_status;
+
+  const isStudent = education === "student";
+
+  const ADDRESS_TYPES = useMemo(() => {
+    const employment = profile?.details?.employment_status;
+    const education = profile?.details?.education_status;
+
+    const isStudent = education === "student";
+    const isWorking =
+      employment === "employed" || employment === "self_employed";
+
+    // Student OR Working OR both → full access
+    if (isWorking || (isStudent && isWorking)) {
+      return [
+        { type: "personal", title: "Personal Address" },
+        { type: "work", title: "Work Address" },
+        { type: "office", title: "Office Address" },
+      ];
+    }
+
+    // Only student
+    if (isStudent) {
+      return [{ type: "personal", title: "Personal Address" }];
+    }
+
+    // fallback
+    return [{ type: "personal", title: "Personal Address" }];
+  }, [profile?.details]);
 
   const fetchProfile = async () => {
     try {
@@ -188,6 +222,7 @@ const EditProfile = ({ onNext, isOnboarding }) => {
       console.error("Error fetching districts", err);
     }
   };
+
   useEffect(() => {
     if (!profile.addresses) return;
 
@@ -201,6 +236,7 @@ const EditProfile = ({ onNext, isOnboarding }) => {
       }
     });
   }, [profile.addresses]);
+
   useEffect(() => {
     if (!access_token) return;
 
@@ -266,8 +302,14 @@ const EditProfile = ({ onNext, isOnboarding }) => {
     if (!profile.bio?.trim()) {
       newErrors.bio = "Bio is required";
     }
-    if (!profile.details?.occupation_status) {
-      newErrors.occupation_status = "Occupation is required";
+    if (!profile.details?.employment_status) {
+      newErrors.employment_status = "Please select employment status";
+    }
+    if (
+      profile.details?.employment_status !== "retired" &&
+      !profile.details?.education_status
+    ) {
+      newErrors.education_status = "Tell us your education status";
     }
     if (interests.length === 0) {
       newErrors.interests = "Select at least one interest";
@@ -332,7 +374,9 @@ const EditProfile = ({ onNext, isOnboarding }) => {
     }
 
     /* ---------- ADDRESS EXTRACTION ---------- */
-    const ADDRESS_TYPES = ["personal", "work", "office"];
+    const ADDRESS_TYPES = isStudent
+      ? ["personal"]
+      : ["personal", "work", "office"];
     const addressPayload = {};
 
     ADDRESS_TYPES.forEach((type) => {
@@ -366,7 +410,6 @@ const EditProfile = ({ onNext, isOnboarding }) => {
       /* ---------- USER Details UPDATE ---------- */
 
       const details = profile?.details || {};
-      const occupation_status = details?.occupation_status;
 
       await axios.post(
         USER_DETAILS_API,
@@ -374,11 +417,18 @@ const EditProfile = ({ onNext, isOnboarding }) => {
           salutation: details.salutation ?? null,
           gender: details.gender ?? null,
           marital_status: details.marital_status ?? null,
-          occupation_status: details.occupation_status ?? null,
+          employment_status: details.employment_status ?? null,
+          education_status: details.education_status ?? null,
           date_of_birth: details.date_of_birth ?? null,
+
+          alternate_mobile_number: details.alternate_mobile_number ?? null,
 
           father_name: details.father_name ?? null,
           father_phone: details.father_phone ?? null,
+
+          blood_group: details.blood_group ?? null,
+
+          // Social links
           youtube: details.youtube ?? null,
           instagram: details.instagram ?? null,
           facebook: details.facebook ?? null,
@@ -386,6 +436,7 @@ const EditProfile = ({ onNext, isOnboarding }) => {
           github: details.github ?? null,
           website: details.website ?? null,
           whatsapp: details.whatsapp ?? null,
+          linkedin: details.linkedin ?? null,
         },
         {
           headers: { Authorization: `Bearer ${access_token}` },
@@ -402,12 +453,12 @@ const EditProfile = ({ onNext, isOnboarding }) => {
 
       // update auth (ONLY ONCE)
       const updatedAuth = {
-        ...userAuth,
         ...updatedUser,
-        access_token: userAuth?.access_token,
-        user_type: getUserTypeFromOccupation(
-          updatedUser?.details?.occupation_status,
-        ),
+        access_token: userAuth.access_token,
+
+        user_type: updatedUser.details?.user_type,
+        employment_status: updatedUser.details?.employment_status,
+        education_status: updatedUser.details?.education_status,
       };
 
       setUserAuth(updatedAuth);
@@ -481,6 +532,15 @@ const EditProfile = ({ onNext, isOnboarding }) => {
     setIsPublic(Boolean(profile?.is_location_public));
   }, [profile]);
 
+  useEffect(() => {
+    if (isOnboarding && formSubmitted && continueBannerRef.current) {
+      continueBannerRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center", // or "start" depending on preferred alignment
+      });
+    }
+  }, [formSubmitted, isOnboarding]);
+
   const toggleLocationPrivacy = async () => {
     if (!access_token) {
       toast.error("Session expired. Please login again.");
@@ -538,17 +598,25 @@ const EditProfile = ({ onNext, isOnboarding }) => {
         className="w-full px-2 sm:px-2 lg:px-0 py-0"
       >
         {isOnboarding && formSubmitted && (
-          <div className="mb-2 p-3 rounded-lg bg-green-50 border border-green-300 shadow-md flex items-center justify-between gap-3 animate-fade-in">
-            <p className="text-sm text-green-800 font-semibold">
-              ✅ Profile saved successfully. Continue to the next step.
-            </p>
+          <div
+            ref={continueBannerRef}
+            className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 p-3 shadow-sm animate-fade-in"
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircleIcon className="h-6 w-6 text-green-600 flex-shrink-0" />
+
+              <p className="text-sm font-medium text-green-800">
+                Profile saved successfully. Continue to the next step.
+              </p>
+            </div>
 
             <button
               type="button"
               onClick={onNext}
-              className="text-sm px-4 py-1.5 rounded-full bg-green-600 text-white hover:bg-green-700 transition shadow"
+              className="inline-flex items-center gap-1 rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700"
             >
-              Continue →
+              Continue
+              <ArrowRightIcon className="h-4 w-4" />
             </button>
           </div>
         )}
@@ -601,11 +669,7 @@ const EditProfile = ({ onNext, isOnboarding }) => {
             {errors.address && (
               <p className="text-xs text-red-500 px-1">{errors.address}</p>
             )}
-            {[
-              { type: "personal", title: "Personal Address" },
-              { type: "office", title: "Office Address" },
-              { type: "work", title: "Work Address" },
-            ].map((addr) => (
+            {ADDRESS_TYPES.map((addr) => (
               <AddressSection
                 key={addr.type}
                 title={addr.title}
@@ -621,6 +685,7 @@ const EditProfile = ({ onNext, isOnboarding }) => {
             ))}
 
             <SocialLinksSection profile={profile} setProfile={setProfile} />
+
             {/* SAVE BUTTON */}
             <div className="sticky bottom-0 left-0 w-full bg-white/80 backdrop-blur border-t px-4 py-0.5 flex items-center justify-between gap-3">
               {/* TEXT */}

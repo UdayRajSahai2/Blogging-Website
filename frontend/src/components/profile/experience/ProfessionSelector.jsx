@@ -226,7 +226,7 @@ const ProfessionSelector = ({
     <div className="space-y-4">
       {/* Domain Selection */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-base font-medium text-gray-800 mb-2">
           Professional Domain *
         </label>
 

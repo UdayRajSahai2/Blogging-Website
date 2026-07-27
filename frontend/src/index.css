@@ -4,7 +4,7 @@
 @tailwind utilities;
 
 .leaflet-control-attribution {
-  font-size: 8px !important;
+  font-size: 10px !important;
 }
 /* Leaflet sets a high z-index internally, so you must override it. */
 .leaflet-container {
@@ -210,11 +210,26 @@
   }
 }
 
+@media print {
+  @page {
+    size: A4;
+    margin: 5mm;
+    /* or 0 if your printer allows */
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+}
+
 /* Main marquee class */
   .marquee {
   display: flex;
   min-width: max-content;
-  animation: marqueeScroll 20s linear infinite;
+  animation: marqueeScroll 200s linear infinite;
 }
 
 /*  Pause on hover */

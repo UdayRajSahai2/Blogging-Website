@@ -5,11 +5,10 @@ import sequelize from "../config/db.config.js";
 import "../config/firebase.config.js";
 
 // ---------------- Models / Associations ----------------
-import {
-  Donation,
-  Expenditure,
-  BalanceSnapshot,
-} from "../models/associations.js";
+
+import Donation from "../models/Donation.js";
+import Expenditure from "../models/Expenditure.js";
+import BalanceSnapshot from "../models/BalanceSnapshot.js";
 
 // ================= ADD BALANCE SNAPSHOT =================
 export const addBalanceSnapshot = async (req, res) => {

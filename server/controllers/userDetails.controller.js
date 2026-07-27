@@ -1,4 +1,4 @@
-//server\controllers\userDetails.controller.js
+// server\controllers\userDetails.controller.js
 
 import User from "../models/user/User.js";
 import UserDetails from "../models/user/UserDetails.js";
@@ -7,12 +7,22 @@ import Country from "../models/locations/Country.js";
 import State from "../models/locations/State.js";
 import District from "../models/locations/District.js";
 
-export const getUserTypeFromEmployment = (occupation_status) => {
-  if (occupation_status === "working") return "professional";
-  if (occupation_status === "student") return "student";
-  if (occupation_status === "retired") return "retired";
-  if (occupation_status === "not_working") return "student"; // adjust if needed
-  return null;
+export const getUserType = (employment_status, education_status) => {
+  if (employment_status === "retired") return "retired";
+
+  if (employment_status === "employed" && education_status === "student") {
+    return "working_student";
+  }
+
+  if (employment_status === "employed") {
+    return "professional";
+  }
+
+  if (education_status === "student") {
+    return "student";
+  }
+
+  return "open";
 };
 
 const getUserMetaFromDOB = (dob) => {
@@ -33,9 +43,12 @@ const getUserMetaFromDOB = (dob) => {
 
   return { age, user_type: "unknown" };
 };
+
 /* ---------------- CONSTANTS ---------------- */
 const allowedSalutations = ["Mr", "Ms", "Mrs", "Dr", "Prof"];
 const allowedGender = ["male", "female", "other"];
+// ADDED: Allowed blood groups constant
+const allowedBloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 /* ---------------- URL VALIDATOR ---------------- */
 const validateUrl = (url) => {
@@ -45,11 +58,13 @@ const validateUrl = (url) => {
 };
 
 /* ---------------- VALIDATION FUNCTION ---------------- */
-const validateUserDetails = (body) => {
+export const validateUserDetails = (body) => {
   const {
     salutation,
     gender,
     father_phone,
+    alternate_mobile_number, // ADDED
+    blood_group, // ADDED
     whatsapp,
     date_of_birth,
     facebook,
@@ -58,6 +73,7 @@ const validateUserDetails = (body) => {
     youtube,
     github,
     website,
+    linkedin, // ADDED
   } = body;
 
   if (salutation && !allowedSalutations.includes(salutation)) {
@@ -68,8 +84,21 @@ const validateUserDetails = (body) => {
     return "Invalid gender";
   }
 
+  // ADDED: Validate blood group
+  if (blood_group && !allowedBloodGroups.includes(blood_group)) {
+    return "Invalid blood group";
+  }
+
   if (father_phone && !/^\d{10}$/.test(father_phone)) {
     return "Invalid phone number";
+  }
+
+  // ADDED: Validate alternate mobile number (allows 10 digits or format with standard phone pattern)
+  if (
+    alternate_mobile_number &&
+    !/^[+\d\s-()]{7,20}$/.test(alternate_mobile_number)
+  ) {
+    return "Invalid alternate mobile number";
   }
 
   if (whatsapp && !/^\d{10}$/.test(whatsapp)) {
@@ -101,6 +130,7 @@ const validateUserDetails = (body) => {
     youtube,
     github,
     website,
+    linkedin, // ADDED: linkedin to URL checks
   };
 
   for (const [platform, url] of Object.entries(socialLinks)) {
@@ -131,9 +161,10 @@ export const upsertUserDetails = async (req, res) => {
 
     const data = { user_id };
 
+    /* Sanitize inputs: Convert empty strings ("") to null so ENUM & validation pass */
     Object.keys(req.body).forEach((key) => {
       if (req.body[key] !== undefined) {
-        data[key] = req.body[key];
+        data[key] = req.body[key] === "" ? null : req.body[key];
       }
     });
 
@@ -145,12 +176,22 @@ export const upsertUserDetails = async (req, res) => {
     }
 
     //  already existing
-    const { occupation_status } = req.body;
+    const { employment_status, education_status } = req.body;
 
-    if (occupation_status !== undefined) {
-      data.user_type = getUserTypeFromEmployment(occupation_status);
+    if (employment_status || education_status) {
+      data.user_type = getUserType(employment_status, education_status);
     }
+    const allowedUserTypes = [
+      "student",
+      "professional",
+      "working_student",
+      "retired",
+      "open",
+    ];
 
+    if (!allowedUserTypes.includes(data.user_type)) {
+      data.user_type = "open";
+    }
     /*  UPSERT (atomic operation) */
     await UserDetails.upsert(data);
 
@@ -165,26 +206,35 @@ export const upsertUserDetails = async (req, res) => {
     });
   }
 };
+
 export const updateEmploymentStatus = async (req, res) => {
   try {
     const user_id = req.user.id;
-    const { isWorking } = req.body;
+    const { employment_status, education_status } = req.body;
 
-    const occupation_status = isWorking ? "working" : "not_working";
-    const user_type = getUserTypeFromEmployment(occupation_status);
+    const user_type = getUserType(employment_status, education_status);
 
     await UserDetails.update(
-      { user_type, occupation_status },
-      { where: { user_id } },
+      {
+        employment_status,
+        education_status,
+        user_type,
+      },
+      {
+        where: { user_id },
+      },
     );
 
     return res.json({
       message: "Employment status updated",
+      employment_status,
+      education_status,
       user_type,
-      occupation_status,
     });
   } catch (err) {
-    return res.status(500).json({ error: "Failed to update" });
+    return res.status(500).json({
+      error: "Failed to update",
+    });
   }
 };
 /* ---------------- GET USER DETAILS ---------------- */

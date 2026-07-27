@@ -3,21 +3,20 @@ import { useContext, useState, useEffect, useRef } from "react";
 import { UserContext } from "../../App";
 import { useNavigate } from "react-router-dom";
 import { getUserMeta } from "../../utils/userMeta";
-import ConnectionButton from "../connection/ConnectionButton";
 import ShareButton from "../../common/ShareButtonFirefox";
-import { createConversationAPI } from "../../api/chat.api";
 import UserAvatar from "../../common/UserAvatar";
 import MapPinIcon from "@heroicons/react/24/solid/MapPinIcon";
 import UserIcon from "@heroicons/react/24/solid/UserIcon";
 import HeartIcon from "@heroicons/react/24/solid/HeartIcon";
 import CakeIcon from "@heroicons/react/24/solid/CakeIcon";
-import ShareIcon from "@heroicons/react/24/solid/ShareIcon";
 import BriefcaseIcon from "@heroicons/react/24/solid/BriefcaseIcon";
 import AcademicCapIcon from "@heroicons/react/24/solid/AcademicCapIcon";
 import SparklesIcon from "@heroicons/react/24/solid/SparklesIcon";
 
+import { getUserTypeBadge } from "../../utils/userBadge";
 import ClipboardDocumentIcon from "@heroicons/react/24/outline/ClipboardDocumentIcon";
 import DocumentTextIcon from "@heroicons/react/24/outline/DocumentTextIcon";
+import { ShareIcon, PrinterIcon } from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
 import {
   YoutubeIcon,
@@ -30,11 +29,29 @@ import {
   WhatsappIcon,
   WebsiteIcon,
 } from "../../common/icons/SocialIcons";
+import { useReactToPrint } from "react-to-print";
+export const formatEducation = (text = "") => {
+  if (!text) return "";
 
-const ProfileHeader = ({ profile }) => {
+  return text
+    .toLowerCase()
+    .split(".")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(".");
+};
+
+const ProfileHeader = ({
+  profile,
+  experiences,
+  isOwner,
+  goBack,
+  printRef,
+  printMode = false,
+}) => {
   const navigate = useNavigate();
   const { userAuth } = useContext(UserContext);
-  const [connectionStatus, setConnectionStatus] = useState(null);
   const profileUrl = `${window.location.origin}/user/${profile.username}`;
   const [showShareButton, setShowShareButton] = useState(false);
   const shareButtonRef = useRef(null);
@@ -88,36 +105,14 @@ const ProfileHeader = ({ profile }) => {
 
   const isCurrentUser = String(user_id) === String(userAuth?.user_id);
 
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `${profile.username}-profile`,
+  });
+
   /* =========================
      HELPERS
   ========================= */
-  const getUserTypeBadge = (type) => {
-    switch (type) {
-      case "professional":
-        return {
-          label: "Professional",
-          icon: BriefcaseIcon,
-          className: "bg-emerald-100 text-emerald-700",
-        };
-
-      case "student":
-        return {
-          label: "Student",
-          icon: AcademicCapIcon,
-          className: "bg-sky-100 text-sky-700",
-        };
-
-      case "retired":
-        return {
-          label: "Retired",
-          icon: SparklesIcon,
-          className: "bg-zinc-100 text-zinc-700",
-        };
-
-      default:
-        return null;
-    }
-  };
 
   const badge = getUserTypeBadge(userType);
 
@@ -173,7 +168,7 @@ const ProfileHeader = ({ profile }) => {
     )[0];
   };
 
-  const latestExp = getLatestExperience(profile?.experiences || []);
+  const latestExp = getLatestExperience(experiences || []);
 
   /* =========================
      EDUCATION
@@ -195,7 +190,6 @@ const ProfileHeader = ({ profile }) => {
   /* =========================
      DISPLAY LOGIC
   ========================= */
-
   const professionDisplay = (() => {
     try {
       const role =
@@ -204,50 +198,42 @@ const ProfileHeader = ({ profile }) => {
         profession?.name ||
         "";
 
-      const occupation = details?.occupation_status;
+      const employment = details?.employment_status;
+      const education = details?.education_status;
 
-      //  Working
-      if (occupation === "working") return role;
+      // Retired
+      if (employment === "retired") {
+        return role ? `Former ${role}` : "Retired";
+      }
+
+      // Working
+      if (employment === "employed" || employment === "self_employed") {
+        return role;
+      }
 
       // Student
-      if (occupation === "student") {
-        const edu = latestEdu?.title || latestEdu?.level || "";
+      if (education === "student") {
+        const eduRaw = latestEdu?.title || latestEdu?.level || "";
+        const edu = formatEducation(eduRaw);
+
         return edu || "Student";
       }
 
-      //  Retired
-      if (occupation === "retired") {
-        return role ? `Former ${role}` : "";
-      }
-
-      //  Not working
-      if (occupation === "not_working") return "";
-
-      return "";
+      // Default: show designation/profession
+      return role;
     } catch (err) {
       console.error("professionDisplay error:", err);
       return "";
     }
   })();
 
+  const hasProfession = Boolean(professionDisplay?.trim());
+
   const truncateWords = (text, limit) => {
     if (!text) return "";
     const words = text.split(" ");
     if (words.length <= limit) return text;
     return words.slice(0, limit).join(" ") + "...";
-  };
-
-  const handleMessage = async () => {
-    try {
-      const res = await createConversationAPI({
-        userIds: [user_id],
-        isGroup: false,
-      });
-
-      navigate(`/chat/conversation/${res.data.conversation_id}`);
-    } catch (err) {
-      console.error(err);
-    }
   };
 
   const copyLink = async () => {
@@ -294,6 +280,7 @@ const ProfileHeader = ({ profile }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
   return (
     <div className="w-full border border-gray-200 shadow-lg">
       {/* BLUE BANNER */}
@@ -317,7 +304,6 @@ const ProfileHeader = ({ profile }) => {
                 {salutation ? `${salutation}. ` : ""}
                 {fullname}
               </h2>
-
               <p className="text-[11px] text-gray-700 truncate">
                 <span className="text-gray-500 mr-1">Username:</span>@{username}
               </p>
@@ -334,20 +320,21 @@ const ProfileHeader = ({ profile }) => {
                 )}
 
                 {/* Dot separator */}
-                {badge && professionDisplay && (
+                {badge && hasProfession && (
                   <span className="text-gray-400">•</span>
                 )}
 
-                {/* Text */}
-                {professionDisplay && (
-                  <p className="text-sm text-gray-700">{professionDisplay}</p>
+                {hasProfession && (
+                  <span className="text-sm text-gray-500">
+                    ({professionDisplay})
+                  </span>
                 )}
               </div>
             </div>
           </div>
 
           {/* ================= RIGHT ================= */}
-          <div className="flex items-center justify-between md:justify-end gap-3 flex-wrap">
+          <div className="flex items-center justify-between md:justify-end gap-1 flex-wrap">
             {/* Stats */}
             <div className="flex items-center gap-1 text-[11px] text-gray-600 whitespace-nowrap">
               <span>
@@ -391,21 +378,33 @@ const ProfileHeader = ({ profile }) => {
                 })}
               </div>
             )}
-            <div ref={shareButtonRef} className="relative">
-              <button
-                onClick={handleShare}
-                className="flex items-center gap-0.5 px-1.5 py-0.5 text-indigo-600 hover:text-gray-600 rounded-md border text-[10px] leading-none hover:bg-gray-100 transition"
-              >
-                <ShareIcon className="w-3 h-3" />
-                Share
-              </button>
+            {!printMode && userAuth?.access_token && (
+              <div className="flex items-center gap-0.5">
+                <div ref={shareButtonRef} className="relative">
+                  <button
+                    onClick={handleShare}
+                    className="flex items-center gap-0.5 px-1.5 py-0.5 text-indigo-600 hover:text-gray-600 rounded-md border text-[10px] leading-none hover:bg-gray-100 transition"
+                  >
+                    <ShareIcon className="w-2 h-2" />
+                    Share
+                  </button>
 
-              <ShareButton
-                show={showShareButton}
-                shareLinks={shareLinks}
-                copyLink={copyLink}
-              />
-            </div>
+                  <ShareButton
+                    show={showShareButton}
+                    shareLinks={shareLinks}
+                    copyLink={copyLink}
+                  />
+                </div>
+
+                <button
+                  onClick={handlePrint}
+                  className="flex items-center gap-0.5 px-1.5 py-0.5 text-indigo-600 hover:text-gray-600 rounded-md border text-[10px] leading-none hover:bg-gray-100 transition"
+                >
+                  <PrinterIcon className="w-2 h-2" />
+                  Print
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -432,27 +431,6 @@ const ProfileHeader = ({ profile }) => {
             <span className="line-clamp-1">{bio}</span>
           </p>
         )}
-
-        {/* disabled in production */}
-        {/*  ACTION BUTTON */}
-        {/* {userAuth?.access_token && !isCurrentUser && (
-          <div className="flex justify-start sm:ml-auto">
-            {connectionStatus === "connected" ? (
-              <button
-                onClick={handleMessage}
-                className="text-[11px] px-2 py-[2px] rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition"
-              >
-                Message
-              </button>
-            ) : (
-              <ConnectionButton
-                userId={user_id}
-                currentUserId={userAuth?.user_id}
-                onStatusChange={setConnectionStatus}
-              />
-            )}
-          </div>
-        )} */}
       </div>
     </div>
   );

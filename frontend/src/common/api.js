@@ -20,9 +20,7 @@ export const ADMIN_COMMENTS_API = `${ADMIN_API}/comments`;
 
 export const USER_DETAILS_API = `${BASE_URL}/api/user-details`;
 export const LOCATION_API = `${BASE_URL}/api/location`;
-export const PROFESSIONAL_PROFILE_API = `${BASE_URL}/api/professional-profile`;
 
 export const INTEREST_API = `${BASE_URL}/api/interests`;
 
 export const PROFILE_API = `${BASE_URL}/api/profile`;
-export const ROLE_API = `${BASE_URL}/api/roles`;

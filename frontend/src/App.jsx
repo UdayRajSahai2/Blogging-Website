@@ -18,25 +18,25 @@ import AdminExpenditures from "./pages/admin/finance/AdminExpenditures";
 import AdminBalance from "./pages/admin/finance/AdminBalance";
 import AdminRoute from "./routes/AdminRoute";
 import AdminBlogs from "./pages/admin/AdminBlogs";
-import AdminRoles from "./pages/admin/AdminRoles";
-import AdminRolePanel from "./components/admin/AdminRolePanel";
-import AdminStudentEnrollments from "./pages/admin/AdminStudentEnrollments";
+import AdminEnrollments from "./pages/admin/AdminUserEnrollments";
 import AdminPagesList from "./pages/admin/dynamicPages/AdminPagesList";
 import CreatePage from "./pages/admin/dynamicPages/CreatePage";
 import EditPage from "./pages/admin/dynamicPages/EditPage";
+import AdminRoleManagementPage from "./pages/admin/AdminRoleManagementPage";
+import Approvals from "./pages/admin/AdminUserApprovals";
+
+// User
+import RoleManagementPage from "./pages/userRoles/RoleManagementPage";
+
 // Other pages
 import AcademicPage from "./pages/profile/AcademicPage";
 import AcademicForm from "./components/profile/academic/AcademicForm";
 import ProfessionalProfile from "./pages/profile/ProfessionalProfile";
-import ChatPage from "./pages/chat/ChatPage";
+
 import DonorDashboard from "./components/donation/donor-dashboard.component";
 import OnboardingPage from "./pages/onboarding/OnboardingPage";
 import WelcomePage from "./pages/WelcomePage";
 import PageRenderer from "./pages/menubar/PageRenderer";
-
-//Connections/Friends
-import FriendsPage from "./pages/connection/FriendsPage";
-import RequestsPage from "./pages/connection/RequestsPage";
 
 import HomePage from "./pages/home.page";
 import UserAuthForm from "./pages/userAuthForm.page";
@@ -51,7 +51,8 @@ import MyBlogs from "./pages/manage-blogs.page";
 import ForgotPasswordPage from "./pages/forgot-password.page";
 import ResetPasswordPage from "./pages/reset-password.page";
 import PageNotFound from "./pages/404.page";
-// import Dashboard from "./pages/Dashboard"; //for multiple role profiles demo stage
+import ApprovalPending from "./pages/ApprovalPending";
+
 export const UserContext = createContext({
   userAuth: { access_token: null },
   setUserAuth: () => {},
@@ -95,35 +96,23 @@ const App = () => {
 
           <Route path="users" element={<AdminUsers />} />
 
-          <Route path="roles">
-            <Route index element={<Navigate to="requests" />} />
-
-            <Route path="requests" element={<AdminRoles />} />
-
-            <Route path="manage" element={<AdminRolePanel />} />
-          </Route>
-
           <Route path="blogs" element={<AdminBlogs />} />
+
+          <Route path="approvals" element={<Approvals />} />
 
           <Route path="pages">
             <Route index element={<AdminPagesList />} />
-
             <Route path="create" element={<CreatePage />} />
-
             <Route path=":id" element={<EditPage />} />
           </Route>
-
-          <Route path="finance" element={<AdminFinance />} />
 
           <Route path="finance" element={<AdminFinance />} />
 
           <Route path="finance/expenditures" element={<AdminExpenditures />} />
 
           <Route path="finance/balance" element={<AdminBalance />} />
-          <Route
-            path="student-enrollments"
-            element={<AdminStudentEnrollments />}
-          />
+
+          <Route path="enrollments" element={<AdminEnrollments />} />
         </Route>
 
         {/* ================= USER APP ================= */}
@@ -154,8 +143,6 @@ const App = () => {
               />
             }
           />
-          {/* for multiple roles profiles  demo stage */}
-          {/* <Route path="dashboard-home" element={<Dashboard />} /> */}
           <Route
             path="/editor"
             element={
@@ -177,6 +164,7 @@ const App = () => {
             }
           />
 
+          <Route path="/approval-pending" element={<ApprovalPending />} />
           <Route path="/editor/:blog_id" element={<Editor />} />
           <Route path="search/:query" element={<SearchPage />} />
           <Route path="user/:id" element={<ProfilePage />} />
@@ -186,12 +174,6 @@ const App = () => {
           <Route path="signup" element={<UserAuthForm type="sign-up" />} />
           <Route path="forgot-password" element={<ForgotPasswordPage />} />
           <Route path="reset-password" element={<ResetPasswordPage />} />
-          <Route path="chat">
-            <Route index element={<ChatPage />} />
-
-            {/*  OPEN BY CONVERSATION */}
-            <Route path="conversation/:conversationId" element={<ChatPage />} />
-          </Route>
           {/* Dashboard */}
           <Route
             path="dashboard"
@@ -202,23 +184,26 @@ const App = () => {
             }
           >
             <Route path="donor" element={<DonorDashboard />} />
+
             <Route index element={<div>Select a section</div>} />
+
             <Route path="user/:id" element={<ProfilePage />} />
+
             <Route path="notifications" element={<Notification />} />
+
             <Route path="blogs" element={<MyBlogs />} />
+
             <Route path="academics">
               <Route index element={<AcademicPage />} />
               <Route path="add" element={<AcademicForm />} />
               <Route path="edit/:academic_id" element={<AcademicForm />} />
             </Route>
+
             <Route
               path="professional-profile"
               element={<ProfessionalProfile />}
             />
-            <Route path="connections">
-              <Route index element={<FriendsPage />} />
-              <Route path="requests" element={<RequestsPage />} />
-            </Route>
+
             <Route path="*" element={<div>Page not found</div>} />
           </Route>
           {/* Settings */}
@@ -232,10 +217,11 @@ const App = () => {
           >
             <Route path="edit-profile" element={<EditProfile />} />
             <Route path="change-password" element={<ChangePassword />} />
+            {/* Business User Roles */} {/* disabled in production */}
+            {/* <Route path="role-management" element={<RoleManagementPage />} /> */}
           </Route>
           {/*  PageRenderer pages */}
           <Route path=":slug" element={<PageRenderer />} />
-
           {/*  404 fallback */}
           <Route path="*" element={<PageNotFound />} />
         </Route>

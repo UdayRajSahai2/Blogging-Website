@@ -7,9 +7,9 @@ console.log("Imports completed, about to define runAllImports...");
 const runAllImports = async () => {
   console.log("runAllImports function is defined");
   try {
-    console.log("🚀 Starting complete location data import process...");
+    console.log(" Starting complete location data import process...");
     // Setup associations first
-    console.log("🔗 Setting up database associations...");
+    console.log(" Setting up database associations...");
     // If you need to call setupAssociations, do it here
     // setupAssociations();
     console.log("Calling importCountries...");
@@ -18,11 +18,11 @@ const runAllImports = async () => {
     await importLocationData();
     console.log("Location data import done.");
     console.log(
-      "\n🎉 Complete location data import process finished successfully!",
+      "\n Complete location data import process finished successfully!",
     );
-    console.log("✅ All location tables are now populated and ready to use.");
+    console.log(" All location tables are now populated and ready to use.");
   } catch (error) {
-    console.error("❌ Error in complete location data import process:", error);
+    console.error("Error in complete location data import process:", error);
     throw error;
   }
 };
@@ -36,12 +36,12 @@ if (
   runAllImports()
     .then(() => {
       console.log(
-        "✅ Complete location data import script completed successfully",
+        " Complete location data import script completed successfully",
       );
       process.exit(0);
     })
     .catch((error) => {
-      console.error("❌ Complete location data import script failed:", error);
+      console.error("Complete location data import script failed:", error);
       process.exit(1);
     });
 }

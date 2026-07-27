@@ -1,7 +1,10 @@
 import { Op } from "sequelize";
 import sequelize from "../config/db.config.js";
 import { nanoid } from "nanoid";
-import { User, Blog, Comment, Notification } from "../models/associations.js";
+import User from "../models/user/User.js";
+import Blog from "../models/blog/Blog.js";
+import Comment from "../models/blog/Comment.js";
+import Notification from "../models/blog/Notification.js";
 export const addComment = async (req, res) => {
   // Validate request body structure first
   if (!req.body || typeof req.body !== "object") {

@@ -1,51 +1,62 @@
-//server\models\index.js
-"use strict";
+// // ================= MODELS =================
 
-const fs = require("fs");
-const path = require("path");
-const Sequelize = require("sequelize");
-const process = require("process");
-const basename = path.basename(__filename);
-const env = process.env.NODE_ENV || "development";
-const config = require(__dirname + "/../config/config.json")[env];
-const db = {};
+// import Blog from "./blog/Blog.js";
+// import BlogTaxonomy from "./blog/BlogTaxonomy.js";
+// import Comment from "./blog/Comment.js";
+// import Like from "./blog/Like.js";
+// import Notification from "./blog/Notification.js";
+// import Read from "./blog/Read.js";
 
-let sequelize;
-if (config.use_env_variable) {
-  sequelize = new Sequelize(process.env[config.use_env_variable], config);
-} else {
-  sequelize = new Sequelize(
-    config.database,
-    config.username,
-    config.password,
-    config,
-  );
-}
+// import Block from "./locations/Block.js";
+// import Country from "./locations/Country.js";
+// import District from "./locations/District.js";
+// import State from "./locations/State.js";
+// import Village from "./locations/Village.js";
 
-fs.readdirSync(__dirname)
-  .filter((file) => {
-    return (
-      file.indexOf(".") !== 0 &&
-      file !== basename &&
-      file.slice(-3) === ".js" &&
-      file.indexOf(".test.js") === -1
-    );
-  })
-  .forEach((file) => {
-    const model = require(path.join(__dirname, file))(
-      sequelize,
-      Sequelize.DataTypes,
-    );
-    db[model.name] = model;
-  });
+// import Enrollment from "./user/Enrollment.js";
+// import Interest from "./user/Interest.js";
+// import ProfessionalExperience from "./user/ProfessionalExperience.js";
 
-Object.keys(db).forEach((modelName) => {
-  if (db[modelName].associate) {
-    db[modelName].associate(db);
-  }
-});
+// import User from "./user/User.js";
+// import UserAddress from "./user/UserAddress.js";
+// import UserAcademic from "./user/UserAcademic.js";
+// import UserDetails from "./user/UserDetails.js";
+// import UserIPHistory from "./user/UserIPHistory.js";
 
-db.sequelize = sequelize;
-db.Sequelize = Sequelize;
+// import BalanceSnapshot from "./BalanceSnapshot.js";
+// import Donation from "./Donation.js";
+// import Donor from "./Donor.js";
+// import Expenditure from "./Expenditure.js";
 
-module.exports = db;
+// import Page from "./Page.js";
+// import Profession from "./Profession.js";
+
+// // ================= EXPORTS =================
+
+// // export {
+//   Blog,
+//   BlogTaxonomy,
+//   Comment,
+//   Like,
+//   Notification,
+//   Read,
+//   Block,
+//   Country,
+//   District,
+//   State,
+//   Village,
+//   Enrollment,
+//   Interest,
+//   ProfessionalExperience,
+//   User,
+//   UserAcademic,
+//   UserAddress,
+//   UserDetails,
+//   UserIPHistory,
+//   BalanceSnapshot,
+//   Donation,
+//   Donor,
+//   Expenditure,
+//   Page,
+//   Profession,
+// };

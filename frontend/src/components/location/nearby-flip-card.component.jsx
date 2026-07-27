@@ -207,12 +207,16 @@ const NearbyFlipCard = ({
 
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
             <Link
-              to={`/user/${user_id}`}
+              to={
+                userAuth?.access_token
+                  ? `/dashboard/user/${username}`
+                  : `/user/${username}`
+              }
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-semibold text-purple bg-purple/10 hover:bg-purple/20 transition-colors"
             >
-              View profile
+              View Profile
             </Link>
           </div>
         </div>

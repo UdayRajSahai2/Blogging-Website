@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
+import { logger } from "./utils/logger.js";
 
 // ---------------- Node.js / Core ----------------
 import { createServer } from "http";
@@ -14,45 +15,41 @@ import sequelize from "./config/db.config.js";
 
 // ---------------- Service Configs ----------------
 import "./config/firebase.config.js";
-import { Server } from "socket.io";
-import { initChatSocket } from "./sockets/chat.socket.js";
+
 // ---------------- Models / Associations ----------------
-import { User, Blog, setupAssociations } from "./models/associations.js";
+import { setupAssociations } from "./models/associations.js";
 
 // ---------------- Paths ----------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-console.log(" [SYSTEM] Root Directory:", __dirname);
-
-// ================= INIT ASSOCIATIONS =================
-console.log(" [INIT] Setting up model associations...");
-setupAssociations();
-console.log(" [INIT] Associations initialized successfully");
-
-console.log("[DEBUG] User associations:", Object.keys(User.associations));
-console.log(" [DEBUG] Blog associations:", Object.keys(Blog.associations));
+logger.info(`[SYSTEM] Root Directory: ${__dirname}`);
 
 // ================= DB CONNECTION =================
 const connectDB = async () => {
   try {
-    console.log("[DB] Connecting to MySQL...");
+    logger.info("[DB] Connecting to MySQL...");
 
     await sequelize.authenticate();
-    console.log(" [DB] Connection established");
+    logger.info("[DB] Connection established");
 
-    console.log("[DB] Syncing database models...");
-    await sequelize.sync({
-      alter: false,
-      force: false,
-    });
+    logger.info("[DB] Setting up associations...");
+    setupAssociations();
 
-    console.log(" [DB] All tables are ready");
+    logger.info("[DB] Syncing database models...");
+
+    await sequelize.sync({ alter: false }); // production-safe
+
+    logger.info("[DB] All tables are ready");
   } catch (error) {
-    console.error("[DB] Connection failed:", {
-      message: error.message,
-      stack: error.stack,
-    });
+    logger.error(
+      {
+        message: error.message,
+        stack: error.stack,
+      },
+      "[DB] Connection failed",
+    );
+
     process.exit(1);
   }
 };
@@ -63,44 +60,32 @@ const PORT = process.env.PORT || 3000;
 
 async function startServer() {
   try {
-    console.log(" [SERVER] Starting application...");
+    logger.info("[SERVER] Starting application...");
 
-    // ================= DB =================
+    // DB
     await connectDB();
 
-    // ================= HTTP SERVER =================
+    // HTTP SERVER
     const httpServer = createServer(app);
 
-    // ================= SOCKET.IO =================
-    console.log("[SOCKET] Initializing Socket.IO...");
-
-    const io = new Server(httpServer, {
-      cors: {
-        origin: "*", // change in production
-        methods: ["GET", "POST"],
-      },
-    });
-
-    // Attach socket logic
-    initChatSocket(io);
-
-    console.log(" [SOCKET] Socket.IO initialized");
-
-    // ================= START SERVER =================
-    httpServer.listen(PORT, async () => {
-      console.log(" [SERVER] Server is live");
-      console.log(` [SERVER] URL: http://localhost:${PORT}`);
-      console.log(
-        ` [SERVER] Environment: ${process.env.NODE_ENV || "development"}`,
+    // START SERVER (NO SOCKET)
+    httpServer.listen(PORT, () => {
+      logger.info("[SERVER] Server is live");
+      logger.info(`[SERVER] URL: http://localhost:${PORT}`);
+      logger.info(
+        `[SERVER] Environment: ${process.env.NODE_ENV || "development"}`,
       );
-
-      console.log("[SERVER] Startup completed successfully");
+      logger.info("[SERVER] Startup completed successfully");
     });
   } catch (err) {
-    console.error(" [SERVER] Startup failed:", {
-      message: err.message,
-      stack: err.stack,
-    });
+    logger.error(
+      {
+        message: err.message,
+        stack: err.stack,
+      },
+      "[SERVER] Startup failed",
+    );
+
     process.exit(1);
   }
 }

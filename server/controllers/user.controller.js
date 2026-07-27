@@ -1,21 +1,28 @@
 //server\controllers\user.controller.js
-import {
-  User,
-  Profession,
-  UserDetails,
-  UserAddress,
-  Country,
-  State,
-  District,
-} from "../models/associations.js";
+import User from "../models/user/User.js";
+import Profession from "../models/Profession.js";
+import UserDetails from "../models/user/UserDetails.js";
+import UserAddress from "../models/user/UserAddress.js";
+import Country from "../models/locations/Country.js";
+import State from "../models/locations/State.js";
+import District from "../models/locations/District.js";
 import { Op } from "sequelize";
 import sequelize from "../config/db.config.js";
-import Role from "../models/roles/Role.js";
+
 import { assignCustomerLocation } from "../services/locationService.js";
 import { getUserAcademics } from "../services/academic.service.js";
 import { getUserExperiences } from "../services/experience.service.js";
 import { getUserInterests } from "../services/userInterests.service.js";
 import { generateOTP, sendSMSOTP } from "../services/otp.service.js";
+import { generateProfileId } from "../services/profile-id.service.js";
+import { getUserType } from "./userDetails.controller.js";
+
+import {
+  createEnrollment,
+  getEnrollmentByUserId,
+} from "../services/userService.js";
+
+import { sendAdminSignupNotification } from "../services/email.service.js";
 
 export const searchUsers = async (req, res) => {
   const query = (req.body.query || req.query.query || "").trim();
@@ -37,16 +44,6 @@ export const searchUsers = async (req, res) => {
           { fullname: { [Op.like]: `%${query}%` } },
         ],
       },
-      include: role
-        ? [
-            {
-              model: Role,
-              where: { role_name: role },
-              attributes: [],
-              through: { attributes: [] },
-            },
-          ]
-        : [],
       limit: 50,
       attributes: ["user_id", "fullname", "username", "profile_img"],
       order: [["username", "ASC"]],
@@ -143,11 +140,6 @@ export const getProfile = async (req, res) => {
               },
             ],
           },
-          {
-            model: Role,
-            attributes: ["role_name"],
-            through: { attributes: ["is_primary"] },
-          },
         ],
       });
     } else if (username) {
@@ -201,11 +193,6 @@ export const getProfile = async (req, res) => {
               },
             ],
           },
-          {
-            model: Role,
-            attributes: ["role_name"],
-            through: { attributes: ["is_primary"] },
-          },
         ],
       });
     } else {
@@ -219,18 +206,22 @@ export const getProfile = async (req, res) => {
     const experiences = await getUserExperiences(user.user_id);
     const academics = await getUserAcademics(user.user_id);
     const interests = await getUserInterests(user.user_id);
+
     const safeUser = user.toJSON();
 
-    const rolesData = safeUser.Roles || [];
-
-    safeUser.roles = rolesData.map((r) => r.role_name);
-
-    safeUser.primary_role =
-      rolesData.find((r) => r.UserRole?.is_primary)?.role_name || null;
-
-    delete safeUser.Roles;
     safeUser.details = safeUser.details || {};
-    safeUser.addresses = safeUser.addresses || [];
+    safeUser.isOnboardingCompleted = safeUser.is_onboarding_completed;
+
+    const isEmployed = safeUser?.details?.employment_status === "employed";
+
+    const allowedTypes = isEmployed
+      ? ["personal", "office", "work"]
+      : ["personal"];
+
+    safeUser.addresses = (safeUser.addresses || []).filter((addr) =>
+      allowedTypes.includes(addr.type),
+    );
+
     safeUser.experiences = Array.isArray(experiences)
       ? experiences.map((exp) => exp.toJSON())
       : [];
@@ -289,9 +280,6 @@ export const updateProfile = async (req, res) => {
 
     if (domain_id && field_id && specialty_id) {
       try {
-        const { generateProfileId } =
-          await import("../utils/profile-id.generator.js");
-
         const professionResult = await generateProfileId(
           domain_id,
           field_id,
@@ -331,7 +319,11 @@ export const updateProfile = async (req, res) => {
 
     /* ---------- UPSERT User  ADDRESS ---------- */
 
-    const ADDRESS_TYPES = ["personal", "work", "office"];
+    const isEmployed = req.body.employment_status === "employed";
+
+    const ADDRESS_TYPES = isEmployed
+      ? ["personal", "office", "work"]
+      : ["personal"];
 
     for (const type of ADDRESS_TYPES) {
       await UserAddress.upsert(
@@ -515,16 +507,6 @@ export const findNearbyUsers = async (req, res) => {
             "date_of_birth",
           ],
         },
-        ...(role
-          ? [
-              {
-                model: Role,
-                where: { role_name: role },
-                attributes: [],
-                through: { attributes: [] },
-              },
-            ]
-          : []),
       ],
       attributes: [
         "user_id",
@@ -717,5 +699,52 @@ export const verifyMobileUpdateOtp = async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
+  }
+};
+
+//User-Enrollment
+export const createEnrollmentController = async (req, res) => {
+  try {
+    const enrollment = await createEnrollment(req.body);
+
+    const user = await User.findByPk(enrollment.user_id);
+
+    try {
+      await sendAdminSignupNotification(user, enrollment);
+    } catch (err) {
+      console.error("Enrollment email failed:", err);
+    }
+
+    return res.status(201).json({
+      success: true,
+      data: enrollment,
+    });
+  } catch (error) {
+    console.error("Create Enrollment Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create enrollment",
+    });
+  }
+};
+
+export const getEnrollmentByUserController = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+
+    const enrollment = await getEnrollmentByUserId(user_id);
+
+    return res.status(200).json({
+      success: true,
+      data: enrollment,
+    });
+  } catch (error) {
+    console.error("Get Enrollment Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch enrollment",
+    });
   }
 };

@@ -6,14 +6,11 @@ import sequelize from "../../config/db.config.js";
 const BlogTaxonomy = sequelize.define(
   "BlogTaxonomy",
   {
-    // INTERNAL DB PRIMARY KEY
     id: {
       type: DataTypes.INTEGER,
-      autoIncrement: true,
       primaryKey: true,
+      autoIncrement: true,
     },
-
-    // EXCEL TAXONOMY CODE
     taxonomy_id: {
       type: DataTypes.STRING,
       allowNull: false,

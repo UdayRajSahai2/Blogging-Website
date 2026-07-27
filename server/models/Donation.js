@@ -94,7 +94,6 @@ const Donation = sequelize.define(
     indexes: [
       { fields: ["donor_id"], name: "donation_donor_idx" },
       { fields: ["user_id"], name: "donation_user_idx" },
-      { fields: ["payment_id"], name: "donation_payment_idx" },
       { fields: ["year"], name: "donation_year_idx" },
       { fields: ["date"], name: "donation_date_idx" },
       { fields: ["user_id", "year"], name: "donation_user_year_idx" },

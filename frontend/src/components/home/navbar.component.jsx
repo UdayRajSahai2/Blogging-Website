@@ -11,7 +11,6 @@ import NavbarMenu from "../menubar/NavbarMenu";
 import UserAvatar from "../../common/UserAvatar";
 import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
 import PencilSquareIcon from "@heroicons/react/24/outline/PencilSquareIcon";
-import ChatBubbleLeftIcon from "@heroicons/react/24/outline/ChatBubbleLeftIcon";
 import BellIcon from "@heroicons/react/24/outline/BellIcon";
 import HeartIcon from "@heroicons/react/24/outline/HeartIcon";
 import ShoppingCartIcon from "@heroicons/react/24/outline/ShoppingCartIcon";
@@ -125,9 +124,9 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
       </div> */}
       <nav className="bg-white shadow-md sticky top-0 z-50">
         <div className="w-full max-w-full px-0 md:px-2">
-          {/* ================= DESKTOP (UNCHANGED) ================= */}
+          {/* ================= DESKTOP ================= */}
           <div className="hidden md:flex mt-1 items-start justify-between h-20">
-            {/* ================= LEFT → LOGO ================= */}
+            {/* LEFT → LOGO */}
             <Link to="/" className="flex items-start gap-2 shrink-0 -ml-4">
               <img
                 src={logo}
@@ -140,9 +139,10 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                 <span className="text-gray-600 font-medium">Foundation</span>
               </span>
             </Link>
-            {/* RIGHT SIDE (independent alignment) */}
+
+            {/* RIGHT SIDE */}
             <div className="flex items-center justify-end gap-4 flex-1">
-              {/* ================= SEARCH ================= */}
+              {/* SEARCH */}
               <div className="relative min-w-[160px] flex-1 max-w-[220px] md:max-w-md">
                 <input
                   type="text"
@@ -153,7 +153,7 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                 <MagnifyingGlassIcon className="w-4 h-4 md:w-5 md:h-5 text-gray-400 absolute left-2 md:left-3 top-1/2 -translate-y-1/2" />
               </div>
 
-              {/* ================= WELCOME ================= */}
+              {/* WELCOME */}
               {access_token && fullname && (
                 <div className="text-xs md:text-sm text-cyan-700 truncate max-w-[120px] md:max-w-none shrink-0">
                   Welcome, {fullname}
@@ -165,8 +165,8 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                 </div>
               )}
 
-              {/* ================= SOCIAL ICONS ================= */}
-              <div className="flex items-center gap-1 shrink-0">
+              {/* SOCIAL ICONS */}
+              <div className="flex items-center gap-0.3 shrink-0">
                 {[
                   "youtube",
                   "instagram",
@@ -177,7 +177,6 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                   "whatsapp",
                 ].map((key) => {
                   const link = profile?.details?.[key];
-
                   const Icon = socialIcons[key];
 
                   return (
@@ -186,23 +185,20 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                       href={link || undefined}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={(e) => {
-                        if (!link) e.preventDefault();
-                      }}
-                      className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100 transition text-[11px]"
+                      onClick={(e) => !link && e.preventDefault()}
+                      className="w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100 transition"
                     >
                       <Icon className="h-3 w-3" />
                     </a>
                   );
                 })}
 
-                {/* CART */}
                 <button className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100 transition">
                   <ShoppingCartIcon className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* ================= RIGHT ACTIONS ================= */}
+              {/* AUTH / ACTIONS */}
               <div className="flex items-center gap-1 md:gap-2 shrink-0">
                 {!access_token ? (
                   <>
@@ -222,7 +218,6 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                   </>
                 ) : (
                   <>
-                    {/* POST */}
                     <Link
                       to="/editor"
                       className="bg-purple text-white px-2 md:px-3 py-1 rounded-full text-xs md:text-sm flex items-center gap-1"
@@ -237,7 +232,7 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                         onClick={handleNotificationClick}
                         className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition"
                       >
-                        <BellIcon className="w-4 h-4  text-gray-700" />
+                        <BellIcon className="w-4 h-4 text-gray-700" />
 
                         {notificationCount > 0 && (
                           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] md:text-[10px] px-1 rounded-full">
@@ -250,14 +245,6 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                         <NotificationPanel notifications={notifications} />
                       )}
                     </div>
-                    {/* disabled in production */}
-                    {/* CHAT */}
-                    {/* <button
-                      onClick={() => navigate("/chat")}
-                      className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition"
-                    >
-                      <ChatBubbleLeftIcon className="w-4 h-4 text-gray-700" />
-                    </button> */}
 
                     {/* PROFILE */}
                     <div
@@ -265,7 +252,7 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                       onClick={handleUserNavPanel}
                       onBlur={handleBlur}
                     >
-                      <button className="w-8 h-8 md:w-8 md:h-8">
+                      <button className="w-8 h-8">
                         <UserAvatar
                           src={profile_img}
                           name={fullname}
@@ -281,21 +268,22 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
               </div>
             </div>
           </div>
+
           {/* ================= MOBILE ================= */}
           <div className="md:hidden">
-            {/*  ROW 1 */}
-            <div className="flex items-center justify-between min-w-0 px-2">
+            {/* ROW 1 */}
+            <div className="flex items-center justify-between px-2">
               {/* LOGO */}
               <Link to="/" className="flex items-center gap-2">
-                <img src={logo} className="w-14 h-14 object-contain" />
-                <span className="text-base font-bold text-purple whitespace-nowrap">
+                <img src={logo} className="w-12 h-12 object-contain" />
+                <span className="text-sm font-bold text-purple whitespace-nowrap">
                   REACH{" "}
                   <span className="font-medium text-gray-600">Foundation</span>
                 </span>
               </Link>
 
               {/* ACTIONS */}
-              <div className="flex md:hidden items-center">
+              <div className="flex items-center gap-1">
                 {!access_token ? (
                   <>
                     <Link
@@ -304,7 +292,6 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                     >
                       Login
                     </Link>
-
                     <Link
                       to="/signup"
                       className="bg-purple text-white px-2 py-1 rounded-full text-xs"
@@ -317,58 +304,51 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                     {/* POST */}
                     <Link
                       to="/editor"
-                      className="flex items-center gap-1 bg-purple text-white px-2 py-[2px] rounded-full text-[10px] whitespace-nowrap shrink-0"
+                      className="flex items-center gap-1 bg-purple text-white px-2 py-[2px] rounded-full text-[10px]"
                     >
                       <PencilSquareIcon className="w-3 h-3" />
                       <span className="hidden xs:inline">Post</span>
                     </Link>
 
-                    {/* SEARCH ICON */}
+                    {/* SEARCH */}
                     <div className="relative">
-                      {/* SEARCH ICON */}
                       <button
-                        onClick={() => setSearchBoxVisibility((prev) => !prev)}
+                        onClick={() => setSearchBoxVisibility((p) => !p)}
                         className="w-7 h-7 flex items-center justify-center"
                       >
                         <MagnifyingGlassIcon className="w-4 h-4 text-gray-700" />
                       </button>
 
-                      {/* SEARCH DROPDOWN */}
                       {searchBoxVisibility && (
                         <div className="absolute right-0 top-full mt-2 w-[220px] z-50">
-                          <div className="relative">
-                            <form
-                              onSubmit={(e) => {
-                                e.preventDefault();
-                                const query = e.target.search.value.trim();
+                          <form
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              const query = e.target.search.value.trim();
+                              if (query.length < 3) return;
 
-                                if (query.length < 3) return;
-
-                                navigate(
-                                  `/search/${encodeURIComponent(query)}`,
-                                );
-                                setSearchBoxVisibility(false);
-                              }}
-                            >
-                              <input
-                                name="search"
-                                type="search"
-                                enterKeyHint="search"
-                                placeholder="Search blogs,profiles..."
-                                className="w-full h-8 pl-8 pr-2 text-xs rounded-full border bg-white shadow-md"
-                                autoFocus
-                              />
-                            </form>
-                          </div>
+                              navigate(`/search/${encodeURIComponent(query)}`);
+                              setSearchBoxVisibility(false);
+                            }}
+                          >
+                            <input
+                              name="search"
+                              type="search"
+                              placeholder="Search blogs,profiles..."
+                              className="w-full h-8 pl-8 pr-2 text-xs rounded-full border bg-white shadow-md"
+                              autoFocus
+                            />
+                          </form>
                         </div>
                       )}
                     </div>
+
                     {/* CART */}
-                    <button className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:text-purple-600 hover:bg-purple-100 transition">
+                    <button className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100">
                       <ShoppingCartIcon className="w-4 h-4" />
                     </button>
 
-                    {/* NOTIFICATION */}
+                    {/* NOTIFICATIONS */}
                     <div className="relative" ref={notificationRef}>
                       <button
                         onClick={handleNotificationClick}
@@ -394,9 +374,10 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                       onBlur={handleBlur}
                       className="relative"
                     >
-                      <img
+                      <UserAvatar
                         src={profile_img}
-                        className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden ring-2 ring-purple-400 ring-offset-2 ring-offset-white"
+                        name={fullname}
+                        className="w-8 h-8 ring-2 ring-purple-400 ring-offset-2 rounded-full"
                       />
                       {userNavPanel && <UserNavigationPanel />}
                     </div>
@@ -405,21 +386,20 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
               </div>
             </div>
 
-            {/*  ROW 2 → WELCOME + CIF + SOCIAL ICONS */}
+            {/* ROW 2 */}
             {access_token && fullname && (
-              <div className="flex items-center justify-between px-1 pb-1 gap-2">
-                {/* LEFT */}
-                <div className="text-[11px] text-cyan-700 truncate flex-1 min-w-0">
+              <div className="flex items-center justify-between px-2 py-1">
+                <div className="text-[11px] text-cyan-700 truncate">
                   Welcome, {fullname}
                   {userAuth.customer_id && (
-                    <span className="ml-1 text-cyan-600 whitespace-nowrap">
+                    <span className="ml-1 text-cyan-600">
                       | CIF: {userAuth.customer_id}
                     </span>
                   )}
                 </div>
 
-                {/* RIGHT → Social Icons (small) */}
-                <div className="flex items-center gap-1.5 shrink-0">
+                {/* SOCIAL ICONS */}
+                <div className="flex items-center gap-1">
                   {[
                     "youtube",
                     "instagram",
@@ -430,21 +410,16 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
                     "whatsapp",
                   ].map((key) => {
                     const link = profile?.details?.[key];
-
                     const Icon = socialIcons[key];
 
                     return (
                       <a
                         key={key}
                         href={link || undefined}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => {
-                          if (!link) e.preventDefault();
-                        }}
-                        className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-100 text-[9px] flex-shrink-0"
+                        onClick={(e) => !link && e.preventDefault()}
+                        className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-100"
                       >
-                        <Icon />
+                        <Icon className="h-3 w-3" />
                       </a>
                     );
                   })}
@@ -456,7 +431,6 @@ const Navbar = ({ onInterestClick, activeInterest, profile }) => {
           {/* MENU */}
           <NavbarMenu />
         </div>
-        <div></div>
       </nav>
     </>
   );

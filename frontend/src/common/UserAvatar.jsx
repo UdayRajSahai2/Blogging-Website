@@ -1,20 +1,19 @@
+import { useState } from "react";
+
 const UserAvatar = ({
   src,
   name,
-
   className = "w-10 h-10",
-
-  // Dynamic styles
-
   ringClassName = "ring-slate-300",
   bgClassName = "bg-white",
   textClassName = "text-xl font-bold tracking-tight",
-
   roundedClassName = "rounded-full",
-
-  alt = "Profile",
+  alt = " ",
 }) => {
+  const [imageError, setImageError] = useState(false);
+
   const isValidImage =
+    !imageError &&
     typeof src === "string" &&
     src.trim() !== "" &&
     src !== "null" &&
@@ -37,7 +36,7 @@ const UserAvatar = ({
         {name?.charAt(0)?.toUpperCase() || "U"}
       </div>
 
-      {/* Real image */}
+      {/* Profile Image */}
       {isValidImage && (
         <img
           src={src}
@@ -45,12 +44,12 @@ const UserAvatar = ({
           draggable={false}
           loading="eager"
           decoding="async"
-          onError={(e) => {
-            e.target.style.display = "none";
-          }}
+          onError={() => setImageError(true)}
           className={`
-            absolute inset-0 w-full h-full
-            object-cover ring-2
+            absolute inset-0
+            w-full h-full
+            object-cover
+            ring-2
             ${roundedClassName}
             ${ringClassName}
           `}

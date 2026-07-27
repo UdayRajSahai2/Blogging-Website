@@ -1,6 +1,7 @@
 import axios from "axios";
 import { generateCustomerIdFromLocation } from "../services/customerIdFromLocation.js";
-import { User } from "../models/associations.js";
+
+import User from "../models/user/User.js";
 
 export const assignCustomerLocation = async (user, latitude, longitude) => {
   try {

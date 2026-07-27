@@ -2,15 +2,13 @@ import { Op } from "sequelize";
 import sequelize from "../config/db.config.js";
 import Sequelize from "sequelize";
 import { nanoid } from "nanoid";
-import {
-  User,
-  Blog,
-  Comment,
-  Like,
-  Read,
-  Notification,
-  UserDetails,
-} from "../models/associations.js";
+import User from "../models/user/User.js";
+import Blog from "../models/blog/Blog.js";
+import Comment from "../models/blog/Comment.js";
+import Like from "../models/blog/Like.js";
+import Read from "../models/blog/Read.js";
+import Notification from "../models/blog/Notification.js";
+import UserDetails from "../models/user/UserDetails.js";
 import BlogTaxonomy from "../models/blog/BlogTaxonomy.js";
 export const getUserBlogs = async (req, res) => {
   try {

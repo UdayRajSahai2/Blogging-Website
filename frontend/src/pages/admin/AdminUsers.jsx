@@ -228,25 +228,29 @@ const AdminUsers = () => {
 
     return (
       <div className="flex flex-wrap justify-center gap-1">
-        {/* ROLE */}
-        {!u.is_deleted &&
-          (u.system_role === "user" ? (
-            <button
-              disabled={isProcessing}
-              className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white px-3 py-1 rounded"
-              onClick={() => changeRole(u.user_id, "admin")}
-            >
-              {isProcessing ? "..." : "Make Admin"}
-            </button>
-          ) : (
-            <button
-              disabled={isProcessing}
-              className="bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 text-white px-3 py-1 rounded"
-              onClick={() => changeRole(u.user_id, "user")}
-            >
-              {isProcessing ? "..." : "Remove Admin"}
-            </button>
-          ))}
+        {/* ROLE TOGGLE */}
+        {!u.is_deleted && (
+          <button
+            disabled={isProcessing}
+            onClick={() =>
+              changeRole(
+                u.user_id,
+                u.system_role === "admin" ? "user" : "admin",
+              )
+            }
+            className={`px-3 py-1 rounded text-white disabled:opacity-50 ${
+              u.system_role === "admin"
+                ? "bg-yellow-500 hover:bg-yellow-600"
+                : "bg-green-500 hover:bg-green-600"
+            }`}
+          >
+            {isProcessing
+              ? "..."
+              : u.system_role === "admin"
+                ? "Remove Admin"
+                : "Make Admin"}
+          </button>
+        )}
 
         {u.is_deleted ? (
           <>
@@ -398,8 +402,8 @@ const AdminUsers = () => {
                     </td>
 
                     {/* CUSTOMER ID */}
-                    <td className="px-2 py-1.5 font-mono text-cyan-700 text-[12px] whitespace-nowrap">
-                      [{u.country_code} {u.state_code} {u.district_code}{" "}
+                    <td className="px-2 py-1.5 text-cyan-700 whitespace-nowrap">
+                      [{u.country_code} {u.state_code} {u.district_code}
                       {u.block_code} {u.village_code} {u.customer_id?.slice(-4)}
                       ]
                     </td>

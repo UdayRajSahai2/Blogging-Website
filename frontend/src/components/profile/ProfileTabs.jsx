@@ -5,6 +5,7 @@ import NoDataMessage from "../nodata.component.jsx";
 import LoadMoreDataBtn from "../load-more.component.jsx";
 import Loader from "../loader.component.jsx";
 import AnimationWrapper from "../../common/page-animation.jsx";
+import SimilarProfiles from "./SimilarProfiles.jsx";
 import {
   UserIcon,
   DocumentTextIcon,
@@ -25,6 +26,7 @@ const ProfileTabs = ({
   experiences,
   academics,
   interests,
+  userId,
 }) => {
   return (
     <div className="w-full">
@@ -102,23 +104,30 @@ const ProfileTabs = ({
             ) : (
               <NoDataMessage message="No blogs yet" />
             )}
-
-            <LoadMoreDataBtn state={blogs} fetchDataFun={getBlogs} />
+            <LoadMoreDataBtn
+              state={blogs}
+              fetchDataFun={getBlogs}
+              userId={userId}
+            />
           </div>
         )}
 
         {/* ABOUT TAB */}
         {tab === "about" && (
-          <AboutUser
-            bio={bio}
-            joinedAt={createdAt}
-            details={details}
-            addresses={addresses}
-            experiences={experiences}
-            academics={academics}
-            interests={interests || []}
-            isOwner={isOwner}
-          />
+          <div className="space-y-6">
+            <AboutUser
+              bio={bio}
+              joinedAt={createdAt}
+              details={details}
+              addresses={addresses}
+              experiences={experiences}
+              academics={academics}
+              interests={interests || []}
+              isOwner={isOwner}
+            />
+
+            <SimilarProfiles userId={userId} />
+          </div>
         )}
 
         {/* Donor-Donation TAB */}

@@ -11,10 +11,10 @@ import BriefcaseIcon from "@heroicons/react/24/solid/BriefcaseIcon";
 import AcademicCapIcon from "@heroicons/react/24/solid/AcademicCapIcon";
 import UserIcon from "@heroicons/react/24/solid/UserIcon";
 import FolderIcon from "@heroicons/react/24/solid/FolderIcon";
-import ChatBubbleLeftRightIcon from "@heroicons/react/24/solid/ChatBubbleLeftRightIcon";
 import HomeIcon from "@heroicons/react/24/solid/HomeIcon";
 import HeartIcon from "@heroicons/react/24/solid/HeartIcon";
 import Bars3Icon from "@heroicons/react/24/solid/Bars3Icon";
+
 const SideNav = () => {
   const location = useLocation();
   const {
@@ -152,16 +152,6 @@ const SideNav = () => {
             Post blog
           </NavLink>
 
-          {/* disabled in production */}
-          {/* <NavLink
-            to="/chat"
-            className={({ isActive }) =>
-              `sidebar-link ${isActive ? "active-link" : ""}`
-            }
-          >
-            <ChatBubbleLeftRightIcon className="w-5 h-5" />
-            Chat
-          </NavLink> */}
           <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-normal px-2">
             Profile
           </h4>
@@ -194,24 +184,14 @@ const SideNav = () => {
             }
           >
             <BriefcaseIcon className="w-5 h-5" aria-hidden="true" />
-            Experience
+            Professional
           </NavLink>
-
-          {/* disabled in production */}
-          {/* <NavLink
-            to="/dashboard/connections"
-            className={({ isActive }) =>
-              `sidebar-link ${isActive ? "active-link" : ""}`
-            }
-          >
-            <UserIcon className="w-5 h-5" aria-hidden="true" />
-            My Connections
-          </NavLink> */}
 
           <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-normal px-2">
             Activity
           </h4>
           <div className="h-px bg-gray-200 my-2 ml-3 mr-1" />
+
           <NavLink
             to="/dashboard/donor"
             className={({ isActive }) =>
@@ -271,6 +251,19 @@ const SideNav = () => {
             <LockClosedIcon className="w-5 h-5" aria-hidden="true" />
             Change Password
           </NavLink>
+          {/* disabled in production */}
+          {/* ROLE REQUESTS */}
+          {/* <NavLink
+            to="/settings/role-management"
+            onClick={handleNavLinkClick}
+            aria-current={({ isActive }) => (isActive ? "page" : undefined)}
+            className={({ isActive }) =>
+              `sidebar-link ${isActive ? "active-link" : ""}`
+            }
+          >
+            <BriefcaseIcon className="w-5 h-5" aria-hidden="true" />
+            My Roles
+          </NavLink> */}
         </nav>
       </div>
 

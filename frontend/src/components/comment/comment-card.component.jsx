@@ -98,18 +98,6 @@ const CommentCard = ({
         if (pagination.total !== undefined) {
           setTotalRepliesFromServer(pagination.total);
         }
-
-        console.log(
-          `Loaded ${newReplies.length} replies for comment ${comment_id}`,
-          {
-            skip,
-            total: pagination.total,
-            hasMore: pagination.hasMore,
-            currentRepliesCount: append
-              ? replies.length + newReplies.length
-              : newReplies.length,
-          },
-        );
       } else {
         console.error("Failed to load replies:", response.data.error);
         toast.error("Failed to load replies");

@@ -1,5 +1,9 @@
+//server\controllers\professional-profile.controller.js
 import ProfessionalExperience from "../models/user/ProfessionalExperience.js";
-import { getUserExperiences } from "../services/experience.service.js";
+import {
+  getUserExperiences,
+  getExperienceByIdService,
+} from "../services/experience.service.js";
 import Profession from "../models/Profession.js";
 /*
 |--------------------------------------------------------------------------
@@ -12,11 +16,8 @@ const allowedExperienceFields = [
   "profession_id",
   "employer_name",
   "industry",
-  "employer_type",
   "designation",
   "employment_type",
-  "experience_type",
-  "location_type",
   "start_date",
   "end_date",
   "is_current",
@@ -25,8 +26,6 @@ const allowedExperienceFields = [
   "country",
   "roles_responsibilities",
   "achievements",
-  "experience_document_url",
-  "visibility",
 ];
 
 /*
@@ -44,6 +43,17 @@ const pickFields = (source, allowedFields) => {
   return data;
 };
 
+const validateExperience = (body) => {
+  if (body.roles_responsibilities?.length > 3000) {
+    return "Roles & Responsibilities is too long";
+  }
+
+  if (body.achievements?.length > 2000) {
+    return "Achievements is too long";
+  }
+
+  return null;
+};
 /*
 |--------------------------------------------------------------------------
 | GET PROFESSIONAL PROFILE
@@ -71,6 +81,24 @@ export const getProfessionalProfile = async (req, res) => {
   }
 };
 
+export const getExperienceById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const data = await getExperienceByIdService(id, req.user.id);
+
+    return res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    return res.status(404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 /*
 |--------------------------------------------------------------------------
 | EXPERIENCE CRUD
@@ -79,6 +107,14 @@ export const getProfessionalProfile = async (req, res) => {
 
 export const addExperience = async (req, res) => {
   try {
+    const error = validateExperience(req.body);
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error,
+      });
+    }
     const user_id = req.user.id;
 
     const data = pickFields(req.body, allowedExperienceFields);

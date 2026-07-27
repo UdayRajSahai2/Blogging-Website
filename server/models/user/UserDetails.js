@@ -28,16 +28,30 @@ const UserDetails = sequelize.define(
       allowNull: true,
     },
 
-    // NEW
     user_type: {
-      type: DataTypes.ENUM("student", "professional", "retired", "unknown"),
+      type: DataTypes.STRING(50),
       allowNull: true,
+      validate: {
+        isIn: [
+          ["student", "professional", "working_student", "retired", "open"],
+        ],
+      },
     },
 
-    //  FIXED
-    occupation_status: {
-      type: DataTypes.ENUM("working", "not_working", "student", "retired"),
+    employment_status: {
+      type: DataTypes.STRING(50),
       allowNull: true,
+      validate: {
+        isIn: [["employed", "not_working", "self_employed", "retired"]],
+      },
+    },
+
+    education_status: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      validate: {
+        isIn: [["student", "not_student"]],
+      },
     },
 
     date_of_birth: {
@@ -53,6 +67,11 @@ const UserDetails = sequelize.define(
       },
     },
 
+    alternate_mobile_number: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+
     father_name: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -63,6 +82,13 @@ const UserDetails = sequelize.define(
       allowNull: true,
     },
 
+    blood_group: {
+      type: DataTypes.ENUM("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"),
+      allowNull: true,
+    },
+
+    // Social Links
+    linkedin: DataTypes.STRING,
     youtube: DataTypes.STRING,
     instagram: DataTypes.STRING,
     facebook: DataTypes.STRING,
@@ -76,4 +102,5 @@ const UserDetails = sequelize.define(
     timestamps: true,
   },
 );
+
 export default UserDetails;

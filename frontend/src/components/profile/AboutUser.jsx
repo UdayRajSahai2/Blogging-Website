@@ -3,7 +3,9 @@ import {
   BriefcaseIcon,
   HomeIcon,
   BuildingOfficeIcon,
+  PlusCircleIcon,
 } from "@heroicons/react/24/outline";
+import { EllipsisHorizontalCircleIcon } from "@heroicons/react/24/solid";
 import ExperienceList from "./experience/ExperienceList";
 import AcademicList from "./academic/AcademicList";
 import { Link } from "react-router-dom";
@@ -17,6 +19,7 @@ const AboutUser = ({
   academics = [],
   interests = [],
   isOwner = false,
+  printMode = false,
 }) => {
   const normalizedInterests = interests;
   const { employment_status } = details || {};
@@ -26,7 +29,7 @@ const AboutUser = ({
   const isLong = bio && bio.length > MAX_LENGTH;
 
   const displayBio =
-    expanded || !isLong ? bio : bio?.slice(0, MAX_LENGTH) + "...";
+    printMode || expanded || !isLong ? bio : bio?.slice(0, MAX_LENGTH) + "...";
 
   const employment =
     employment_status === true
@@ -72,7 +75,7 @@ const AboutUser = ({
   /* ---------------- UI ---------------- */
 
   return (
-    <section className="w-full max-w-screen-2xl mx-auto bg-white border rounded px-2 py-2">
+    <section className="w-full max-w-screen-2xl mx-auto bg-white  px-2 py-2">
       {/* HEADER */}
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-semibold text-gray-900 text-sm sm:text-base">
@@ -82,12 +85,12 @@ const AboutUser = ({
 
       {/* BIO */}
       <div className="mb-4">
-        <p className="text-base text-gray-700 leading-relaxed">
+        <p className="text-base text-gray-700 leading-relaxed text-justify">
           {bio?.trim() ? (
             <>
               {displayBio}
 
-              {isLong && (
+              {!printMode && isLong && (
                 <button
                   onClick={() => setExpanded(!expanded)}
                   className="ml-2 text-blue-600 text-sm font-medium hover:underline"
@@ -113,12 +116,12 @@ const AboutUser = ({
             return (
               <div
                 key={index}
-                className="flex items-center gap-2 whitespace-nowrap"
+                className="flex items-center gap-0.5 whitespace-nowrap"
               >
-                <Icon className="w-4 h-4 text-gray-500 shrink-0" />
+                <Icon className="w-4 h-4 text-sky-400 shrink-0" />
 
                 <div className="flex items-center gap-1 text-sm text-gray-700">
-                  <span className="text-[10px] uppercase tracking-wide text-gray-500">
+                  <span className="text-[11px]  text-gray-500">
                     {item.label}:
                   </span>
 
@@ -133,53 +136,55 @@ const AboutUser = ({
       )}
 
       {/* INTERESTS */}
-      {(interests?.length > 0 || isOwner) && (
-        <div className="mt-4 pt-3 border-t">
-          <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-3">
-            Interests
-          </h4>
+      <div className="mt-2 pt-3 border-t">
+        <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-2">
+          Interests
+        </h4>
 
-          {interests?.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {normalizedInterests.map((item) => (
-                <span
-                  key={item.interest_id}
-                  className="px-3 py-1 text-xs sm:text-sm rounded-full bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-600 transition"
-                >
-                  {item.name}
-                </span>
-              ))}
-            </div>
-          ) : (
-            isOwner && (
-              <div className="flex flex-col items-center text-center border rounded-lg p-3 sm:p-4 bg-gray-50">
-                <p className="text-xs sm:text-sm text-gray-600 mb-2">
-                  Add interests to improve your profile visibility
-                </p>
-
-                <Link
-                  to="/settings/edit-profile"
-                  className="text-xs sm:text-sm px-3 py-1.5 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition"
-                >
-                  Add Interests
-                </Link>
-              </div>
-            )
-          )}
-        </div>
-      )}
-
+        {interests?.length > 0 ? (
+          <div className="text-[13px] leading-6 text-gray-600">
+            {normalizedInterests.map((item, index) => (
+              <span key={item.interest_id}>
+                {index > 0 && <span className="text-indigo-300"> ✦ </span>}
+                <span className="font-medium">{item.name}</span>
+              </span>
+            ))}
+          </div>
+        ) : isOwner ? (
+          <div className="text-sm border rounded-lg p-4 text-center hover:border-indigo-300 hover:bg-indigo-50 transition-colors duration-200">
+            <Link
+              to="/settings/edit-profile"
+              className="inline-flex items-center gap-2 font-medium text-indigo-600 hover:text-indigo-700"
+            >
+              <PlusCircleIcon className="h-5 w-5" />
+              Add Interests
+            </Link>
+          </div>
+        ) : (
+          <p className="text-gray-400 text-sm">No interests added</p>
+        )}
+      </div>
       {/* EDUCATION */}
-      <div className="mt-4 pt-3 border-t">
-        <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-3">
+      <div className="mt-2 pt-3 border-t">
+        <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-2">
           Education
         </h4>
 
         {academics?.length > 0 ? (
-          <AcademicList academics={academics} isOwner={isOwner} />
-        ) : isOwner ? (
-          <div className="text-sm border rounded-lg p-4 text-center">
-            <Link to="/dashboard/academics">+ Add Education</Link>
+          <AcademicList
+            academics={academics}
+            isOwner={isOwner}
+            printMode={printMode}
+          />
+        ) : isOwner && !printMode ? (
+          <div className="text-sm border rounded-lg p-4 text-center hover:border-indigo-300 hover:bg-indigo-50 transition-colors duration-200">
+            <Link
+              to="/dashboard/academics"
+              className="inline-flex items-center gap-2 font-medium text-indigo-600 hover:text-indigo-700"
+            >
+              <PlusCircleIcon className="h-5 w-5" />
+              Add Education
+            </Link>
           </div>
         ) : (
           <p className="text-gray-400 text-sm">No education added</p>
@@ -187,16 +192,26 @@ const AboutUser = ({
       </div>
 
       {/* EXPERIENCE */}
-      <div className="mt-4 pt-3 border-t">
-        <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-3">
+      <div className="mt-2 pt-3 border-t">
+        <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-2">
           Experience
         </h4>
 
         {experiences?.length > 0 ? (
-          <ExperienceList experiences={experiences} isOwner={isOwner} />
-        ) : isOwner ? (
-          <div className="text-sm border rounded-lg p-4 text-center">
-            <Link to="/dashboard/professional-profile">+ Add Experience</Link>
+          <ExperienceList
+            experiences={experiences}
+            isOwner={isOwner}
+            printMode={printMode}
+          />
+        ) : isOwner && !printMode ? (
+          <div className="text-sm border rounded-lg p-4 text-center hover:border-indigo-300 hover:bg-indigo-50 transition-colors duration-200">
+            <Link
+              to="/dashboard/professional-profile"
+              className="inline-flex items-center gap-2 font-medium text-indigo-600 hover:text-indigo-700"
+            >
+              <PlusCircleIcon className="h-5 w-5" />
+              Add Experience
+            </Link>
           </div>
         ) : (
           <p className="text-gray-400 text-sm">No experience added</p>

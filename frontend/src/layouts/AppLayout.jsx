@@ -26,7 +26,7 @@ const ScrollToTop = () => {
   return null;
 };
 
-// 🌐 Global App Layout (Navbar + Sidebars + Center)
+// Global App Layout (Navbar + Sidebars + Center)
 const AppLayout = ({ loadBlogByCategory, pageState }) => {
   const { userAuth, profile } = useContext(UserContext);
 

@@ -113,9 +113,7 @@ const BlogInteraction = () => {
       try {
         await navigator.share(shareData);
         return;
-      } catch (err) {
-        console.log(err);
-      }
+      } catch (err) {}
     }
 
     // Desktop fallback

@@ -5,11 +5,14 @@ import Comment from "../../models/blog/Comment.js";
 import Donation from "../../models/Donation.js";
 import Donor from "../../models/Donor.js";
 import User from "../../models/user/User.js";
-import Role from "../../models/roles/Role.js";
-import UserRole from "../../models/roles/UserRole.js";
-import StudentEnrollment from "../../models/student/StudentEnrollment.js";
+
+import Enrollment from "../../models/user/Enrollment.js";
 import { Op } from "sequelize";
 import ProfessionalExperience from "../../models/user/ProfessionalExperience.js";
+import {
+  sendApprovalEmail,
+  sendRejectionEmail,
+} from "../../services/email.service.js";
 /* =========================
    HELPERS
 ========================= */
@@ -23,24 +26,11 @@ const isValidId = (id) => /^\d+$/.test(id);
 
 export const getAdminStats = async (req, res) => {
   try {
-    const [
-      users,
-      blogs,
-      comments,
-      donations,
-      totalRoles,
-      pendingRoleRequests,
-      assignedRoles,
-    ] = await Promise.all([
+    const [users, blogs, comments, donations] = await Promise.all([
       User.count(),
       Blog.count(),
       Comment.count(),
       Donation.count(),
-
-      //  ADD THESE
-      Role.count(),
-      UserRole.count({ where: { status: "pending" } }),
-      UserRole.count({ where: { status: "approved" } }),
     ]);
 
     return res.json({
@@ -50,11 +40,6 @@ export const getAdminStats = async (req, res) => {
         totalBlogs: blogs,
         totalComments: comments,
         totalDonations: donations,
-
-        //  NEW
-        totalRoles,
-        pendingRoleRequests,
-        assignedRoles,
       },
     });
   } catch (err) {
@@ -66,9 +51,7 @@ export const getAdminStats = async (req, res) => {
   }
 };
 
-/* =========================
-   GET USERS (PAGINATED)
-========================= */
+//  GET USERS (PAGINATED)
 export const getAllUsers = async (req, res) => {
   try {
     const { page = 1, limit = 20, search = "", deleted, status } = req.query;
@@ -85,8 +68,11 @@ export const getAllUsers = async (req, res) => {
     } else if (deleted === "false") {
       whereClause.is_deleted = false;
     }
-    // else → BOTH
 
+    if (status) {
+      whereClause.approval_status = status;
+    }
+    // else → BOTH
     //  search
     if (search?.trim()) {
       whereClause[Op.or] = [
@@ -114,6 +100,7 @@ export const getAllUsers = async (req, res) => {
         "system_role",
         "createdAt",
         "is_deleted",
+        "approval_status",
       ],
 
       include: [
@@ -647,9 +634,9 @@ export const restoreBlogAdmin = async (req, res) => {
 };
 
 /* =========================
-   GET STUDENT ENROLLMENTS
+   GET  ENROLLMENTS
 ========================= */
-export const getStudentEnrollments = async (req, res) => {
+export const getEnrollments = async (req, res) => {
   try {
     const { page = 1, limit = 20, search = "" } = req.query;
 
@@ -664,17 +651,17 @@ export const getStudentEnrollments = async (req, res) => {
     if (search?.trim()) {
       whereClause[Op.or] = [
         {
-          referrer_first_name: {
-            [Op.like]: `%${search}%`,
-          },
-        },
-        {
-          referrer_last_name: {
+          referrer_name: {
             [Op.like]: `%${search}%`,
           },
         },
         {
           referrer_mobile: {
+            [Op.like]: `%${search}%`,
+          },
+        },
+        {
+          referrer_email: {
             [Op.like]: `%${search}%`,
           },
         },
@@ -687,8 +674,11 @@ export const getStudentEnrollments = async (req, res) => {
     }
 
     const { rows: enrollments, count: total } =
-      await StudentEnrollment.findAndCountAll({
-        where: whereClause,
+      await Enrollment.findAndCountAll({
+        where: {
+          ...whereClause,
+          enrollment_type: "student",
+        },
 
         include: [
           {
@@ -716,11 +706,259 @@ export const getStudentEnrollments = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("GET STUDENT ENROLLMENTS ERROR:", err);
+    console.error("GET ENROLLMENTS ERROR:", err);
 
     return res.status(500).json({
       success: false,
       error: err.message,
+    });
+  }
+};
+
+//Enrollment-Referrers
+export const getReferrers = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search = "" } = req.query;
+
+    const parsedLimit = Math.min(parseInt(limit) || 20, 100);
+    const parsedPage = Math.max(parseInt(page) || 1, 1);
+
+    const offset = (parsedPage - 1) * parsedLimit;
+
+    const whereClause = {};
+
+    // SEARCH
+    if (search?.trim()) {
+      whereClause[Op.or] = [
+        {
+          referrer_name: {
+            [Op.like]: `%${search}%`,
+          },
+        },
+        {
+          referrer_mobile: {
+            [Op.like]: `%${search}%`,
+          },
+        },
+        {
+          referrer_email: {
+            [Op.like]: `%${search}%`,
+          },
+        },
+        {
+          referrer_district: {
+            [Op.like]: `%${search}%`,
+          },
+        },
+      ];
+    }
+
+    const { rows: enrollments, count: total } =
+      await Enrollment.findAndCountAll({
+        where: {
+          ...whereClause,
+          enrollment_type: "referrer",
+        },
+        include: [
+          {
+            model: User,
+            as: "user",
+            attributes: ["user_id", "fullname", "email", "mobile_number"],
+          },
+        ],
+
+        order: [["createdAt", "DESC"]],
+
+        limit: parsedLimit,
+        offset,
+      });
+
+    return res.json({
+      success: true,
+      data: enrollments,
+
+      pagination: {
+        total,
+        page: parsedPage,
+        limit: parsedLimit,
+        totalPages: Math.ceil(total / parsedLimit),
+      },
+    });
+  } catch (err) {
+    console.error("GET ENROLLMENTS ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
+/**
+ * GET USERS BY APPROVAL STATUS
+ */
+
+export const getUsersByStatus = async (req, res) => {
+  try {
+    const { status } = req.query;
+
+    const where = {};
+
+    if (status) {
+      where.approval_status = status;
+    }
+
+    const [users, pending, approved, rejected] = await Promise.all([
+      User.findAll({
+        where,
+        include: [
+          {
+            model: Enrollment,
+            as: "enrollment", // use association alias
+            required: false,
+            attributes: [
+              "referrer_name",
+              "referrer_mobile",
+              "referrer_email",
+              "referrer_district",
+            ],
+          },
+        ],
+        order: [["createdAt", "DESC"]],
+      }),
+
+      User.count({
+        where: { approval_status: "pending" },
+      }),
+
+      User.count({
+        where: { approval_status: "approved" },
+      }),
+
+      User.count({
+        where: { approval_status: "rejected" },
+      }),
+    ]);
+
+    return res.json({
+      success: true,
+      data: users,
+      counts: {
+        pending,
+        approved,
+        rejected,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch users",
+      data: [],
+      counts: {
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+      },
+    });
+  }
+};
+
+/**
+ * UPDATE USER APPROVAL STATUS (GENERIC)
+ */
+export const updateUserApprovalStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { status, reason } = req.body;
+
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    await user.update({ approval_status: status });
+
+    if (status === "approved") {
+      await sendApprovalEmail(user.email, user.fullname);
+    }
+
+    if (status === "rejected") {
+      await sendRejectionEmail(
+        user.email,
+        user.fullname,
+        reason || "Not specified",
+      );
+    }
+
+    return res.json({
+      success: true,
+      message: `User ${status} successfully`,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Update failed",
+    });
+  }
+};
+
+/**
+ * QUICK APPROVE
+ */
+export const approveUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    await user.update({ approval_status: "approved" });
+
+    await sendApprovalEmail(user.email, user.fullname);
+
+    return res.json({
+      success: true,
+      message: "User approved",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Approval failed",
+    });
+  }
+};
+
+/**
+ * QUICK REJECT
+ */
+export const rejectUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason } = req.body;
+
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    await user.update({ approval_status: "rejected" });
+
+    await sendRejectionEmail(
+      user.email,
+      user.fullname,
+      reason || "Not specified",
+    );
+
+    return res.json({
+      success: true,
+      message: "User rejected",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Rejection failed",
     });
   }
 };

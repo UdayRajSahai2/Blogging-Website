@@ -13,10 +13,10 @@ import { BLOG_API } from "../common/api";
 import { useContext } from "react";
 import { UserContext } from "../App";
 import { useNavigate } from "react-router-dom";
+import { RocketLaunchIcon } from "@heroicons/react/24/solid";
 const HomePage = ({ pageState, setPageState }) => {
   const { userAuth } = useContext(UserContext);
   const navigate = useNavigate();
-
   const isIncomplete =
     userAuth?.access_token && !userAuth?.isOnboardingCompleted;
   // Blogs
@@ -86,17 +86,23 @@ const HomePage = ({ pageState, setPageState }) => {
           onClick={() => navigate("/onboarding")}
           className="w-full bg-yellow-100 border-b border-yellow-200 cursor-pointer mb-2"
         >
-          <div className="text-sm text-yellow-900 py-2 font-medium text-center leading-relaxed">
-            🚀 Your profile is your identity here — and it truly matters.
-            <span className="font-semibold">
-              {" "}
-              People discover, trust, and connect with complete profiles.
-            </span>
-            You’re just one small step away —{" "}
-            <span className="underline font-semibold">
-              complete your profile
-            </span>{" "}
-            and unlock your full presence.
+          <div className="flex items-start gap-2 text-sm text-yellow-900 py-2 font-medium leading-relaxed">
+            <RocketLaunchIcon className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+
+            <p className="text-sm text-center">
+              A complete profile opens more opportunities—
+              <span className="font-semibold">
+                {" "}
+                help others discover, trust, and connect with you.
+              </span>{" "}
+              <button
+                onClick={() => navigate("/onboarding")}
+                className="text-blue-600 font-semibold underline hover:text-blue-700"
+              >
+                Complete your profile
+              </button>
+              .
+            </p>
           </div>
         </div>
       )}

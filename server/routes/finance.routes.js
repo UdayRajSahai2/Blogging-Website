@@ -1,6 +1,6 @@
 import express from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { authorizeRoles } from "../middlewares/role.middleware.js";
+import { authorizeSystemRoles } from "../middlewares/role.middleware.js";
 import {
   addBalanceSnapshot,
   getBalanceHistory,
@@ -12,21 +12,21 @@ const router = express.Router();
 router.post(
   "/add-balance-snapshot",
   verifyJWT,
-  authorizeRoles("admin"),
+  authorizeSystemRoles("admin"),
   addBalanceSnapshot,
 );
 
 router.get(
   "/balance-history",
   verifyJWT,
-  authorizeRoles("admin"),
+  authorizeSystemRoles("admin"),
   getBalanceHistory,
 );
 
 router.get(
   "/financial-summary",
   verifyJWT,
-  authorizeRoles("admin"),
+  authorizeSystemRoles("admin"),
   getFinancialSummary,
 );
 

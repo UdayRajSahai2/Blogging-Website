@@ -1,5 +1,6 @@
 // ---------------- Models / Associations ----------------
-import { User, Donor } from "../models/associations.js";
+import User from "../models/user/User.js";
+import Donor from "../models/Donor.js";
 
 export const registerDonor = async (req, res) => {
   try {

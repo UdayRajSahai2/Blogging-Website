@@ -1,3 +1,4 @@
+//server\routes\professional-profile.routes.js
 import express from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -6,6 +7,7 @@ import {
   addExperience,
   updateExperience,
   deleteExperience,
+  getExperienceById,
 } from "../controllers/professional-profile.controller.js";
 
 const router = express.Router();
@@ -24,9 +26,12 @@ router.get("/", verifyJWT, getProfessionalProfile); // own profile
 |--------------------------------------------------------------------------
 */
 
+router.get("/experience/:id", verifyJWT, getExperienceById);
+
 router.post("/experience", verifyJWT, addExperience);
 router.put("/experience/:id", verifyJWT, updateExperience);
 router.delete("/experience/:id", verifyJWT, deleteExperience);
-router.get("/:user_id", getProfessionalProfile); // public
+
+router.get("/:user_id", getProfessionalProfile);
 
 export default router;

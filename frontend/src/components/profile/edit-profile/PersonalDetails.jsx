@@ -57,49 +57,83 @@ const PersonalDetailsSection = ({ profile, setProfile, errors }) => {
             className="w-full h-9 rounded-lg border border-gray-200 bg-gray-50 px-2 text-[13px]"
           >
             <option value="">Prefer not to say</option>
-            <option value="single">Single</option>
+            <option value="single">Unmarried (If you need assistance)</option>
             <option value="married">Married</option>
           </select>
         </div>
 
-        {/* Occupation */}
+        {/* Employment */}
         <div>
           <label className="block text-xs font-medium mb-1 text-gray-600">
-            Occupation Status <span className="text-red-500">*</span>
+            Employment Status <span className="text-red-500">*</span>
           </label>
 
           <select
-            value={profile.details?.occupation_status || ""}
+            value={profile.details?.employment_status || ""}
             onChange={(e) => {
-              const val = e.target.value;
+              const employmentStatus = e.target.value;
 
               setProfile((prev) => ({
                 ...prev,
                 details: {
                   ...prev.details,
-                  occupation_status: val || null,
+                  employment_status: employmentStatus,
+                  education_status:
+                    employmentStatus === "retired"
+                      ? "not_student"
+                      : prev.details?.education_status,
                 },
               }));
             }}
-            className={`w-full h-9 rounded-lg px-2 text-[13px] ${
-              errors?.occupation_status
-                ? "border border-red-400 bg-red-50"
-                : "border border-gray-200 bg-gray-50"
-            }`}
+            className="w-full h-9 rounded-lg border border-gray-200 bg-gray-50 px-2 text-[13px]"
           >
-            <option value="">Select Occupation</option>
-            <option value="working">Working</option>
-            <option value="not_working">Not Working</option>
-            <option value="student">Student</option>
+            <option value="">Select Employment</option>
+            <option value="employed">Employed</option>
+            <option value="not_working">Unemployed</option>
             <option value="retired">Retired</option>
+            <option value="self_employed">Self Employed</option>
           </select>
 
-          {errors?.occupation_status && (
+          {errors?.employment_status && (
             <p className="text-xs text-red-500 mt-1">
-              {errors.occupation_status}
+              {errors.employment_status}
             </p>
           )}
         </div>
+
+        {/* Education */}
+        {profile.details?.employment_status !== "retired" && (
+          <div>
+            <label className="block text-xs font-medium mb-1 text-gray-600">
+              Education Status <span className="text-red-500">*</span>
+            </label>
+
+            <select
+              value={profile.details?.education_status || ""}
+              disabled={profile.details?.employment_status === "retired"}
+              onChange={(e) =>
+                setProfile((prev) => ({
+                  ...prev,
+                  details: {
+                    ...prev.details,
+                    education_status: e.target.value,
+                  },
+                }))
+              }
+              className="w-full h-9 rounded-lg border border-gray-200 bg-gray-50 px-2 text-[13px] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+            >
+              <option value="">Select Education</option>
+              <option value="student">Student</option>
+              <option value="not_student">Not a Student</option>
+            </select>
+
+            {errors?.education_status && (
+              <p className="text-xs text-red-500 mt-1">
+                {errors.education_status}
+              </p>
+            )}
+          </div>
+        )}
         {/* DOB */}
         <div>
           <label className="block text-xs font-medium mb-1 text-gray-600">
@@ -121,6 +155,36 @@ const PersonalDetailsSection = ({ profile, setProfile, errors }) => {
                 details: {
                   ...prev.details,
                   date_of_birth: value,
+                },
+              }));
+            }}
+            className="w-full h-9 rounded-lg border border-gray-200 bg-gray-50 px-2 text-[13px]"
+          />
+        </div>
+
+        {/* Alternate Mobile Number */}
+        <div>
+          <label className="block text-xs font-medium mb-1 text-gray-600">
+            Alternate Mobile Number
+          </label>
+
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="1234567890"
+            maxLength={15}
+            value={profile.details?.alternate_mobile_number || ""}
+            onChange={(e) => {
+              const value = e.target.value;
+
+              // Allow only digits (0-9) or empty string
+              if (value !== "" && !/^\d+$/.test(value)) return;
+
+              setProfile((prev) => ({
+                ...prev,
+                details: {
+                  ...prev.details,
+                  alternate_mobile_number: value,
                 },
               }));
             }}
@@ -154,29 +218,57 @@ const PersonalDetailsSection = ({ profile, setProfile, errors }) => {
         {/* FATHER PHONE */}
         <div>
           <label className="block text-xs font-medium mb-1 text-gray-600">
-            Father’s Mobile Number
+            Father’s Mobile
           </label>
 
-          <div className="flex items-center h-9 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden focus-within:ring-1 focus-within:ring-indigo-100">
-            <span className="text-[13px] text-gray-600 border-r px-2">+91</span>
+          <input
+            type="tel"
+            value={profile.details?.father_phone || ""}
+            placeholder="1234567890"
+            maxLength={10}
+            onChange={(e) =>
+              setProfile((prev) => ({
+                ...prev,
+                details: {
+                  ...prev.details,
+                  father_phone: e.target.value.replace(/\D/g, ""),
+                },
+              }))
+            }
+            className="w-full h-9 rounded-lg border border-gray-200 bg-gray-50 px-2 text-[13px]"
+          />
+        </div>
+        {/* Blood Group */}
+        <div>
+          <label className="block text-xs font-medium mb-1 text-gray-600">
+            Blood Group
+          </label>
 
-            <input
-              type="tel"
-              value={profile.details?.father_phone || ""}
-              placeholder="9876543210"
-              maxLength={10}
-              onChange={(e) =>
-                setProfile((prev) => ({
-                  ...prev,
-                  details: {
-                    ...prev.details,
-                    father_phone: e.target.value.replace(/\D/g, ""),
-                  },
-                }))
-              }
-              className="flex-1 h-full px-2 text-[13px] bg-transparent outline-none"
-            />
-          </div>
+          <select
+            value={profile.details?.blood_group || ""}
+            onChange={(e) => {
+              const value = e.target.value;
+
+              setProfile((prev) => ({
+                ...prev,
+                details: {
+                  ...prev.details,
+                  blood_group: value,
+                },
+              }));
+            }}
+            className="w-full h-9 rounded-lg border border-gray-200 bg-gray-50 px-2 text-[13px]"
+          >
+            <option value="">Select Blood Group</option>
+            <option value="A+">A+</option>
+            <option value="A-">A-</option>
+            <option value="B+">B+</option>
+            <option value="B-">B-</option>
+            <option value="AB+">AB+</option>
+            <option value="AB-">AB-</option>
+            <option value="O+">O+</option>
+            <option value="O-">O-</option>
+          </select>
         </div>
       </div>
     </div>

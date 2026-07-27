@@ -1,5 +1,3 @@
-// models/role.model.js
-
 import { DataTypes } from "sequelize";
 import sequelize from "../../config/db.config.js";
 
@@ -11,16 +9,26 @@ const Role = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
-    role_name: {
+
+    name: {
       type: DataTypes.STRING(50),
       allowNull: false,
       unique: true,
+    },
+
+    description: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
   },
   {
     tableName: "roles",
     timestamps: true,
-    indexes: [{ unique: true, fields: ["role_name"] }],
   },
 );
 

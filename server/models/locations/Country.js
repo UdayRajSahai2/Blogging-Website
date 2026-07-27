@@ -24,6 +24,11 @@ const Country = sequelize.define(
       allowNull: false,
       comment: "ISO Alpha-3 code (e.g., IND)",
     },
+    // country_alpha2: {
+    //   type: DataTypes.STRING(2),
+    //   allowNull: true,
+    //   comment: "ISO Alpha-2 code (e.g., IN)",
+    // },
     is_active: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
@@ -33,10 +38,6 @@ const Country = sequelize.define(
     tableName: "countries",
     timestamps: true,
     indexes: [
-      {
-        unique: true,
-        fields: ["country_code"],
-      },
       {
         fields: ["country_name"],
       },

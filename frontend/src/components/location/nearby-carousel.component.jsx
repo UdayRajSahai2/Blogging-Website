@@ -20,7 +20,7 @@ const NearbyCarousel = ({ users = [], intervalMs = 5000 }) => {
   });
 
   /* -------------------------------
-     Auto rotate (FIXED 🔥)
+     Auto rotate (FIXED)
   --------------------------------*/
   useEffect(() => {
     if (total <= 1) return;
@@ -32,7 +32,7 @@ const NearbyCarousel = ({ users = [], intervalMs = 5000 }) => {
     }, intervalMs);
 
     return () => clearInterval(id);
-  }, []); // ✅ ONLY ONCE
+  }, []); //  ONLY ONCE
 
   /* -------------------------------
      Manual navigation
@@ -58,17 +58,10 @@ const NearbyCarousel = ({ users = [], intervalMs = 5000 }) => {
   --------------------------------*/
   if (!total) {
     return (
-      <>
-        <div className="hidden sm:flex items-center justify-center gap-2 text-dark-grey bg-grey/10 rounded-lg py-6">
-          <UsersIcon className="w-4 h-4 opacity-70" />
-          <span>No nearby users found</span>
-        </div>
-
-        <p className="sm:hidden flex items-center justify-center gap-1 text-dark-grey text-sm py-2">
-          <UsersIcon className="w-4 h-4 opacity-70" />
-          No nearby users found
-        </p>
-      </>
+      <div className="flex items-center justify-center gap-2 text-dark-grey bg-grey/10 rounded-lg py-4 sm:py-6 text-sm sm:text-base">
+        <UsersIcon className="w-4 h-4 opacity-70" />
+        <span>No nearby users found</span>
+      </div>
     );
   }
 

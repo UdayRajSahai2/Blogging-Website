@@ -69,7 +69,7 @@ const InputBox = ({
 
         {/* ICON (if no prefix) */}
         {!prefix && icon && (
-          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500">
             {icon}
           </div>
         )}

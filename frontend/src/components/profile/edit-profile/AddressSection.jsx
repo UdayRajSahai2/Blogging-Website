@@ -5,11 +5,12 @@ import {
   BuildingOfficeIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
+
 const InputWrapper = ({ children, className = "" }) => (
   <div className={`relative w-full mb-2 sm:mb-3 ${className}`}>
     <div
       className="
-        flex items-center h-10 rounded-xl border border-gray-500
+        flex items-center h-10 rounded-lg border border-gray-400
         bg-white/70 backdrop-blur-sm
         shadow-sm hover:shadow-md
         transition-all duration-200
@@ -63,13 +64,25 @@ const AddressSection = ({
     },
   };
 
-  const current = labels[type];
+  const getLabels = (type) => {
+    return (
+      labels[type] || {
+        city: "City",
+        state: "State",
+        country: "Country",
+        zip: "Zip Code",
+        street: "Address",
+      }
+    );
+  };
+
+  const current = getLabels(type);
 
   return (
-    <div className="bg-white border rounded-lg p-2 sm:p-3 space-y-3">
-      <p className="text-xs font-semibold text-gray-500 uppercase">{title}</p>
+    <div className="bg-white border rounded-lg p-2 sm:p-3 space-y-1">
+      <p className="text-xs font-semibold text-gray-600 uppercase">{title}</p>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-1">
         {/* STREET */}
         <div className="flex flex-col">
           <label className="text-xs font-medium mb-1 text-gray-600">

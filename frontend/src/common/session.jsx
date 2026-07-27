@@ -88,12 +88,6 @@ const hasRole = (role) => {
   return roles.includes(role);
 };
 
-// Primary role
-const getPrimaryRole = () => {
-  const user = getCurrentUser();
-  return user?.primary_role || null;
-};
-
 // Optional: check login state
 const isAuthenticated = () => {
   return !!getAccessToken();
@@ -112,6 +106,5 @@ export {
   getAccessToken,
   getUserRoles,
   hasRole,
-  getPrimaryRole,
   isAuthenticated,
 };

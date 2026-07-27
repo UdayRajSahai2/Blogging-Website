@@ -61,15 +61,15 @@ import paymentRoutes from "./routes/payment.routes.js";
 import academicRoutes from "./routes/academic.routes.js";
 import userDetailsRoutes from "./routes/userdetails.routes.js";
 import professionalProfileRoutes from "./routes/professional-profile.routes.js";
-import chatRoutes from "./routes/chat.routes.js";
 import adminRoutes from "./routes/admin/index.js";
-import roleRoutes from "./routes/role.routes.js";
 import userInterestsRoutes from "./routes/userInterests.routes.js";
-import connectionRoutes from "./routes/connection.routes.js";
 import locationRoutes from "./routes/location.routes.js";
 import pageRoutes from "./routes/page.routes.js";
 import menuRoutes from "./routes/menu.routes.js";
-import studentEnrollmentRoutes from "./routes/studentEnrollment.routes.js";
+import enrollmentRoutes from "./routes/user.routes.js";
+import profileRoutes from "./routes/profile.routes.js";
+import userRoleRoutes from "./routes/userRole.routes.js";
+import dailyFeedRoutes from "./routes/dailyFeedRoutes.js";
 
 app.use("/api/auth", authRoutes);
 app.use("/api/blog", blogRoutes);
@@ -86,15 +86,15 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/academics", academicRoutes);
 app.use("/api/user-details", userDetailsRoutes);
 app.use("/api/professional-profile", professionalProfileRoutes);
-app.use("/api/chat", chatRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/roles", roleRoutes);
 app.use("/api/interests", userInterestsRoutes);
 app.use("/api/location", locationRoutes);
-app.use("/api/connections", connectionRoutes);
 app.use("/api/pages", pageRoutes);
 app.use("/api/menu", menuRoutes);
-app.use("/api/student-enrollment", studentEnrollmentRoutes);
+app.use("/api/enrollments", enrollmentRoutes);
+app.use("/api/profiles", profileRoutes);
+app.use("/api/user-roles", userRoleRoutes);
+app.use("/api/daily-feed", dailyFeedRoutes);
 // ================= HEALTH CHECK =================
 
 app.get("/api/health", (req, res) => {

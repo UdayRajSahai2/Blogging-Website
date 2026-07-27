@@ -7,7 +7,9 @@ import razorpay from "../config/razorpay.config.js";
 import sequelize from "../config/db.config.js";
 
 // ---------------- Models ----------------
-import { User, Donor, Donation } from "../models/associations.js";
+import User from "../models/user/User.js";
+import Donor from "../models/Donor.js";
+import Donation from "../models/Donation.js";
 
 /**
  * ================================

@@ -1,5 +1,5 @@
 // ---------------- Models / Associations ----------------
-import { Expenditure } from "../models/associations.js";
+import Expenditure from "../models/Expenditure.js";
 
 // ================= ADD EXPENDITURE =================
 // (admin only — middleware should enforce system_role)

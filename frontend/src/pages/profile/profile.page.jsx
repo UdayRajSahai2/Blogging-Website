@@ -8,12 +8,15 @@ import PageNotFound from "../404.page";
 
 import { UserContext } from "../../App";
 import { filterPaginationData } from "../../common/filter-pagination-data";
-import { BLOG_API, USER_API, PROFESSIONAL_PROFILE_API } from "../../common/api";
+import { BLOG_API, USER_API } from "../../common/api";
+import { getProfessionalProfileByUser } from "../../api/professionalProfile.api";
 
 import ProfileHeader from "../../components/profile/ProfileHeader";
 import ProfileContainer from "../../components/profile/ProfileContainer";
 import ProfileTabs from "../../components/profile/ProfileTabs";
-
+import SimilarProfiles from "../../components/profile/SimilarProfiles";
+import { useRef } from "react";
+import PrintableProfile from "../../components/profile/PrintableProfile";
 //  IMPORT HOOK
 import useLocationTracker from "../../hooks/useLocationTracker";
 
@@ -74,16 +77,20 @@ const ProfilePage = ({ username, goBack }) => {
   const [experiences, setExperiences] = useState([]);
   const [academics, setAcademics] = useState([]);
   const [interests, setInterests] = useState([]);
+  const printRef = useRef(null);
   //  GLOBAL LOCATION TRACKING (FIXED)
   useLocationTracker(isOwner ? userAuth?.access_token : null);
 
   const fetchExperiences = async (user_id) => {
     try {
-      const res = await axios.get(`${PROFESSIONAL_PROFILE_API}/${user_id}`);
+      const res = await getProfessionalProfileByUser(user_id);
 
       setExperiences(res.data.data?.experiences || []);
-    } catch (err) {}
+    } catch (err) {
+      console.error(err);
+    }
   };
+
   const fetchAcademics = async (user_id) => {
     try {
       const res = await axios.get(
@@ -229,47 +236,76 @@ const ProfilePage = ({ username, goBack }) => {
     <AnimationWrapper>
       <ProfileContainer embedded={!!goBack}>
         {/* ================= HEADER (ALWAYS VISIBLE) ================= */}
-        <ProfileHeader profile={profile} isOwner={isOwner} goBack={goBack} />
+        <ProfileHeader
+          profile={profile}
+          experiences={experiences}
+          isOwner={isOwner}
+          goBack={goBack}
+          printRef={printRef}
+        />
 
         {/* ================= PROFILE CONTENT ================= */}
         {userAuth?.access_token ? (
-          <ProfileTabs
-            tab={tab}
-            setTab={setTab}
-            blogs={blogs}
-            getBlogs={getBlogs}
-            isOwner={isOwner}
-            bio={profile.bio}
-            social_links={profile.details}
-            details={profile.details}
-            createdAt={profile.createdAt}
-            addresses={profile.addresses}
-            experiences={profile.experiences}
-            academics={profile.academics}
-            interests={interests}
-          />
+          <>
+            <ProfileTabs
+              tab={tab}
+              setTab={setTab}
+              blogs={blogs}
+              getBlogs={getBlogs}
+              isOwner={isOwner}
+              bio={profile.bio}
+              social_links={profile.details}
+              details={profile.details}
+              createdAt={profile.createdAt}
+              addresses={profile.addresses}
+              experiences={profile.experiences}
+              academics={profile.academics}
+              interests={interests}
+              userId={profile.user_id} // <-- add
+            />
+          </>
         ) : (
           /* ================= GUEST VIEW ================= */
-          <div className="mt-6 text-center text-sm text-gray-500 border-t pt-4">
-            <p>Sign in to view full profile details</p>
+          <div className="mt-2 border-t pt-2 text-center">
+            <p className="text-sm text-gray-500">
+              Login in or create an account to view full profile details and
+              connect with other users.
+            </p>
 
-            <div className="mt-2 flex justify-center gap-3">
+            <div className="mt-2 mb-2 flex justify-center gap-3">
               <Link
                 to="/signin"
-                className="text-indigo-600 font-medium hover:underline"
+                className="rounded-lg border border-slate-400 px-2 py-1 text-sm text-slate-700 hover:bg-slate-100"
               >
-                Sign In
+                Login
               </Link>
+
               <Link
                 to="/signup"
-                className="text-indigo-600 font-medium hover:underline"
+                className="rounded-lg bg-purple px-2 py-1 text-sm text-white hover:bg-slate-900"
               >
-                Register
+                Sign Up
               </Link>
             </div>
           </div>
         )}
       </ProfileContainer>
+      {/*  SIMILAR PROFILES*/}
+      <div
+        style={{
+          position: "absolute",
+          left: "-99999px",
+          top: 0,
+        }}
+      >
+        <div ref={printRef}>
+          <PrintableProfile
+            profile={profile}
+            interests={interests}
+            isOwner={isOwner}
+          />
+        </div>
+      </div>
     </AnimationWrapper>
   );
 };

@@ -131,7 +131,6 @@ const BlogPage = () => {
         return;
       }
 
-      console.log(err);
       setLoading(false);
     }
   };

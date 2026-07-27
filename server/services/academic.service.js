@@ -1,5 +1,9 @@
 // server/services/academic.service.js
+import Country from "../models/locations/Country.js";
+import State from "../models/locations/State.js";
+import District from "../models/locations/District.js";
 import UserAcademic from "../models/user/UserAcademic.js";
+
 const normalizeTitle = (val) => {
   let v = val?.toLowerCase().trim();
 
@@ -31,6 +35,7 @@ export const getUserAcademics = async (user_id) => {
 /* =========================
    GET ONE (PRIVATE)
 ========================= */
+
 export const getAcademicByIdService = async (academic_id, user_id) => {
   const academic = await UserAcademic.findOne({
     where: { academic_id, user_id },
@@ -38,9 +43,49 @@ export const getAcademicByIdService = async (academic_id, user_id) => {
 
   if (!academic) throw new Error("Record not found");
 
-  return academic;
-};
+  const data = academic.toJSON();
 
+  // Country
+  const country = await Country.findOne({
+    where: {
+      country_name: data.country,
+      is_active: 1,
+    },
+  });
+
+  if (country) {
+    data.country_code = country.country_code;
+  }
+
+  // State
+  const state = await State.findOne({
+    where: {
+      country_code: data.country_code,
+      state_name: data.state,
+      is_active: 1,
+    },
+  });
+
+  if (state) {
+    data.state_code = state.state_code;
+  }
+
+  // District
+  const district = await District.findOne({
+    where: {
+      country_code: data.country_code,
+      state_code: data.state_code,
+      district_name: data.city,
+      is_active: 1,
+    },
+  });
+
+  if (district) {
+    data.district_code = district.district_code;
+  }
+
+  return data;
+};
 /* =========================
    GET BY USER (PUBLIC)
 ========================= */

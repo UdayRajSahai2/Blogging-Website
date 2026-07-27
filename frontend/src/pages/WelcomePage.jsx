@@ -6,11 +6,19 @@ import { useEffect } from "react";
 import CheckBadgeIcon from "@heroicons/react/24/solid/CheckBadgeIcon";
 import IdentificationIcon from "@heroicons/react/24/solid/IdentificationIcon";
 import SparklesIcon from "@heroicons/react/24/solid/SparklesIcon";
+import {
+  ArrowRightCircleIcon,
+  ArrowRightOnRectangleIcon,
+} from "@heroicons/react/24/solid";
+import UserAvatar from "../common/UserAvatar";
 const WelcomePage = () => {
   const navigate = useNavigate();
   const { userAuth, setUserAuth } = useContext(UserContext);
 
   const user = userAuth;
+  const formattedName = user?.fullname
+    ? user.fullname.replace(/\b\w/g, (char) => char.toUpperCase())
+    : user?.username;
 
   const signOutUser = () => {
     removeFromSession("user");
@@ -37,20 +45,22 @@ const WelcomePage = () => {
         {/*  Header */}
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-2">
           <SparklesIcon className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-500" />
-          Welcome, {user?.fullname || user?.username}!
+          Welcome, {formattedName}!
         </h1>
         <p className="text-gray-500 text-xs sm:text-sm mb-6 flex items-start sm:items-center justify-center gap-2">
           <CheckBadgeIcon className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
           Your account has been successfully created and is ready to go
         </p>
-
         {/*  Avatar */}
-        <img
-          src={user?.profile_img || "/default-avatar.png"}
-          alt="avatar"
-          className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border mb-5 mx-auto"
-        />
 
+        <UserAvatar
+          src={user?.profile_img}
+          name={user?.fullname}
+          className="w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-5"
+          bgClassName="bg-gray-200"
+          ringClassName="ring-gray-300"
+          textClassName="text-3xl sm:text-4xl font-bold text-gray-600"
+        />
         {/* Customer ID */}
         <div className="bg-white/70 backdrop-blur-md rounded-xl px-4 sm:px-6 py-3 sm:py-4 mb-6 shadow-sm text-center">
           <p className="text-[11px] sm:text-xs text-gray-500 flex items-center justify-center gap-1">
@@ -62,26 +72,26 @@ const WelcomePage = () => {
             #{user?.customer_id || "CUST-XXXX"}
           </p>
         </div>
-
         {/* Profile Status */}
         <p className="text-xs sm:text-sm text-gray-600 mb-6 leading-relaxed">
           Complete your profile in just a few seconds to unlock full access and
-          start getting discovered
+          start getting discovered.
         </p>
-
-        {/*  Buttons */}
+        {/* Buttons */}
         <div className="w-full space-y-2">
           <button
             onClick={() => navigate("/onboarding")}
-            className="w-full py-2.5 text-sm sm:text-base bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
+            className="w-full flex items-center justify-center gap-2 py-2 text-sm bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
           >
-            Complete Your Profile →
+            <ArrowRightCircleIcon className="w-5 h-5" />
+            Complete Your Profile
           </button>
 
           <button
             onClick={signOutUser}
-            className="w-full py-2 text-sm sm:text-base bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition"
+            className="w-full flex items-center justify-center gap-2 py-2 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition"
           >
+            <ArrowRightOnRectangleIcon className="w-5 h-5" />
             Sign Out
           </button>
         </div>

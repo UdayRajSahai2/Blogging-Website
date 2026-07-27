@@ -11,41 +11,41 @@ const runImport = async () => {
   const transaction = await sequelize.transaction();
 
   try {
-    console.log("🚀 Profession Import Script Started...");
-    console.log(`⚙️ Mode: ${MODE}`);
+    console.log(" Profession Import Script Started...");
+    console.log(` Mode: ${MODE}`);
 
     // DB connection check
     await sequelize.authenticate();
-    console.log("✅ Database connected");
+    console.log(" Database connected");
 
     // BEFORE STATS
     const beforeStats = await getProfessionStats(transaction);
-    console.log("📊 Before:", beforeStats);
+    console.log(" Before:", beforeStats);
 
     // OPTIONAL RESET
     if (MODE === "reset") {
-      console.log("🧹 Reset mode: clearing existing data...");
+      console.log(" Reset mode: clearing existing data...");
       await clearProfessionData(transaction);
     }
 
     // IMPORT
-    console.log("📥 Importing profession hierarchy...");
+    console.log(" Importing profession hierarchy...");
     const result = await importProfessionData(transaction);
-    console.log("✅ Import result:", result);
+    console.log(" Import result:", result);
 
     // AFTER STATS
     const afterStats = await getProfessionStats(transaction);
-    console.log("📊 After:", afterStats);
+    console.log(" After:", afterStats);
 
     // COMMIT
     await transaction.commit();
 
-    console.log("🎉 Import completed successfully!");
-    console.log(`📈 Records: ${beforeStats.total} → ${afterStats.total}`);
+    console.log("Import completed successfully!");
+    console.log(` Records: ${beforeStats.total} → ${afterStats.total}`);
   } catch (error) {
     await transaction.rollback();
 
-    console.error("❌ Import failed:", {
+    console.error(" Import failed:", {
       message: error.message,
       stack: error.stack,
     });

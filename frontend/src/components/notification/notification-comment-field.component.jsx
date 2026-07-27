@@ -19,8 +19,6 @@ const NotificationCommentField = ({
   const [reply, setReply] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  console.log("Notification Data", notificationData);
-
   // Safely extract notification data with proper null checks
   const blog = notificationData?.blog || {};
   const comment = notificationData?.comment || {};
@@ -64,8 +62,6 @@ const NotificationCommentField = ({
         replying_to: replyingToId,
       };
 
-      console.log("Sending reply request:", requestData);
-
       const response = await axios.post(
         `${COMMENT_API}/add-comment`,
         requestData,
@@ -75,8 +71,6 @@ const NotificationCommentField = ({
           },
         },
       );
-
-      console.log("Server response:", response.data);
 
       // Check if request was successful
       if (response.data.success) {

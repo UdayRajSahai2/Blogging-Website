@@ -1,14 +1,15 @@
 import { useEffect, useState, useMemo } from "react";
-import { getMyAcademics, deleteAcademic } from "../../api/academic.api";
 import { Link } from "react-router-dom";
 import BookOpenIcon from "@heroicons/react/24/solid/BookOpenIcon";
 import PlusIcon from "@heroicons/react/24/solid/PlusIcon";
 import MagnifyingGlassIcon from "@heroicons/react/24/solid/MagnifyingGlassIcon";
-import PencilSquareIcon from "@heroicons/react/24/solid/PencilSquareIcon";
-import TrashIcon from "@heroicons/react/24/solid/TrashIcon";
 import StarIcon from "@heroicons/react/24/solid/StarIcon";
 import MapPinIcon from "@heroicons/react/24/solid/MapPinIcon";
 import CalendarIcon from "@heroicons/react/24/solid/CalendarIcon";
+import PencilSquareIcon from "@heroicons/react/24/outline/PencilSquareIcon";
+import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
+
+import { getMyAcademics, deleteAcademic } from "../../api/academic.api";
 export default function AcademicPage() {
   const [academics, setAcademics] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -193,9 +194,7 @@ export default function AcademicPage() {
       {/* LIST */}
       <div className="bg-white divide-y border rounded-lg overflow-hidden">
         {loading && <LoadingState />}
-
         {!loading && filtered.length === 0 && <EmptyState />}
-
         {filtered.map((item) => {
           const toTitleCase = (text = "") =>
             text
@@ -220,36 +219,35 @@ export default function AcademicPage() {
           return (
             <div
               key={item.academic_id}
-              className="relative py-3 md:py-4 px-3 md:px-5 hover:bg-gray-50 transition"
+              className="relative py-4 px-4 md:px-5 hover:bg-gray-50/80 transition"
             >
               {/* ACTIONS */}
-              <div className="absolute right-3 top-3 flex items-center gap-3 text-gray-500">
+              <div className="absolute right-3 top-3 flex items-center gap-2 text-gray-700">
                 <Link
                   to={`edit/${item.academic_id}`}
-                  className="flex items-center gap-1 hover:text-blue-600 transition"
+                  className="flex items-center gap-1 text-blue-700 hover:text-blue-900 transition"
                   title="Edit"
                 >
                   <PencilSquareIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline text-xs md:text-sm">
+                  <span className="hidden sm:inline text-xs md:text-sm font-medium">
                     Edit
                   </span>
                 </Link>
 
                 <button
                   onClick={() => handleDelete(item.academic_id)}
-                  className="flex items-center gap-1 hover:text-red-600 transition"
+                  className="flex items-center gap-1 text-red-600 hover:text-red-800 transition"
                   title="Delete"
                 >
                   <TrashIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline text-xs md:text-sm">
+                  <span className="hidden sm:inline text-xs md:text-sm font-medium">
                     Delete
                   </span>
                 </button>
               </div>
 
               {/* CONTENT */}
-              <div className="min-w-0 text-xs md:text-sm lg:text-base">
-                {/* TITLE ROW */}
+              <div className="min-w-0 text-sm lg:text-base text-gray-900 font-medium leading-snug">
                 {/* TITLE ROW */}
                 <div className="flex flex-wrap items-center gap-2 md:gap-3 font-medium text-gray-900">
                   <span>{formatText(item.title)}</span>
@@ -257,7 +255,7 @@ export default function AcademicPage() {
                   {item.level && (
                     <>
                       <span className="text-gray-300">•</span>
-                      <span className="text-gray-500 font-normal">
+                      <span className="text-gray-600 font-medium">
                         {formatText(item.level)}
                       </span>
                     </>
@@ -266,7 +264,7 @@ export default function AcademicPage() {
                   {duration && (
                     <>
                       <span className="text-gray-300">•</span>
-                      <span className="flex items-center gap-1 text-gray-400 font-normal">
+                      <span className="flex items-center gap-1 text-gray-600 font-medium">
                         <CalendarIcon className="w-3.5 h-3.5" />
                         {duration}
                       </span>
@@ -276,7 +274,7 @@ export default function AcademicPage() {
                   {grade && (
                     <>
                       <span className="text-gray-300">•</span>
-                      <span className="flex items-center gap-1 text-gray-400 font-normal">
+                      <span className="flex items-center gap-1 text-gray-600 font-medium">
                         <StarIcon className="w-3.5 h-3.5" />
                         {grade}
                       </span>
@@ -288,11 +286,11 @@ export default function AcademicPage() {
                 <StatusBadges item={item} />
 
                 {/* INSTITUTE + UNIVERSITY */}
-                <div className="mt-1 text-gray-700 text-sm">
+                <div className="mt-1 text-gray-700 text-sm font-medium">
                   {formatText(item.institute_name)}
 
                   {item.university_name && (
-                    <span className="text-gray-500">
+                    <span className="text-gray-500 font-normal">
                       {" "}
                       · {formatText(item.university_name)}
                     </span>
@@ -300,17 +298,17 @@ export default function AcademicPage() {
                 </div>
 
                 {/* META */}
-                <div className="flex flex-wrap items-center gap-2 md:gap-3 text-gray-500 text-xs md:text-sm mt-1">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3 text-gray-600 text-xs md:text-sm mt-1">
                   {item.field_of_study && (
-                    <span className="flex items-center gap-1.5">
-                      <BookOpenIcon className="w-3 h-3" />
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <BookOpenIcon className="w-3.5 h-3.5" />
                       {formatText(item.field_of_study)}
                     </span>
                   )}
 
                   {location && (
                     <span className="flex items-center gap-1.5">
-                      <MapPinIcon className="w-3 h-3" />
+                      <MapPinIcon className="w-3.5 h-3.5" />
                       {location}
                     </span>
                   )}
@@ -318,7 +316,7 @@ export default function AcademicPage() {
 
                 {/* DESCRIPTION */}
                 {item.description && (
-                  <div className="text-gray-400 text-xs md:text-sm mt-1 line-clamp-2">
+                  <div className="text-gray-600 text-sm mt-2 line-clamp-2 leading-relaxed">
                     {item.description}
                   </div>
                 )}

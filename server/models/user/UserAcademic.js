@@ -7,56 +7,56 @@ import sequelize from "../../config/db.config.js";
 ========================= */
 const LEVEL_TITLES = {
   School: [
-    "class 1",
-    "class 2",
-    "class 3",
-    "class 4",
-    "class 5",
-    "class 6",
-    "class 7",
-    "class 8",
-    "class 9",
-    "class 10",
-    "class 11",
-    "class 12",
+    "Class 1",
+    "Class 2",
+    "Class 3",
+    "Class 4",
+    "Class 5",
+    "Class 6",
+    "Class 7",
+    "Class 8",
+    "Class 9",
+    "Class 10",
+    "Class 11",
+    "Class 12",
   ],
 
-  ITI: ["iti electrician", "iti fitter", "iti welder", "iti mechanic"],
+  ITI: ["ITI Electrician", "ITI Fitter", "ITI Welder", "ITI Mechanic"],
 
   Diploma: [
-    "diploma in engineering",
-    "diploma in polytechnic",
-    "diploma in computer science",
-    "diploma in mechanical",
-    "diploma in civil",
-    "diploma in electrical",
+    "Diploma in Engineering",
+    "Diploma in Polytechnic",
+    "Diploma in Computer Science",
+    "Diploma in Mechanical",
+    "Diploma in Civil",
+    "Diploma in Electrical",
   ],
 
   UG: [
-    "b.tech",
-    "b.e",
-    "b.sc",
-    "b.com",
-    "ba",
-    "bba",
-    "bca",
-    "b.arch",
-    "b.pharm",
-    "mbbs",
-    "llb",
+    "B.Tech",
+    "B.E",
+    "B.Sc",
+    "B.Com",
+    "BA",
+    "BBA",
+    "BCA",
+    "B.Arch",
+    "B.Pharm",
+    "MBBS",
+    "LLB",
   ],
 
-  PG: ["m.tech", "m.e", "m.sc", "m.com", "ma", "mba", "mca", "m.pharm", "llm"],
+  PG: ["M.Tech", "M.E", "M.Sc", "M.Com", "MA", "MBA", "MCA", "M.Pharm", "LLM"],
 
-  PhD: ["phd"],
+  PhD: ["PhD"],
 
-  PostDoc: ["postdoc", "postdoctoral"],
+  PostDoc: ["PostDoc", "Postdoctoral"],
 };
 
 /* =========================
    HELPERS
 ========================= */
-const normalize = (val) => (val ? val.toString().trim().toLowerCase() : null);
+const normalize = (val) => (val ? val.toString().trim() : null);
 
 /* =========================
    MODEL
@@ -97,17 +97,15 @@ const UserAcademic = sequelize.define(
       type: DataTypes.STRING(150),
       allowNull: false,
       set(value) {
-        let val = normalize(value);
+        const input = value?.toString().trim();
 
-        const match = val?.match(/\d+/);
-        if (match) {
-          const num = parseInt(match[0]);
-          if (num >= 1 && num <= 12) {
-            val = `class ${num}`;
-          }
-        }
+        const allowed = LEVEL_TITLES[this.level] || [];
 
-        this.setDataValue("title", val);
+        const matched = allowed.find(
+          (t) => t.toLowerCase() === input.toLowerCase(),
+        );
+
+        this.setDataValue("title", matched || input);
       },
     },
 
@@ -278,7 +276,9 @@ const UserAcademic = sequelize.define(
       },
       validSchoolTitle() {
         if (this.level === "School") {
-          const valid = /^class (1[0-2]|[1-9])$/.test(this.title);
+          const title = this.title.trim();
+
+          const valid = /^class (1[0-2]|[1-9])$/i.test(title);
 
           if (!valid) {
             throw new Error("Invalid class. Use Class 1–12 only.");

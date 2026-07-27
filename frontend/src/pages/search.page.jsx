@@ -13,6 +13,7 @@ import UserCard from "../components/usercard.component";
 import { filterPaginationData } from "../common/filter-pagination-data";
 import { BLOG_API, USER_API } from "../common/api";
 import { UserIcon } from "@heroicons/react/24/outline";
+
 const SearchPage = () => {
   const { query } = useParams();
 

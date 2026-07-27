@@ -37,18 +37,6 @@ const ProfessionalExperience = sequelize.define(
       type: DataTypes.STRING,
     },
 
-    employer_type: {
-      type: DataTypes.ENUM(
-        "Corporate",
-        "Startup",
-        "SME",
-        "Govt",
-        "NGO",
-        "Self-employed",
-        "Freelance",
-      ),
-    },
-
     designation: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -64,21 +52,6 @@ const ProfessionalExperience = sequelize.define(
         "Consultant",
       ),
       allowNull: false,
-    },
-
-    experience_type: {
-      type: DataTypes.ENUM(
-        "employment",
-        "practice",
-        "consulting",
-        "freelance",
-        "training",
-      ),
-      defaultValue: "employment",
-    },
-
-    location_type: {
-      type: DataTypes.ENUM("onsite", "remote", "hybrid"),
     },
 
     start_date: {
@@ -115,33 +88,6 @@ const ProfessionalExperience = sequelize.define(
 
     achievements: {
       type: DataTypes.TEXT,
-    },
-
-    experience_document_url: {
-      type: DataTypes.STRING,
-      validate: { isUrl: true },
-    },
-
-    verification_status: {
-      type: DataTypes.ENUM("pending", "verified", "rejected"),
-      defaultValue: "pending",
-    },
-
-    verification_notes: {
-      type: DataTypes.TEXT,
-    },
-
-    verified_by: {
-      type: DataTypes.INTEGER,
-    },
-
-    verified_at: {
-      type: DataTypes.DATE,
-    },
-
-    visibility: {
-      type: DataTypes.ENUM("public", "private", "connections"),
-      defaultValue: "public",
     },
   },
   {

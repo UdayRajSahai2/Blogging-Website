@@ -52,8 +52,6 @@ const CommentField = ({ action, replyingTo, onCommentAdded }) => {
         requestData.replying_to = replyingTo;
       }
 
-      console.log("Sending comment request:", requestData);
-
       const response = await axios.post(
         `${COMMENT_API}/add-comment`,
         requestData,
@@ -63,8 +61,6 @@ const CommentField = ({ action, replyingTo, onCommentAdded }) => {
           },
         },
       );
-
-      console.log("Server response:", response.data);
 
       // Check if request was successful
       if (response.data.success) {

@@ -19,7 +19,7 @@ const buildCode = (parentCode, currentPart) => {
  */
 export const importProfessionData = async (transaction) => {
   try {
-    console.log("🔄 Starting profession data import...");
+    console.log(" Starting profession data import...");
 
     const jsonPath = path.join(
       __dirname,
@@ -119,11 +119,11 @@ export const importProfessionData = async (transaction) => {
       }
     }
 
-    console.log(`🎉 Import completed! Total new records: ${totalImported}`);
+    console.log(` Import completed! Total new records: ${totalImported}`);
 
     return { success: true, totalImported };
   } catch (error) {
-    console.error("❌ Import error:", error);
+    console.error(" Import error:", error);
     throw error;
   }
 };
@@ -133,7 +133,7 @@ export const importProfessionData = async (transaction) => {
  */
 export const clearProfessionData = async (transaction) => {
   try {
-    console.log("🗑️ Clearing profession data...");
+    console.log(" Clearing profession data...");
 
     const { User } = await import("../models/associations.js");
 
@@ -152,11 +152,11 @@ export const clearProfessionData = async (transaction) => {
     await Profession.destroy({ where: { level: 1 }, transaction });
     await Profession.destroy({ where: { level: 0 }, transaction });
 
-    console.log("✅ Profession data cleared");
+    console.log(" Profession data cleared");
 
     return { success: true };
   } catch (error) {
-    console.error("❌ Clear error:", error);
+    console.error(" Clear error:", error);
     throw error;
   }
 };
@@ -194,7 +194,7 @@ export const getProfessionStats = async (transaction) => {
       total: domains + fields + specialties + detailed,
     };
   } catch (error) {
-    console.error("❌ Stats error:", error);
+    console.error(" Stats error:", error);
     throw error;
   }
 };

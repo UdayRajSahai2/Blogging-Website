@@ -69,7 +69,7 @@ const Blog = sequelize.define(
       allowNull: true,
     },
     taxonomy_id: {
-      type: DataTypes.STRING,
+      type: DataTypes.INTEGER, // IMPORTANT CHANGE
       allowNull: true,
     },
   },

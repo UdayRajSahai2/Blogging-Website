@@ -109,6 +109,7 @@ export const getAcademicById = async (req, res) => {
 
     return res.json({ data });
   } catch (err) {
+    console.error(err); // <-- add this
     return res.status(404).json({ error: err.message });
   }
 };

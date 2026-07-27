@@ -5,7 +5,8 @@ import sequelize from "../config/db.config.js";
 import "../config/firebase.config.js";
 
 // ---------------- Models / Associations ----------------
-import { Donor, Donation } from "../models/associations.js";
+import Donor from "../models/Donor.js";
+import Donation from "../models/Donation.js";
 export const makeDonation = async (req, res) => {
   try {
     const { amount, purpose, customer_id, payment_id, payment_signature } =

@@ -1,3 +1,4 @@
+//server\routes\admin\admin.routes.js
 import express from "express";
 import {
   getAdminStats,
@@ -11,15 +12,20 @@ import {
   deleteBlogAdmin,
   deleteBlogPermanent,
   deleteUserPermanent,
-  getStudentEnrollments,
+  getEnrollments,
+  getUsersByStatus,
+  updateUserApprovalStatus,
+  approveUser,
+  rejectUser,
+  getReferrers,
 } from "../../controllers/admin/admin.controller.js";
 import { verifyJWT } from "../../middlewares/auth.middleware.js";
-import { authorizeRoles } from "../../middlewares/role.middleware.js";
+import { authorizeSystemRoles } from "../../middlewares/role.middleware.js";
 
 const router = express.Router();
 
 // (auth)
-router.use(verifyJWT, authorizeRoles("admin"));
+router.use(verifyJWT, authorizeSystemRoles("admin"));
 
 // ========================
 // Dashboard
@@ -49,7 +55,16 @@ router.patch("/blogs/:id/restore", restoreBlogAdmin);
 //  HARD DELETE
 router.delete("/blogs/:id/permanent", deleteBlogPermanent);
 
-//Student Enrollments
-router.get("/student-enrollments", getStudentEnrollments);
+// Enrollments
+
+router.get("/enrollments", getEnrollments);
+
+router.get("/referrers", getReferrers);
+
+router.get("/users/approval", getUsersByStatus);
+router.put("/users/:userId/approval", updateUserApprovalStatus);
+router.patch("/users/:userId/approve", approveUser);
+
+router.patch("/users/:userId/reject", rejectUser);
 
 export default router;

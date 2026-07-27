@@ -14,7 +14,6 @@ import DocumentTextIcon from "@heroicons/react/24/outline/DocumentTextIcon";
 import Cog6ToothIcon from "@heroicons/react/24/outline/Cog6ToothIcon";
 import ArrowRightOnRectangleIcon from "@heroicons/react/24/outline/ArrowRightOnRectangleIcon";
 import CalendarDaysIcon from "@heroicons/react/24/outline/CalendarDaysIcon";
-import ChatBubbleLeftRightIcon from "@heroicons/react/24/outline/ChatBubbleLeftRightIcon";
 import Squares2X2Icon from "@heroicons/react/24/outline/Squares2X2Icon";
 const UserNavigationPanel = () => {
   const navigate = useNavigate();
@@ -79,7 +78,7 @@ const UserNavigationPanel = () => {
               {/* Username */}
               <p className="text-xs text-gray-500">@{username}</p>
 
-              {/* Role */}
+              {/* System  Role */}
               <p className="text-[11px] text-gray-400 mt-0.5">
                 {role === "super_admin"
                   ? "Super Admin"
@@ -159,40 +158,3 @@ const UserNavigationPanel = () => {
 };
 
 export default UserNavigationPanel;
-{
-  /* disabled in production */
-}
-{
-  /* <Link
-            to="/events/my"
-            className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-all"
-          >
-            <CalendarDaysIcon className="w-4 h-4 mr-3 text-purple-600" />
-My Events
-          </Link> */
-}
-
-{
-  /* disabled in production */
-}
-{
-  /* <Link
-            to="/chat"
-            className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-all"
-          >
-         <ChatBubbleLeftRightIcon className="w-4 h-4 mr-3 text-purple-600" />
-My Chats
-          </Link> */
-}
-{
-  /*  DASHBOARD for multiple roles disabled */
-}
-{
-  /* <Link
-            to="/dashboard-home"
-            className="flex items-center px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 transition-all font-medium"
-          >
-            <Squares2X2Icon className="w-4 h-4 mr-3" />
-Dashboard
-          </Link> */
-}

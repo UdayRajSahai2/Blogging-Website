@@ -17,15 +17,15 @@ export const filterPaginationData = async ({
     };
   }
 
-  // 🔑 SAFE dynamic unique key resolver
+  //  SAFE dynamic unique key resolver
   const getUniqueKey = (item) => item?.blog_id ?? item?._id ?? item?.id ?? null;
 
-  // ✅ APPEND MODE
-  if (state !== null && !create_new_arr) {
+  // APPEND MODE
+  if (state !== null && page > 1 && !create_new_arr) {
     const merged = [...state.results, ...data].reduce((acc, item) => {
       const key = getUniqueKey(item);
 
-      // 🚨 If no key, push anyway (prevents data loss)
+      //  If no key, push anyway (prevents data loss)
       if (!key || !acc.some((n) => getUniqueKey(n) === key)) {
         acc.push(item);
       }
@@ -39,7 +39,7 @@ export const filterPaginationData = async ({
     };
   }
 
-  // ✅ SAFETY
+  //  SAFETY
   if (!countRoute) {
     console.error("countRoute is missing in filterPaginationData");
     return {
@@ -49,7 +49,7 @@ export const filterPaginationData = async ({
     };
   }
 
-  // ✅ RESET MODE
+  //  RESET MODE
   try {
     const response = await axios.post(countRoute, data_to_send, config);
 

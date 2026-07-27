@@ -1,8 +1,8 @@
-import { Profession } from "../models/associations.js";
-
+import { Op } from "sequelize";
+import Profession from "../models/Profession.js";
 import sequelize from "../config/db.config.js";
 
-import { getProfessionNamesFromProfileId } from "../utils/profile-id.generator.js";
+import { getProfessionNamesFromProfileId } from "../services/profile-id.service.js";
 
 // --- PROFILE ID MANAGEMENT ENDPOINTS ---
 
@@ -159,9 +159,6 @@ export const searchProfessions = async (req, res) => {
       });
     }
 
-    const { Profession } = await import("../models/associations.js");
-    const { Op } = await import("sequelize");
-
     const whereClause = {
       name: {
         [Op.like]: `%${query.trim()}%`,
@@ -184,6 +181,7 @@ export const searchProfessions = async (req, res) => {
     });
   } catch (error) {
     console.error("Error searching professions:", error);
+
     return res.status(500).json({
       error: "Failed to search professions",
       details: process.env.NODE_ENV === "development" ? error.message : null,

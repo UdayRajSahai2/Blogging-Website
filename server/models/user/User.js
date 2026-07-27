@@ -1,6 +1,8 @@
+//server\models\user\User.js
 import { DataTypes, Op } from "sequelize";
 import sequelize from "../../config/db.config.js"; // Adjust based on your DB config
 //Sequelize.col() column projection with aliasing to flatten joined attributes.
+import { toTitleCase } from "../../utils/format.utils.js";
 
 const User = sequelize.define(
   "User",
@@ -19,18 +21,25 @@ const User = sequelize.define(
     // NEW: Split name fields
     first_name: {
       type: DataTypes.STRING,
-      allowNull: true, // Initially allow null for backward compatibility
+      allowNull: true,
       validate: {
         len: [1, 100],
         notEmpty: true,
       },
+      set(value) {
+        this.setDataValue("first_name", toTitleCase(value));
+      },
     },
+
     last_name: {
       type: DataTypes.STRING,
-      allowNull: true, // Initially allow null for backward compatibility
+      allowNull: true,
       validate: {
         len: [1, 100],
         notEmpty: true,
+      },
+      set(value) {
+        this.setDataValue("last_name", toTitleCase(value));
       },
     },
 
@@ -38,7 +47,12 @@ const User = sequelize.define(
     fullname: {
       type: DataTypes.STRING,
       allowNull: true, // Changed to allow null since we're moving to first_name/last_name
-      validate: { len: [3, 255] },
+      validate: {
+        len: [3, 255],
+      },
+      set(value) {
+        this.setDataValue("fullname", toTitleCase(value));
+      },
     },
 
     email: {
@@ -251,91 +265,25 @@ const User = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    approval_status: {
+      type: DataTypes.ENUM("pending", "approved", "rejected"),
+      defaultValue: "pending",
+    },
   },
   {
     timestamps: true,
     tableName: "users",
     indexes: [
+      // ONLY SMART GEO INDEX
       {
-        unique: true,
-        fields: ["email"],
-        name: "email_unique",
+        fields: ["country_code", "state_code", "district_code"],
+        name: "geo_hierarchy_idx",
       },
-      {
-        unique: true,
-        fields: ["username"],
-        name: "username_unique",
-      },
-      {
-        unique: true,
-        fields: ["mobile_number"],
-        name: "mobile_unique",
-        where: {
-          mobile_number: {
-            [Op.ne]: null,
-          },
-        },
-      },
-      {
-        unique: true,
-        fields: ["customer_id"],
-        name: "customer_id_unique",
-        where: {
-          customer_id: {
-            [Op.ne]: null,
-          },
-        },
-      },
-      // NEW: Indexes for location-based queries
-      {
-        fields: ["current_latitude", "current_longitude"],
-        name: "location_coordinates_idx",
-      },
-      {
-        fields: ["is_location_public"],
-        name: "location_public_idx",
-      },
-      {
-        fields: ["profile_id"],
-        name: "profile_id_idx",
-      },
+
+      // ONLY PROFESSION FILTER INDEX
       {
         fields: ["profession_id", "is_location_public"],
-        name: "profession_location_idx",
-      },
-      // Location code indexes for fast filtering
-      {
-        fields: ["country_code"],
-        name: "user_country_code_idx",
-      },
-      {
-        fields: ["state_code"],
-        name: "user_state_code_idx",
-      },
-      {
-        fields: ["district_code"],
-        name: "user_district_code_idx",
-      },
-      {
-        fields: ["block_code"],
-        name: "user_block_code_idx",
-      },
-      {
-        fields: ["village_code"],
-        name: "user_village_code_idx",
-      },
-      // Composite indexes for location-based queries
-      {
-        fields: ["country_code", "state_code"],
-        name: "user_country_state_idx",
-      },
-      {
-        fields: ["state_code", "district_code"],
-        name: "user_state_district_idx",
-      },
-      {
-        fields: ["district_code", "block_code"],
-        name: "user_district_block_idx",
+        name: "profession_visibility_idx",
       },
     ],
     hooks: {
