@@ -8,6 +8,8 @@ import {
   updatePageService,
 } from "../../services/admin/admin.page.service.js";
 
+import { logger } from "../../utils/logger.js";
+
 /* GET ALL */
 export const getAllPagesController = async (req, res) => {
   try {
@@ -88,6 +90,14 @@ export const createPageController = async (req, res) => {
 /* UPDATE */
 export const updatePageController = async (req, res) => {
   try {
+    logger.info(
+      {
+        pageId: req.params.id,
+        sections: req.body.sections,
+      },
+      "Update page request received",
+    );
+
     const page = await updatePageService(req.params.id, req.body);
 
     return res.status(200).json({
@@ -95,7 +105,13 @@ export const updatePageController = async (req, res) => {
       data: page,
     });
   } catch (error) {
-    console.error(error);
+    logger.error(
+      {
+        err: error,
+        pageId: req.params.id,
+      },
+      "Failed to update page",
+    );
 
     return res.status(500).json({
       message: "Failed to update page",

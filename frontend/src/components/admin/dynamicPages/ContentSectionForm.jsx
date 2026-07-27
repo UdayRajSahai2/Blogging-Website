@@ -13,9 +13,7 @@ import Image from "@tiptap/extension-image";
 import { uploadImage } from "../../../common/aws";
 import { compressImage } from "../../../common/compressImage";
 import { UPLOAD_API } from "../../../common/api";
-import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
-import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import Highlight from "@tiptap/extension-highlight";
 
@@ -82,18 +80,13 @@ const ContentSectionForm = ({ section, onChange }) => {
         : "bg-white border-gray-200"
     }
   `;
+
   // TIPTAP EDITOR
   const editor = useEditor({
     extensions: [
       StarterKit,
 
-      Underline,
-
       Highlight,
-
-      Link.configure({
-        openOnClick: false,
-      }),
 
       Placeholder.configure({
         placeholder: "Start writing content here...",
