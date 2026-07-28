@@ -61,13 +61,6 @@ export const updateProfileImage = async (req, res) => {
     const { profile_img } = req.body;
     const userId = req.user.id;
 
-    console.log(
-      "Updating profile image for user:",
-      userId,
-      "URL:",
-      profile_img,
-    );
-
     if (!profile_img) {
       return res.status(400).json({ error: "Profile image URL is required" });
     }
@@ -212,15 +205,7 @@ export const getProfile = async (req, res) => {
     safeUser.details = safeUser.details || {};
     safeUser.isOnboardingCompleted = safeUser.is_onboarding_completed;
 
-    const isEmployed = safeUser?.details?.employment_status === "employed";
-
-    const allowedTypes = isEmployed
-      ? ["personal", "office", "work"]
-      : ["personal"];
-
-    safeUser.addresses = (safeUser.addresses || []).filter((addr) =>
-      allowedTypes.includes(addr.type),
-    );
+    safeUser.addresses = safeUser.addresses || [];
 
     safeUser.experiences = Array.isArray(experiences)
       ? experiences.map((exp) => exp.toJSON())
@@ -230,7 +215,6 @@ export const getProfile = async (req, res) => {
 
     return res.status(200).json(safeUser);
   } catch (err) {
-    console.log(err);
     return res.status(500).json({ error: err.message });
   }
 };
@@ -319,19 +303,56 @@ export const updateProfile = async (req, res) => {
 
     /* ---------- UPSERT User  ADDRESS ---------- */
 
-    const isEmployed = req.body.employment_status === "employed";
+    const details = await UserDetails.findOne({
+      where: {
+        user_id: userId,
+      },
+      transaction,
+    });
 
-    const ADDRESS_TYPES = isEmployed
-      ? ["personal", "office", "work"]
-      : ["personal"];
+    const employmentStatus =
+      req.body.employment_status || details?.employment_status;
+
+    const isWorking =
+      employmentStatus === "employed" || employmentStatus === "self_employed";
+
+    const ADDRESS_TYPES =
+      employmentStatus === "employed"
+        ? ["personal", "work", "office"]
+        : employmentStatus === "self_employed"
+          ? ["personal", "work"]
+          : ["personal"];
+
+    /* Activate/deactivate old addresses */
+
+    await UserAddress.update(
+      {
+        is_active:
+          employmentStatus === "employed" ||
+          employmentStatus === "self_employed",
+      },
+      {
+        where: {
+          user_id: userId,
+          type: {
+            [Op.in]: ["work", "office"],
+          },
+        },
+        transaction,
+      },
+    );
 
     for (const type of ADDRESS_TYPES) {
       await UserAddress.upsert(
         {
           user_id: userId,
           type,
+          is_active: true,
           street: req.body[`${type}_street`] || null,
           city: req.body[`${type}_city`] || null,
+
+          state: req.body[`${type}_state`] || null,
+          country: req.body[`${type}_country`] || null,
 
           state_code: req.body[`${type}_state_code`] || null,
           country_code: req.body[`${type}_country_code`] || null,

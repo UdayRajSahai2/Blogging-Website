@@ -190,9 +190,9 @@ const AddressSection = ({
                 const selected = districts.find(
                   (d) => d.district_code === value,
                 );
-
                 updateAddress(type, "district_code", value);
                 updateAddress(type, "district", selected?.district_name || "");
+                updateAddress(type, "city", selected?.district_name || "");
               }}
               className="w-full h-full bg-transparent outline-none px-2 text-[13px] appearance-none"
             >

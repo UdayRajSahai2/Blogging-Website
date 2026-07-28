@@ -43,6 +43,11 @@ const UserAddress = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      allowNull: false,
+    },
   },
   {
     tableName: "user_addresses",

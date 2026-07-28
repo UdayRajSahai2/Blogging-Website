@@ -372,28 +372,32 @@ const EditProfile = ({ onNext, isOnboarding }) => {
       formData.field_id = selectedField;
       formData.specialty_id = selectedSpecialty;
     }
-
     /* ---------- ADDRESS EXTRACTION ---------- */
-    const ADDRESS_TYPES = isStudent
-      ? ["personal"]
-      : ["personal", "work", "office"];
+
+    const isWorking =
+      profile.details?.employment_status === "employed" ||
+      profile.details?.employment_status === "self_employed";
+
+    const ADDRESS_TYPES = isWorking
+      ? ["personal", "work", "office"]
+      : ["personal"];
+    formData.employment_status = profile.details?.employment_status;
     const addressPayload = {};
 
     ADDRESS_TYPES.forEach((type) => {
       const addr = getAddress(type);
 
-      addressPayload[`${type}_city`] = addr.city || null;
-
-      //  FIX: send codes instead of names
-      addressPayload[`${type}_state_code`] = addr.state_code || null;
-      addressPayload[`${type}_country_code`] = addr.country_code || null;
-      addressPayload[`${type}_district_code`] = addr.district_code || null;
-
       addressPayload[`${type}_street`] = addr.street || null;
+      addressPayload[`${type}_city`] = addr.city || addr.district || null;
+      addressPayload[`${type}_state`] = addr.state || null;
+      addressPayload[`${type}_country`] = addr.country || null;
+      addressPayload[`${type}_country_code`] = addr.country_code || null;
+      addressPayload[`${type}_state_code`] = addr.state_code || null;
+      addressPayload[`${type}_district_code`] = addr.district_code || null;
       addressPayload[`${type}_zip_code`] = addr.zip_code || null;
     });
-    const loadingToast = toast.loading("Updating profile...");
 
+    const loadingToast = toast.loading("Updating profile...");
     try {
       /* ---------- USER Address UPDATE ---------- */
       await axios.post(
@@ -401,6 +405,7 @@ const EditProfile = ({ onNext, isOnboarding }) => {
         {
           ...formData,
           ...addressPayload,
+          employment_status: profile.details.employment_status,
         },
         {
           headers: { Authorization: `Bearer ${access_token}` },
@@ -478,10 +483,27 @@ const EditProfile = ({ onNext, isOnboarding }) => {
       );
       toast.dismiss(loadingToast);
 
-      setProfile((prev) => ({
-        ...prev,
+      const refreshedProfile = {
         ...updatedUser,
-      }));
+        addresses: (updatedUser.addresses || []).map((addr) => ({
+          type: addr.type,
+
+          city: addr.city || "",
+          street: addr.street || "",
+          zip_code: addr.zip_code || "",
+
+          country_code: addr.country_code || "",
+          state_code: addr.state_code || "",
+          district_code: addr.district_code || "",
+
+          country: addr.country || addr.countryDetails?.country_name || "",
+          state: addr.state || addr.stateDetails?.state_name || "",
+          district: addr.district || addr.districtDetails?.district_name || "",
+        })),
+        details: updatedUser.details || {},
+      };
+
+      setProfile(refreshedProfile);
       // (optional if exists)
       if (updatedUser.first_name)
         updatedAuth.first_name = updatedUser.first_name;
