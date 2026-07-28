@@ -1,3 +1,4 @@
+//server\routes\admin\index.js
 import express from "express";
 
 import { verifyJWT } from "../../middlewares/auth.middleware.js";

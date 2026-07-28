@@ -807,66 +807,13 @@ const UserAuthForm = ({ type }) => {
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
                   required
-                />
-                {type !== "sign-in" &&
-                  password.length > 0 &&
-                  !isPasswordValid && (
-                    <>
-                      <div className="flex flex-wrap gap-x-2 text-[12px] mt-1 bg-slate-100">
-                        <span
-                          className={
-                            passwordChecks.length
-                              ? "text-green-600"
-                              : "text-gray-500"
-                          }
-                        >
-                          Password must include: Minimum 12+ characters
-                        </span>
-                        <span className="text-gray-400">|</span>
-                        <span
-                          className={
-                            passwordChecks.number
-                              ? "text-green-600"
-                              : "text-gray-500"
-                          }
-                        >
-                          Number
-                        </span>
-                        <span className="text-gray-400">|</span>
-                        <span
-                          className={
-                            passwordChecks.upper
-                              ? "text-green-600"
-                              : "text-gray-500"
-                          }
-                        >
-                          Uppercase
-                        </span>
-                        <span className="text-gray-400">|</span>
-
-                        <span
-                          className={
-                            passwordChecks.lower
-                              ? "text-green-600"
-                              : "text-gray-500"
-                          }
-                        >
-                          Lowercase
-                        </span>
-                        <span className="text-gray-400">|</span>
-
-                        <span
-                          className={
-                            passwordChecks.special
-                              ? "text-green-600"
-                              : "text-gray-500"
-                          }
-                        >
-                          Special character
-                        </span>
-                      </div>
-                    </>
-                  )}
+                />{" "}
+                {type !== "sign-in" && (
+                  <p className="text-[12px] text-gray-500 whitespace-nowrap">
+                    Password: Min. 12 characters, alphanumeric (1 uppercase, 1
+                    symbol, 1 number)
+                  </p>
+                )}
                 {type !== "sign-in" && (
                   <div className="mb-2 rounded-lg border border-gray-300 bg-gray-50 px-4 py-3">
                     <div className="flex items-center gap-4 text-sm">
@@ -878,24 +825,23 @@ const UserAuthForm = ({ type }) => {
                         <input
                           type="radio"
                           name="userType"
-                          checked={!isStudent}
-                          onChange={() => setIsStudent(false)}
-                          className="h-4 w-4 accent-indigo-600"
-                        />
-                        <UserIcon className="h-4 w-4 text-gray-600" />
-                        <span>Others</span>
-                      </label>
-
-                      <label className="flex cursor-pointer items-center gap-1.5">
-                        <input
-                          type="radio"
-                          name="userType"
                           checked={isStudent}
                           onChange={() => setIsStudent(true)}
                           className="h-4 w-4 accent-indigo-600"
                         />
                         <AcademicCapIcon className="h-4 w-4 text-indigo-600" />
                         <span>Enroll as Student</span>
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-1.5">
+                        <input
+                          type="radio"
+                          name="userType"
+                          checked={!isStudent}
+                          onChange={() => setIsStudent(false)}
+                          className="h-4 w-4 accent-indigo-600"
+                        />
+                        <UserIcon className="h-4 w-4 text-gray-600" />
+                        <span>Others</span>
                       </label>
                     </div>
                   </div>
